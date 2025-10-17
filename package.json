@@ -4,17 +4,25 @@
   "description": "",
   "main": "prettier.config.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
   },
   "author": "",
   "license": "ISC",
-
   "devDependencies": {
-  "@types/node": "^22.15.30",
+    "@types/node": "^22.15.30",
     "@types/pg": "^8.15.4",
     "@types/ws": "^8.18.1",
-    "eslint": "^9.28.0",
+    "eslint": "^9.37.0",
     "eslint-config-metarhia": "^9.1.2",
-    "prettier": "^3.3.3"
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.9",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "\"*.{js,jsx,ts,tsx,json,md,css,html}\"": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   }
 }
