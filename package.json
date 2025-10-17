@@ -6,8 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky",
-    "lint": "eslint .",
-    "format": "prettier . --write"
+    "lint": "eslint src",
+    "format": "prettier . --write",
+    "lint:fix": "eslint src --fix"
   },
   "author": "",
   "license": "ISC",
