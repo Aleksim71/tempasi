@@ -13,9 +13,8 @@ export default [
       },
     },
     rules: {
-      // свои правила по вкусу
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "no-console": "off",
+      "no-console": "off"
     },
     ignores: [
       "node_modules/**",

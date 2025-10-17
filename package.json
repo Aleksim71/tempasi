@@ -5,7 +5,9 @@
   "main": "prettier.config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint": "eslint .",
+    "format": "prettier . --write"
   },
   "author": "",
   "license": "ISC",
@@ -18,11 +20,5 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.9",
     "prettier": "^3.6.2"
-  },
-  "lint-staged": {
-    "\"*.{js,jsx,ts,tsx,json,md,css,html}\"": [
-      "prettier --write",
-      "eslint --fix"
-    ]
   }
 }
