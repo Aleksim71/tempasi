@@ -1,0 +1,22 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# Env & local
+.env
+.env.*
+!.env.example
+# Builds / coverage
+dist/
+build/
+coverage/
+# Editors / OS
+.vscode/
+.DS_Store
+EOF
+
+# Temp
+/tmp/
+**/*.tmp.*
+

@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+.vscode/
+info
+**/*.min.js
+**/*.min.css
