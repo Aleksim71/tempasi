@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { engine } from 'express-handlebars';
+import { templates } from './data/templates.js';
 
 dotenv.config();
 
