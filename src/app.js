@@ -4,18 +4,15 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { engine } from 'express-handlebars';
 
-// Загружаем .env
 dotenv.config();
 
 const app = express();
-
-// === Пути ======================================================
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 // Папка с HTML/CSS/icons (статические файлы)
 const publicDir = path.join(__dirname, '..', 'mvp-tempasi');
 
-// === Настройка Handlebars ======================================
+// ===== Handlebars =====
 app.engine(
   'hbs',
   engine({
@@ -29,22 +26,20 @@ app.engine(
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
-// === Раздача статики ===========================================
+// Статика
 app.use(express.static(publicDir));
-
-// === Маршруты Handlebars =======================================
 
 // Главная страница → templates.hbs
 app.get('/', (req, res) => {
   res.render('templates');
 });
 
-// /index.html также обрабатываем корректно
+// /index.html тоже ведёт на templates.hbs
 app.get('/index.html', (req, res) => {
   res.render('templates');
 });
 
-// Страницы, которые пока не переведены в HBS — можно временно отдавать напрямую
+// Страницы, которые пока не переведены в HBS — временно отдаём напрямую
 const staticPages = [
   'about.html',
   'billing.html',
@@ -58,7 +53,6 @@ const staticPages = [
   'rentals.html',
 ];
 
-// Временно отдаём старые HTML файлы
 staticPages.forEach((file) => {
   const route = '/' + file.replace('.html', '');
   app.get(route, (req, res) => {
