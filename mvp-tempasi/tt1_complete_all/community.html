@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempasi — Community</title>
+
+    <link rel="stylesheet" href="css/core.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+
+    <!-- Icons (local + CDN fallback) -->
+    <link
+      rel="stylesheet"
+      href="icons/material-design-iconic-font/css/material-design-iconic-font.min.css"
+    />
+    <link rel="stylesheet" href="icons/themify-icons/themify-icons.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/material-design-iconic-font@2.2.0/dist/css/material-design-iconic-font.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
+    />
+
+    <style>
+      .community-layout {
+        padding: 24px 0;
+      }
+      .community-layout-inner {
+        display: grid;
+        grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+        gap: 32px;
+        align-items: flex-start;
+      }
+      .community-sidebar {
+        position: sticky;
+        top: 80px;
+        align-self: flex-start;
+      }
+      .community-menu {
+        display: grid;
+        gap: 8px;
+      }
+      .community-filter {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .community-filter.active {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .community-content {
+        display: grid;
+        gap: 24px;
+      }
+      .community-list {
+        display: grid;
+        gap: 16px;
+      }
+      .community-item {
+        display: grid;
+        grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+        gap: 16px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .community-user {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .community-user .avatar-img {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6a7bff, #9e6dff);
+      }
+      .community-user .user-meta {
+        display: grid;
+        gap: 2px;
+      }
+      .community-user .user-name {
+        font-weight: 600;
+      }
+      .community-user .user-role {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .community-body p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .page-btn {
+        min-width: 34px;
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: transparent;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .page-btn.current {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .spacer {
+        color: var(--muted);
+        padding: 0 4px;
+      }
+      @media (max-width: 768px) {
+        .community-layout-inner {
+          grid-template-columns: 1fr;
+        }
+        .community-sidebar {
+          position: static;
+          order: -1;
+        }
+        .community-item {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <a href="templates.html"
+          ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
+        >
+      </div>
+
+      <nav class="mainnav" aria-label="Главное меню">
+        <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+        <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
+        <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
+        <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
+        <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
+        <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+      </nav>
+
+      <div class="actions" aria-label="Действия">
+        <button class="iconbtn tooltipped" data-title="Поиск">
+          <i class="zmdi zmdi-search"></i>
+        </button>
+        <div class="dropdown">
+          <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <i class="zmdi zmdi-power"></i>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="register.html">Регистрация</a>
+            <a href="login.html">Вход</a>
+            <a href="javascript:void(0)" id="logoutBtn">Выход</a>
+          </div>
+        </div>
+        <button class="iconbtn tooltipped" data-title="Корзина">
+          <i class="zmdi zmdi-shopping-cart"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="community-layout">
+      <section class="page-section">
+        <div class="container community-layout-inner">
+          <aside class="community-sidebar" aria-label="Фильтры сообщества">
+            <nav class="community-menu">
+              <button class="community-filter active" data-filter="all">Все</button>
+              <button class="community-filter" data-filter="seller">Продавцы</button>
+              <button class="community-filter" data-filter="buyer">Покупатели</button>
+              <button class="community-filter" data-filter="popular">Популярные</button>
+            </nav>
+          </aside>
+
+          <div class="community-content">
+            <header class="community-header">
+              <h1 class="page-title">Community</h1>
+              <p class="lead">
+                Сообщество Tempasi: авторы, студии и покупатели шаблонов. Здесь можно увидеть
+                активных участников и их фокус.
+              </p>
+            </header>
+
+            <section class="community-list" aria-label="Участники сообщества">
+              <!-- Элемент 1 -->
+              <article class="community-item" data-type="seller" data-popular="true">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@nova_design</div>
+                    <div class="user-role">Продавец · SaaS лендинги</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Автор подборки современных SaaS-шаблонов с упором на конверсию. В портфеле —
+                    лендинги, дэшборды и страницы тарифов.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 2 -->
+              <article class="community-item" data-type="buyer">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@studio_flow</div>
+                    <div class="user-role">Покупатель · Диджитал-агентство</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Небольшая студия, которая использует аренду шаблонов Tempasi для быстрых
+                    презентаций клиентам и A/B-тестов концепций.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 3 -->
+              <article class="community-item" data-type="seller" data-popular="true">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@ui_patterns</div>
+                    <div class="user-role">Продавец · UI-компоненты</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Специализируется на наборных секциях: hero-блоки, CTA, прайсинг и FAQ, которые
+                    легко комбинировать в новых лендингах.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 4 -->
+              <article class="community-item" data-type="buyer">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@local_seo_agency</div>
+                    <div class="user-role">Покупатель · SEO-агентство</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Регулярно арендует шаблоны для локальных бизнесов: клиники, салоны, фитнес,
+                    чтобы быстро запускать посадочные страницы.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 5 -->
+              <article class="community-item" data-type="seller">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@ecom_labs</div>
+                    <div class="user-role">Продавец · E-commerce</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Коллекция шаблонов для небольших интернет-магазинов: каталоги, карточки товаров,
+                    корзина и чек-аут.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 6 -->
+              <article class="community-item" data-type="buyer" data-popular="true">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@product_team</div>
+                    <div class="user-role">Покупатель · Продуктовая команда</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Используют Tempasi для быстрых MVP и продуктовых тестов: выбирают шаблон,
+                    дорабатывают и проверяют гипотезы на реальных пользователях.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 7 -->
+              <article class="community-item" data-type="seller">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@landing_pro</div>
+                    <div class="user-role">Продавец · Маркетинговые лендинги</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Автор лендингов под рекламный трафик: упор на скорость загрузки, читабельную
+                    структуру и готовые блоки под офферы.
+                  </p>
+                </div>
+              </article>
+
+              <!-- Элемент 8 -->
+              <article class="community-item" data-type="buyer">
+                <div class="community-user">
+                  <div class="avatar">
+                    <div class="avatar-img"></div>
+                  </div>
+                  <div class="user-meta">
+                    <div class="user-name">@freelance_pm</div>
+                    <div class="user-role">Покупатель · Фриланс PM</div>
+                  </div>
+                </div>
+                <div class="community-body">
+                  <p>
+                    Координирует небольшие проекты и использует каталог Tempasi как витрину для
+                    выбора дизайна совместно с заказчиками.
+                  </p>
+                </div>
+              </article>
+            </section>
+
+            <nav class="pagination" aria-label="Навигация по страницам">
+              <button class="page-btn current" aria-label="Страница 1">1</button>
+              <button class="page-btn" aria-label="Страница 2">2</button>
+              <button class="page-btn" aria-label="Страница 3">3</button>
+              <span class="spacer">…</span>
+              <button class="page-btn" aria-label="Страница 10">10</button>
+            </nav>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/app.js"></script>
+
+    <script>
+      (function () {
+        function setupCommunityFilters() {
+          var filters = document.querySelectorAll('.community-filter');
+          if (!filters.length) return;
+          filters.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              filters.forEach(function (b) {
+                b.classList.remove('active');
+              });
+              btn.classList.add('active');
+              // Здесь позже можно добавить реальную фильтрацию по data-type / data-popular
+            });
+          });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupCommunityFilters);
+        } else {
+          setupCommunityFilters();
+        }
+      })();
+    </script>
+  </body>
+</html>

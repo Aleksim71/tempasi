@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempasi — Шаблоны</title>
+
+    <link rel="stylesheet" href="css/core.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+
+    <!-- Icons (local + CDN fallback) -->
+    <link
+      rel="stylesheet"
+      href="icons/material-design-iconic-font/css/material-design-iconic-font.min.css"
+    />
+    <link rel="stylesheet" href="icons/themify-icons/themify-icons.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/material-design-iconic-font@2.2.0/dist/css/material-design-iconic-font.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="brand">
+          <a href="templates.html"
+            ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
+          >
+        </div>
+
+        <nav class="mainnav" aria-label="Главное меню">
+          <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+          <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
+          <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
+          <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
+          <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
+          <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+        </nav>
+
+        <div class="actions" aria-label="Действия">
+          <button class="iconbtn tooltipped" data-title="Поиск">
+            <i class="zmdi zmdi-search"></i>
+          </button>
+          <div class="dropdown">
+            <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+              <i class="zmdi zmdi-power"></i>
+            </button>
+            <div class="dropdown-menu" id="userMenu">
+              <a href="register.html">Регистрация</a>
+              <a href="login.html">Вход</a>
+              <a href="javascript:void(0)" id="logoutBtn">Выход</a>
+            </div>
+          </div>
+          <button class="iconbtn tooltipped" data-title="Корзина">
+            <i class="zmdi zmdi-shopping-cart"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside>
+          <div class="aside-title">Шаблоны</div>
+          <div class="topics">
+            <label class="chip"><input type="checkbox" /> Лендинги</label>
+            <label class="chip"><input type="checkbox" /> Интернет‑магазины</label>
+            <label class="chip"><input type="checkbox" /> Блог / Медиа</label>
+            <label class="chip"><input type="checkbox" /> Портфолио</label>
+            <label class="chip"><input type="checkbox" /> SaaS / IT</label>
+            <label class="chip"><input type="checkbox" /> Ресторан / Кафе</label>
+            <label class="chip"><input type="checkbox" /> Недвижимость</label>
+            <label class="chip"><input type="checkbox" /> Образование</label>
+            <label class="chip"><input type="checkbox" /> События</label>
+            <label class="chip"><input type="checkbox" /> Медицинa</label>
+          </div>
+
+          <div class="aside-title">Цена</div>
+          <div class="range">
+            <input type="range" min="0" max="1000" value="250" />
+            <div class="range-values"><span>0$</span><span>250</span><span>1000$</span></div>
+          </div>
+
+          <div class="aside-title">Лицензии</div>
+          <div class="licenses">
+            <label class="chip"><input type="checkbox" /> PU</label>
+            <label class="chip"><input type="checkbox" /> CU</label>
+            <label class="chip"><input type="checkbox" /> EL</label>
+            <label class="chip"><input type="checkbox" /> SL</label>
+            <label class="chip"><input type="checkbox" /> ML</label>
+            <label class="chip"><input type="checkbox" /> EX</label>
+            <label class="chip"><input type="checkbox" /> RF</label>
+          </div>
+        </aside>
+
+        <main>
+          <section class="grid">
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Nova SaaS — Landing</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€89</span><span class="old">€129</span></div>
+                  <div class="badges"><span class="badge">EL</span></div>
+                  <div class="author">Автор: @designer</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">E‑Com Pro</div>
+                <div class="meta">
+                  <div class="price">
+                    <span class="now">€149</span><span class="old">€199</span>
+                  </div>
+                  <div class="badges"><span class="badge">CU</span></div>
+                  <div class="author">Автор: @studio</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Portfolio Light</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€59</span><span class="old">€79</span></div>
+                  <div class="badges"><span class="badge">SL</span></div>
+                  <div class="author">Автор: @freelancer</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Realty Pro</div>
+                <div class="meta">
+                  <div class="price">
+                    <span class="now">€129</span><span class="old">€169</span>
+                  </div>
+                  <div class="badges"><span class="badge">EX</span></div>
+                  <div class="author">Автор: @agency</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Cafe & Food</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€69</span><span class="old">€99</span></div>
+                  <div class="badges"><span class="badge">PU</span></div>
+                  <div class="author">Автор: @chefstudio</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Med Clinic</div>
+                <div class="meta">
+                  <div class="price">
+                    <span class="now">€109</span><span class="old">€149</span>
+                  </div>
+                  <div class="badges"><span class="badge">RF</span></div>
+                  <div class="author">Автор: @mediart</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Event Hub</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€79</span><span class="old">€99</span></div>
+                  <div class="badges"><span class="badge">SL</span></div>
+                  <div class="author">Автор: @organizer</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Edu Center</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€89</span><span class="old">€129</span></div>
+                  <div class="badges"><span class="badge">ML</span></div>
+                  <div class="author">Автор: @academy</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Travel Blog</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€49</span><span class="old">€69</span></div>
+                  <div class="badges"><span class="badge">PU</span></div>
+                  <div class="author">Автор: @wanderer</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">SaaS Dark</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€99</span><span class="old">€149</span></div>
+                  <div class="badges"><span class="badge">EL</span></div>
+                  <div class="author">Автор: @teamx</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Restaurant Menu</div>
+                <div class="meta">
+                  <div class="price"><span class="now">€59</span><span class="old">€89</span></div>
+                  <div class="badges"><span class="badge">SL</span></div>
+                  <div class="author">Автор: @tasteit</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="thumb"></div>
+              <div class="card-body">
+                <div class="title">Real Estate Grid</div>
+                <div class="meta">
+                  <div class="price">
+                    <span class="now">€139</span><span class="old">€179</span>
+                  </div>
+                  <div class="badges"><span class="badge">CU</span></div>
+                  <div class="author">Автор: @blocks</div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="actions-row">
+                  <button class="btn icon-only tooltipped" data-title="В избранное">
+                    <i class="zmdi zmdi-favorite"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Демо">
+                    <i class="zmdi zmdi-eye"></i>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="Аренда шаблона">
+                    <svg class="icon"><use href="icons/icons.svg#i-calendar" /></svg>
+                  </button>
+                  <button class="btn icon-only tooltipped" data-title="В корзину">
+                    <i class="zmdi zmdi-shopping-cart"></i>
+                  </button>
+                </div>
+                <button class="btn primary">Подробнее</button>
+              </div>
+            </article>
+          </section>
+
+          <nav class="pagination" aria-label="Пагинация">
+            <button class="page-btn" disabled aria-label="Предыдущая">‹</button>
+            <button class="page-btn current" aria-label="Страница 1">1</button>
+            <button class="page-btn" aria-label="Страница 2">2</button>
+            <button class="page-btn" aria-label="Страница 3">3</button>
+            <span class="spacer">…</span>
+            <button class="page-btn" aria-label="Страница 9">9</button>
+            <button class="page-btn" aria-label="Страница 10">10</button>
+            <button class="page-btn" aria-label="Следующая">›</button>
+          </nav>
+        </main>
+      </div>
+
+      <footer>
+        <div class="footer-inner">
+          <nav>
+            <a href="javascript:void(0)">Условия сервиса</a>
+            <a href="javascript:void(0)">Политика конфиденциальности</a>
+            <a href="javascript:void(0)">Инвесторам</a>
+            <a href="javascript:void(0)">Партнёрам</a>
+            <a href="javascript:void(0)">О проекте</a>
+            <a href="javascript:void(0)">Контакты</a>
+          </nav>
+          <div style="color: var(--muted); font-size: 14px">
+            © 2025 Tempasi. Все права защищены.
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        // Simple demo auth storage
+        const AUTH_KEY = 'tempasi_auth';
+        const NAME_KEY = 'tempasi_name';
+
+        function getAuth() {
+          try {
+            return JSON.parse(localStorage.getItem(AUTH_KEY) || 'false');
+          } catch (e) {
+            return false;
+          }
+        }
+        function getName() {
+          return localStorage.getItem(NAME_KEY) || '';
+        }
+        function setAuth(val, name) {
+          localStorage.setItem(AUTH_KEY, JSON.stringify(!!val));
+          if (name) localStorage.setItem(NAME_KEY, name);
+        }
+
+        // Header dropdown logic
+        function setupMenu() {
+          const btn = document.getElementById('userMenuBtn');
+          const menu = document.getElementById('userMenu');
+          if (!btn || !menu) return;
+          const dropdown = btn.closest('.dropdown');
+
+          // Rebuild menu by auth state
+          function renderMenu() {
+            const isAuth = getAuth();
+            const name = getName();
+            const btn = document.getElementById('userMenuBtn');
+            const menu = document.getElementById('userMenu');
+            const profileNav = null;
+            if (!btn || !menu) return;
+            menu.innerHTML = '';
+            if (isAuth) {
+              var avatarUrl =
+                'https://i.pravatar.cc/150?u=' + encodeURIComponent(name || 'tempasi');
+              btn.innerHTML = '<img src="' + avatarUrl + '" alt="avatar" class="avatar-img">';
+              if (profileNav) {
+                profileNav.style.display = 'inline-flex';
+              }
+              var logout = document.createElement('a');
+              logout.href = 'javascript:void(0)';
+              logout.textContent = 'Выход';
+              logout.id = 'logoutBtn';
+              menu.appendChild(logout);
+              btn.title = 'Аккаунт';
+            } else {
+              if (profileNav) {
+                profileNav.style.display = 'none';
+              }
+              btn.innerHTML = '<i class="zmdi zmdi-power"></i>';
+              var reg = document.createElement('a');
+              reg.href = 'register.html';
+              reg.textContent = 'Регистрация';
+              menu.appendChild(reg);
+              var login = document.createElement('a');
+              login.href = 'login.html';
+              login.textContent = 'Вход';
+              menu.appendChild(login);
+              btn.title = 'Регистрация/Вход';
+            }
+          }
+
+          renderMenu();
+
+          btn.addEventListener('click', function () {
+            dropdown.classList.toggle('open');
+            const expanded = dropdown.classList.contains('open');
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          });
+          document.addEventListener('click', function (e) {
+            if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+          });
+
+          // Delegate clicks for dynamic items
+          menu.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'logoutBtn') {
+              setAuth(false);
+              alert('Вы вышли из системы (демо)');
+              renderMenu();
+              dropdown.classList.remove('open');
+            }
+            if (e.target && e.target.id === 'profileBtn') {
+              alert('Профиль (демо): ' + (getName() || 'Гость'));
+              dropdown.classList.remove('open');
+            }
+          });
+
+          // Expose for other pages (login/register) to call after setting auth
+          window.TempasiAuth = { setAuth, getAuth, getName, renderMenu };
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupMenu);
+        } else {
+          setupMenu();
+        }
+      })();
+    </script>
+  </body>
+</html>

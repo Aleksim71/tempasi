@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempasi — Billing</title>
+
+    <link rel="stylesheet" href="css/core.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+
+    <!-- Icons (local + CDN fallback) -->
+    <link
+      rel="stylesheet"
+      href="icons/material-design-iconic-font/css/material-design-iconic-font.min.css"
+    />
+    <link rel="stylesheet" href="icons/themify-icons/themify-icons.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/material-design-iconic-font@2.2.0/dist/css/material-design-iconic-font.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
+    />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <a href="templates.html"
+          ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
+        >
+      </div>
+
+      <nav class="mainnav" aria-label="Главное меню">
+        <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+        <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
+        <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
+        <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
+        <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
+        <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+      </nav>
+
+      <div class="actions" aria-label="Действия">
+        <button class="iconbtn tooltipped" data-title="Поиск">
+          <i class="zmdi zmdi-search"></i>
+        </button>
+        <div class="dropdown">
+          <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <i class="zmdi zmdi-power"></i>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="register.html">Регистрация</a>
+            <a href="login.html">Вход</a>
+            <a href="javascript:void(0)" id="logoutBtn">Выход</a>
+          </div>
+        </div>
+        <button class="iconbtn tooltipped" data-title="Корзина">
+          <i class="zmdi zmdi-shopping-cart"></i>
+        </button>
+      </div>
+    </header>
+    <main class="profile-layout">
+      <div class="profile-layout-inner">
+        <aside class="profile-sidebar" aria-label="Навигация профиля">
+          <section class="profile-card">
+            <img id="sidebarAvatar" class="avatar-img" src="" alt="avatar" />
+            <div class="info">
+              <div class="name" id="sidebarName">@user</div>
+              <div class="email" id="sidebarEmail">user@demo.dev</div>
+            </div>
+          </section>
+          <nav class="profile-menu">
+            <a href="profile.html">Профиль</a> <a href="favorites.html">Мои избранные</a>
+            <a href="rentals.html">Мои аренды</a> <a href="billing.html" class="active">Billing</a>
+            <a href="deals.html">Сделки</a>
+          </nav>
+        </aside>
+        <div class="profile-main">
+          <section class="panel">
+            <h2>Billing</h2>
+            <p class="hint">
+              Демо-форма для настройки платёжного метода. В продакшене её заменим на Stripe/PayPal
+              виджеты.
+            </p>
+            <form class="account-billing-form">
+              <label>
+                <div class="caption">Имя держателя</div>
+                <input type="text" placeholder="Имя Фамилия" />
+              </label>
+              <label>
+                <div class="caption">Номер карты</div>
+                <input type="text" placeholder="4242 4242 4242 4242" inputmode="numeric" />
+              </label>
+              <div class="row two">
+                <label>
+                  <div class="caption">MM/YY</div>
+                  <input type="text" placeholder="MM/YY" inputmode="numeric" />
+                </label>
+                <label>
+                  <div class="caption">CVC</div>
+                  <input type="text" placeholder="CVC" inputmode="numeric" />
+                </label>
+              </div>
+              <button type="button" class="btn primary">Сохранить метод оплаты</button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <div class="footer-inner">
+        <nav>
+          <a href="javascript:void(0)">Условия сервиса</a>
+          <a href="javascript:void(0)">Политика конфиденциальности</a>
+          <a href="javascript:void(0)">Инвесторам</a>
+          <a href="javascript:void(0)">Партнёрам</a>
+          <a href="javascript:void(0)">О проекте</a>
+          <a href="javascript:void(0)">Контакты</a>
+        </nav>
+        <div style="color: var(--muted); font-size: 14px">© 2025 Tempasi. Все права защищены.</div>
+      </div>
+    </footer>
+    <script>
+      (function () {
+        const AUTH_KEY = 'tempasi_auth';
+        const NAME_KEY = 'tempasi_name';
+        const EMAIL_KEY = 'tempasi_email';
+        function getAuth() {
+          try {
+            return JSON.parse(localStorage.getItem(AUTH_KEY) || 'false');
+          } catch (e) {
+            return false;
+          }
+        }
+        function getName() {
+          return localStorage.getItem(NAME_KEY) || '';
+        }
+        function setName(v) {
+          localStorage.setItem(NAME_KEY, v || '');
+        }
+        function getEmail() {
+          return localStorage.getItem(EMAIL_KEY) || '';
+        }
+        function setEmail(v) {
+          localStorage.setItem(EMAIL_KEY, v || '');
+        }
+        function setAuth(val) {
+          localStorage.setItem(AUTH_KEY, JSON.stringify(!!val));
+        }
+        window.TempasiAuth = { getAuth, getName, setName, getEmail, setEmail, setAuth };
+
+        // dropdown в шапке
+        function setupMenu() {
+          const btn = document.getElementById('userMenuBtn');
+          const menu = document.getElementById('userMenu');
+          if (!btn || !menu) return;
+          const dropdown = btn.closest('.dropdown');
+
+          function renderMenu() {
+            const name = getName();
+            menu.innerHTML = '';
+            const avatarUrl =
+              'https://i.pravatar.cc/150?u=' + encodeURIComponent(name || 'tempasi');
+            btn.innerHTML = '<img src="' + avatarUrl + '" alt="avatar" class="avatar-img">';
+            const profile = document.createElement('a');
+            profile.href = 'profile.html';
+            profile.textContent = 'Профиль';
+            menu.appendChild(profile);
+            const logout = document.createElement('a');
+            logout.href = 'javascript:void(0)';
+            logout.id = 'logoutBtnTop';
+            logout.textContent = 'Выход';
+            menu.appendChild(logout);
+          }
+          renderMenu();
+
+          btn.addEventListener('click', () => {
+            dropdown.classList.toggle('open');
+            btn.setAttribute(
+              'aria-expanded',
+              dropdown.classList.contains('open') ? 'true' : 'false',
+            );
+          });
+          document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+          });
+          menu.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'logoutBtnTop') {
+              setAuth(false);
+              window.location.href = 'templates.html';
+            }
+          });
+        }
+        if (document.readyState === 'loading')
+          document.addEventListener('DOMContentLoaded', setupMenu);
+        else setupMenu();
+      })();
+    </script>
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+        const name = TempasiAuth.getName();
+        const email =
+          TempasiAuth.getEmail() ||
+          (name ? name.split(' ').join('.').toLowerCase() + '@demo.dev' : 'user@demo.dev');
+
+        // Заполняем шапку профиля
+        $('#profileName').textContent = name ? '@' + name.replace(/\s+/g, '_') : '@user';
+        $('#profileEmail').textContent = email;
+        $('#nickInput').value = name || '';
+        $('#emailInput').value = email;
+        $('#profileAvatar').src =
+          'https://i.pravatar.cc/150?u=' + encodeURIComponent(name || 'tempasi');
+
+        // Сохранение основных данных (демо: в localStorage)
+        $('#saveProfile').addEventListener('click', () => {
+          const n = $('#nickInput').value.trim();
+          const e = $('#emailInput').value.trim();
+          TempasiAuth.setName(n);
+          TempasiAuth.setEmail(e);
+          $('#profileName').textContent = n ? '@' + n.replace(/\s+/g, '_') : '@user';
+          $('#profileEmail').textContent = e || 'user@demo.dev';
+          $('#profileAvatar').src =
+            'https://i.pravatar.cc/150?u=' + encodeURIComponent(n || 'tempasi');
+          const hint = $('#saveHint');
+          hint.style.display = 'inline';
+          setTimeout(() => (hint.style.display = 'none'), 1500);
+        });
+
+        // Пароль/2FA (демо)
+        $('#changePassBtn').addEventListener('click', () => {
+          const a = $('#newPass').value,
+            b = $('#newPass2').value;
+          if (a.length < 6 || b.length < 6) return alert('Пароль должен быть 6+ символов');
+          if (a !== b) return alert('Пароли не совпадают');
+          alert('Пароль обновлён (демо)');
+          $('#newPass').value = '';
+          $('#newPass2').value = '';
+        });
+        $('#setup2faBtn').addEventListener('click', () => alert('2FA настроено (демо)'));
+
+        // Выход
+        $('#logoutBtn').addEventListener('click', () => {
+          TempasiAuth.setAuth(false);
+          window.location.href = 'templates.html';
+        });
+
+        // ===== Загрузка шаблонов (демо) =====
+        const drop = $('#dropzone');
+        const input = $('#fileInput');
+        const pickBtn = $('#pickBtn');
+        const uploadBtn = $('#uploadBtn');
+        const previews = $('#previews');
+        const countEl = $('#count');
+
+        function prevent(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((evt) =>
+          drop.addEventListener(evt, prevent),
+        );
+        ['dragenter', 'dragover'].forEach((evt) =>
+          drop.addEventListener(evt, () => drop.classList.add('drag')),
+        );
+        ['dragleave', 'drop'].forEach((evt) =>
+          drop.addEventListener(evt, () => drop.classList.remove('drag')),
+        );
+
+        drop.addEventListener('click', () => input.click());
+        pickBtn.addEventListener('click', () => input.click());
+        drop.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+        input.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        let files = [];
+        function handleFiles(list) {
+          files = Array.from(list);
+          countEl.textContent = files.length;
+          uploadBtn.disabled = files.length === 0;
+          renderPreviews(files);
+        }
+
+        function renderPreviews(items) {
+          previews.innerHTML = '';
+          previews.style.display = items.length ? 'grid' : 'none';
+          items.forEach((f) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const thumb = document.createElement('div');
+            thumb.className = 'thumb';
+            thumb.style.display = 'grid';
+            thumb.style.placeItems = 'center';
+            const body = document.createElement('div');
+            body.className = 'card-body';
+            const title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = f.name;
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.innerHTML =
+              '<span>' +
+              (f.type || 'file') +
+              '</span> <span>' +
+              Math.round(f.size / 1024) +
+              ' KB</span>';
+            body.appendChild(title);
+            body.appendChild(meta);
+            card.appendChild(thumb);
+            card.appendChild(body);
+            // превью для изображений
+            if (f.type.startsWith('image/')) {
+              const img = document.createElement('img');
+              img.src = URL.createObjectURL(f);
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.borderRadius = '6px';
+              thumb.innerHTML = '';
+              thumb.appendChild(img);
+            }
+            previews.appendChild(card);
+          });
+        }
+
+        uploadBtn.addEventListener('click', () => {
+          if (!files.length) return;
+          alert(
+            'Загрузка ' +
+              files.length +
+              ' файла(ов) — демо. Здесь будет POST /api/templates/upload',
+          );
+          // здесь можно собрать FormData и отправить на API
+          files = [];
+          countEl.textContent = '0';
+          previews.innerHTML = '';
+          previews.style.display = 'none';
+          uploadBtn.disabled = true;
+        });
+
+        // копировать ссылку профиля
+        $('#copyProfile').addEventListener('click', async () => {
+          const url = window.location.origin + '/profile.html';
+          try {
+            await navigator.clipboard.writeText(url);
+            alert('Ссылка на профиль скопирована');
+          } catch (e) {
+            alert('Скопируйте вручную: ' + url);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempasi — About</title>
+
+    <link rel="stylesheet" href="css/core.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+
+    <!-- Icons (local + CDN fallback) -->
+    <link
+      rel="stylesheet"
+      href="icons/material-design-iconic-font/css/material-design-iconic-font.min.css"
+    />
+    <link rel="stylesheet" href="icons/themify-icons/themify-icons.css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/material-design-iconic-font@2.2.0/dist/css/material-design-iconic-font.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
+    />
+
+    <style>
+      .about-layout {
+        padding: 24px 0;
+      }
+      .about-layout-inner {
+        display: grid;
+        grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+        gap: 32px;
+        align-items: flex-start;
+      }
+      .about-sidebar {
+        position: sticky;
+        top: 80px;
+        align-self: flex-start;
+      }
+      .about-menu {
+        display: grid;
+        gap: 8px;
+      }
+      .about-menu-item {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 14px;
+        text-decoration: none;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--line);
+      }
+      .about-menu-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .about-content {
+        display: grid;
+        gap: 32px;
+      }
+      .about-section {
+        padding-top: 8px;
+        border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.08));
+      }
+      .about-section h2 {
+        margin-bottom: 8px;
+      }
+      .about-section + .about-section {
+        margin-top: 16px;
+      }
+      @media (max-width: 768px) {
+        .about-layout-inner {
+          grid-template-columns: 1fr;
+        }
+        .about-sidebar {
+          position: static;
+          order: -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <a href="templates.html"
+          ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
+        >
+      </div>
+
+      <nav class="mainnav" aria-label="Главное меню">
+        <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+        <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
+        <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
+        <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
+        <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
+        <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+      </nav>
+
+      <div class="actions" aria-label="Действия">
+        <button class="iconbtn tooltipped" data-title="Поиск">
+          <i class="zmdi zmdi-search"></i>
+        </button>
+        <div class="dropdown">
+          <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <i class="zmdi zmdi-power"></i>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="register.html">Регистрация</a>
+            <a href="login.html">Вход</a>
+            <a href="javascript:void(0)" id="logoutBtn">Выход</a>
+          </div>
+        </div>
+        <button class="iconbtn tooltipped" data-title="Корзина">
+          <i class="zmdi zmdi-shopping-cart"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="about-layout">
+      <section class="page-section">
+        <div class="container about-layout-inner">
+          <aside class="about-sidebar" aria-label="Навигация по разделам">
+            <nav class="about-menu">
+              <a href="#terms" class="about-menu-item">Условия сервиса</a>
+              <a href="#privacy" class="about-menu-item">Политика конфиденциальности</a>
+              <a href="#investors" class="about-menu-item">Инвесторам</a>
+              <a href="#partners" class="about-menu-item">Партнёрам</a>
+            </nav>
+          </aside>
+
+          <div class="about-content">
+            <header class="about-header">
+              <h1 class="page-title">About Tempasi</h1>
+              <p class="lead">
+                Tempasi — платформа для продажи и аренды уникальных веб‑шаблонов для студий,
+                фрилансеров и агентств.
+              </p>
+            </header>
+
+            <section id="terms" class="about-section">
+              <h2>Условия сервиса</h2>
+              <p>
+                На этом этапе MVP здесь может быть краткое резюме основных условий использования
+                платформы: что можно и нельзя делать с шаблонами, базовые правила аренды и покупки,
+                а также ответственность сторон.
+              </p>
+              <p class="hint">
+                Позже этот блок можно заменить ссылкой на полноформатный юридический документ или
+                встроенный markdown‑рендер.
+              </p>
+            </section>
+
+            <section id="privacy" class="about-section">
+              <h2>Политика конфиденциальности</h2>
+              <p>
+                В этом разделе будет описано, какие данные собирает Tempasi, как они используются и
+                как защищаются. Для MVP достаточно зафиксировать принципы: минимум собираемых
+                данных, отсутствие продажи персональной информации, использование данных только для
+                работы сервиса.
+              </p>
+            </section>
+
+            <section id="investors" class="about-section">
+              <h2>Инвесторам</h2>
+              <p>
+                Здесь можно кратко описать бизнес‑модель Tempasi: монетизацию через комиссию с
+                продаж и аренды шаблонов, премиальные аккаунты для студий и авторов, а также
+                дальнейшее развитие продукта.
+              </p>
+              <p>
+                В будущем сюда можно добавить ссылку на pitch‑deck, one‑pager и финансовые метрики
+                (MAU, GMV, LTV/CAC и т.п.).
+              </p>
+            </section>
+
+            <section id="partners" class="about-section">
+              <h2>Партнёрам</h2>
+              <p>
+                Раздел для дизайн‑студий, образовательных проектов, маркетинговых и продуктовых
+                агентств, которые хотят сотрудничать с Tempasi: совместные подборки шаблонов,
+                white‑label‑решения, партнёрские программы.
+              </p>
+              <p>
+                В MVP достаточно описать формат сотрудничества и добавить контакт (например, форму
+                на странице Contact).
+              </p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>

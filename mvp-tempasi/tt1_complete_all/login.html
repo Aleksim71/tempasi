@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempasi — Вход (robust)</title>
+    <link rel="stylesheet" href="css/core.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+    <style>
+      .auth-wrap {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .auth {
+        width: 100%;
+        max-width: 560px;
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+      .auth .body {
+        padding: 20px;
+        display: grid;
+        gap: 14px;
+      }
+      .row {
+        display: grid;
+        gap: 8px;
+      }
+      .label {
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .input input {
+        all: unset;
+        flex: 1;
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.4;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .error {
+        font-size: 12px;
+        color: #ff7b7b;
+        display: none;
+      }
+      .actions {
+        display: grid;
+        gap: 8px;
+      }
+      .btn.primary {
+        width: 100%;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      .toggle-pass {
+        cursor: pointer;
+        border: 1px solid var(--line);
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+      }
+      .avatar-img {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        object-fit: cover;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <a href="templates.html"
+          ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
+        >
+      </div>
+      <nav class="mainnav" aria-label="Главное меню">
+        <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+        <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
+        <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
+        <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
+        <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
+        <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+      </nav>
+
+      <div class="actions" aria-label="Действия">
+        <button class="iconbtn tooltipped" data-title="Поиск">
+          <i class="zmdi zmdi-search"></i>
+        </button>
+        <div class="dropdown" id="authDropdown">
+          <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <i class="zmdi zmdi-power"></i>
+          </button>
+          <div class="dropdown-menu" id="userMenu"></div>
+        </div>
+        <button class="iconbtn tooltipped" data-title="Корзина">
+          <i class="zmdi zmdi-shopping-cart"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="auth-wrap">
+      <div class="auth">
+        <form id="form" class="body" novalidate>
+          <div class="row">
+            <div class="label">Email</div>
+            <div class="input">
+              <svg class="icon"><use href="icons/icons.svg#i-mail" /></svg>
+              <input
+                type="email"
+                name="email"
+                id="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+              />
+            </div>
+            <div class="error" id="emailErr">Введите корректный email</div>
+          </div>
+
+          <div class="row">
+            <div class="label">Пароль</div>
+            <div class="input">
+              <svg class="icon"><use href="icons/icons.svg#i-lock" /></svg>
+              <input
+                type="password"
+                name="password"
+                id="password"
+                placeholder="••••••••"
+                minlength="6"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="toggle-pass"
+                id="togglePass"
+                aria-label="Показать/скрыть пароль"
+              >
+                <svg class="icon" id="eye"><use href="icons/icons.svg#i-eye" /></svg>
+              </button>
+            </div>
+            <div class="hint">Минимум 6 символов</div>
+            <div class="error" id="passErr">Пароль слишком короткий</div>
+          </div>
+
+          <label class="remember">
+            <input type="checkbox" id="remember" />
+            <span>Запомнить меня</span>
+          </label>
+
+          <div class="actions">
+            <button class="btn primary" id="submitBtn" type="submit">Войти</button>
+            <div class="hint">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></div>
+            <div class="hint">
+              Если кнопка не работает, нажмите <a href="#" id="forceLogin">Войти (демо)</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s);
+        const email = $('#email');
+        const password = $('#password');
+        const emailErr = $('#emailErr');
+        const passErr = $('#passErr');
+        const togglePass = $('#togglePass');
+        const eye = $('#eye');
+        const form = $('#form');
+        const forceLogin = document.getElementById('forceLogin');
+
+        function emailValid(v) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        }
+        function show(el) {
+          el.style.display = 'block';
+        }
+        function hide(el) {
+          el.style.display = 'none';
+        }
+
+        function validate() {
+          let ok = true;
+          if (!emailValid(email.value.trim())) {
+            show(emailErr);
+            ok = false;
+          } else hide(emailErr);
+          if (password.value.length < 6) {
+            show(passErr);
+            ok = false;
+          } else hide(passErr);
+          return ok;
+        }
+
+        function toggle(input, eyeEl) {
+          const visible = input.type === 'text';
+          input.type = visible ? 'password' : 'text';
+          eyeEl.innerHTML = visible
+            ? '<use href="icons/icons.svg#i-eye"/>'
+            : '<use href="icons/icons.svg#i-eye-off"/>';
+        }
+        togglePass.addEventListener('click', () => toggle(password, eye));
+
+        function doLogin() {
+          const nameFromEmail =
+            (email.value.trim().split('@')[0] || '').replace(/[\.\-_]+/g, ' ').trim() ||
+            'Пользователь';
+          if (window.TempasiAuth) {
+            TempasiAuth.setAuth(true, nameFromEmail);
+            if (TempasiAuth.renderMenu) TempasiAuth.renderMenu();
+          }
+          alert('Вход выполнен успешно (демо)!');
+          window.location.href = 'templates.html';
+        }
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (validate()) doLogin();
+          else alert('Проверьте email и пароль (минимум 6 символов)');
+        });
+
+        forceLogin.addEventListener('click', function (e) {
+          e.preventDefault();
+          doLogin();
+        });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        const AUTH_KEY = 'tempasi_auth';
+        const NAME_KEY = 'tempasi_name';
+        function getAuth() {
+          try {
+            return JSON.parse(localStorage.getItem(AUTH_KEY) || 'false');
+          } catch (e) {
+            return false;
+          }
+        }
+        function getName() {
+          return localStorage.getItem(NAME_KEY) || '';
+        }
+        function setAuth(val, name) {
+          localStorage.setItem(AUTH_KEY, JSON.stringify(!!val));
+          if (name) localStorage.setItem(NAME_KEY, name);
+        }
+        window.TempasiAuth = window.TempasiAuth || { getAuth, getName, setAuth };
+
+        function setupMenu() {
+          const btn = document.getElementById('userMenuBtn');
+          const menu = document.getElementById('userMenu');
+          if (!btn || !menu) return;
+          const dropdown = btn.closest('div.dropdown');
+
+          function renderMenu() {
+            const isAuth = getAuth();
+            const name = getName();
+            menu.innerHTML = '';
+            if (isAuth) {
+              const avatarUrl =
+                'https://i.pravatar.cc/150?u=' + encodeURIComponent(name || 'tempasi');
+              btn.innerHTML = '<img src="' + avatarUrl + '" alt="avatar" class="avatar-img">';
+              const profile = document.createElement('a');
+              profile.href = 'javascript:void(0)';
+              profile.id = 'profileBtn';
+              profile.textContent = 'Профиль';
+              menu.appendChild(profile);
+              const logout = document.createElement('a');
+              logout.href = 'javascript:void(0)';
+              logout.id = 'logoutBtn';
+              logout.textContent = 'Выход';
+              menu.appendChild(logout);
+              btn.title = 'Аккаунт';
+            } else {
+              btn.innerHTML = '<i class="zmdi zmdi-power"></i>';
+              const reg = document.createElement('a');
+              reg.href = 'register.html';
+              reg.textContent = 'Регистрация';
+              menu.appendChild(reg);
+              const login = document.createElement('a');
+              login.href = 'login.html';
+              login.textContent = 'Вход';
+              menu.appendChild(login);
+              btn.title = 'Регистрация/Вход';
+            }
+          }
+
+          window.TempasiAuth.renderMenu = renderMenu;
+          renderMenu();
+
+          btn.addEventListener('click', () => {
+            dropdown.classList.toggle('open');
+            btn.setAttribute(
+              'aria-expanded',
+              dropdown.classList.contains('open') ? 'true' : 'false',
+            );
+          });
+          document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+          });
+
+          menu.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'logoutBtn') {
+              setAuth(false);
+              renderMenu();
+              dropdown.classList.remove('open');
+            }
+            if (e.target && e.target.id === 'profileBtn') {
+              alert('Профиль (демо)');
+              dropdown.classList.remove('open');
+            }
+          });
+        }
+
+        if (document.readyState === 'loading')
+          document.addEventListener('DOMContentLoaded', setupMenu);
+        else setupMenu();
+      })();
+    </script>
+
+    <footer>
+      <div class="footer-inner">
+        <nav>
+          <a href="javascript:void(0)">Условия сервиса</a>
+          <a href="javascript:void(0)">Политика конфиденциальности</a>
+          <a href="javascript:void(0)">Инвесторам</a>
+          <a href="javascript:void(0)">Партнёрам</a>
+          <a href="javascript:void(0)">О проекте</a>
+          <a href="javascript:void(0)">Контакты</a>
+        </nav>
+        <div style="color: var(--muted); font-size: 14px">© 2025 Tempasi. Все права защищены.</div>
+      </div>
+    </footer>
+  </body>
+</html>

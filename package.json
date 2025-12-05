@@ -1,14 +1,17 @@
 {
+  "type": "module",
   "name": "tempasi",
   "version": "1.0.0",
-  "description": "",
-  "main": "prettier.config.js",
+  "description": "Tempasi MVP backend + static frontend",
+  "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky",
+    "start": "node src/app.js",
+    "dev": "node src/app.js",
     "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
-    "lint:fix": "eslint src --fix"
+    "format:check": "prettier . --check",
+    "prepare": "husky"
   },
   "author": "",
   "license": "ISC",
@@ -21,5 +24,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.9",
     "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "pg": "^8.16.3"
   }
 }
