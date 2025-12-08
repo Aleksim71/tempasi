@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Tempasi — Вход (robust)</title>
-    <link rel="stylesheet" href="css/core.css" />
-    <link rel="stylesheet" href="css/custom.css" />
+    <link rel="stylesheet" href="/css/core.css" />
+    <link rel="stylesheet" href="/css/custom.css" />
     <style>
       .auth-wrap {
         min-height: 100dvh;
@@ -95,17 +95,17 @@
   <body>
     <header>
       <div class="brand">
-        <a href="templates.html"
+        <a href="/templates"
           ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
         >
       </div>
       <nav class="mainnav" aria-label="Главное меню">
-        <a href="templates.html"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
-        <a href="about.html"><i class="zmdi zmdi-info-outline"></i>About</a>
-        <a href="contact.html"><i class="zmdi zmdi-email"></i>Contact</a>
-        <a href="community.html"><i class="zmdi zmdi-accounts"></i>Community</a>
-        <a href="deals.html"><i class="zmdi zmdi-label"></i>Скидки</a>
-        <a href="profile.html"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
+        <a href="/templates"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
+        <a href="/about"><i class="zmdi zmdi-info-outline"></i>About</a>
+        <a href="/contact"><i class="zmdi zmdi-email"></i>Contact</a>
+        <a href="/community"><i class="zmdi zmdi-accounts"></i>Community</a>
+        <a href="/deals"><i class="zmdi zmdi-label"></i>Скидки</a>
+        <a href="/profile"><i class="zmdi zmdi-account-circle"></i>Профиль</a>
       </nav>
 
       <div class="actions" aria-label="Действия">
@@ -130,7 +130,7 @@
           <div class="row">
             <div class="label">Email</div>
             <div class="input">
-              <svg class="icon"><use href="icons/icons.svg#i-mail" /></svg>
+              <svg class="icon"><use href="/icons/icons.svg#i-mail" /></svg>
               <input
                 type="email"
                 name="email"
@@ -146,7 +146,7 @@
           <div class="row">
             <div class="label">Пароль</div>
             <div class="input">
-              <svg class="icon"><use href="icons/icons.svg#i-lock" /></svg>
+              <svg class="icon"><use href="/icons/icons.svg#i-lock" /></svg>
               <input
                 type="password"
                 name="password"
@@ -162,7 +162,7 @@
                 id="togglePass"
                 aria-label="Показать/скрыть пароль"
               >
-                <svg class="icon" id="eye"><use href="icons/icons.svg#i-eye" /></svg>
+                <svg class="icon" id="eye"><use href="/icons/icons.svg#i-eye" /></svg>
               </button>
             </div>
             <div class="hint">Минимум 6 символов</div>
@@ -224,8 +224,8 @@
           const visible = input.type === 'text';
           input.type = visible ? 'password' : 'text';
           eyeEl.innerHTML = visible
-            ? '<use href="icons/icons.svg#i-eye"/>'
-            : '<use href="icons/icons.svg#i-eye-off"/>';
+            ? '<use href=\"/icons/icons.svg#i-eye\"/>'
+            : '<use href=\"/icons/icons.svg#i-eye-off\"/>';
         }
         togglePass.addEventListener('click', () => toggle(password, eye));
 

@@ -1,0 +1,100 @@
+{{!-- src/views/template-details.hbs --}}
+
+<div class="templates-layout container">
+  <aside class="templates-sidebar">
+    {{!-- Те же фильтры, что и на главной --}}
+    {{> sidebar-filters filters=filters query=query }}
+  </aside>
+
+  <main class="templates-main templates-main--details">
+    <nav class="breadcrumb">
+      <a href="/">Главная</a> ›
+      <a href="/">Шаблоны</a> ›
+      {{template.name}}
+    </nav>
+
+    <div class="template-details">
+      <h1 class="template-details__title">
+        {{template.name}}
+      </h1>
+
+      <div class="template-details__meta">
+        {{template.category}} · {{template.type}} · Сложность: {{template.difficulty}}
+      </div>
+
+      <div class="template-details__columns">
+        <div class="template-details__info">
+          <div class="template-details__price">
+            {{template.price}} €
+          </div>
+
+          <div class="template-details__meta template-details__meta--secondary">
+            Лицензия: {{template.license}}<br />
+            Обновлён: {{template.updated}}
+          </div>
+
+          <div class="template-details__actions">
+            {{#if template.demoUrl}}
+              <a
+                href="{{template.demoUrl}}"
+                class="btn btn-ghost btn-sm"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                👁 Демо
+              </a>
+            {{/if}}
+
+            <a href="#" class="btn btn-ghost btn-sm">
+              В аренду
+            </a>
+
+            <a href="#" class="btn btn-primary btn-sm">
+              Купить
+            </a>
+
+            <a href="#" class="btn btn-ghost btn-sm">
+              ☆ В избранное
+            </a>
+          </div>
+        </div>
+
+        <div class="template-details__preview">
+          {{#if template.demoUrl}}
+            <iframe
+              src="{{template.demoUrl}}"
+              width="420"
+              height="280"
+              class="template-details__preview-frame"
+            ></iframe>
+
+            <small class="template-details__preview-note">
+              Если демо не отображается, откройте в новой вкладке:
+              <a href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">
+                {{template.demoUrl}}
+              </a>
+            </small>
+          {{else}}
+            <div class="template-details__preview-placeholder">
+              Превью скоро будет доступно
+            </div>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="template-details__section">
+        <h3>Описание</h3>
+        <p>{{template.description}}</p>
+      </div>
+
+      <div class="template-details__section">
+        <h3>Особенности</h3>
+        <ul class="template-details__list">
+          {{#each template.features}}
+            <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>

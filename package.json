@@ -6,7 +6,7 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "NODE_ENV=development node src/app.js",
+    "dev": "nodemon src/app.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
@@ -23,6 +23,7 @@
     "eslint-config-metarhia": "^9.1.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.9",
+    "nodemon": "^3.1.11",
     "prettier": "^3.6.2"
   },
   "dependencies": {

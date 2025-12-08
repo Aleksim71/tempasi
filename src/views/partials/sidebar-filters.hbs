@@ -1,0 +1,48 @@
+{{!--
+  Сайдбар фильтров.
+  Сейчас он статический — без реальной фильтрации.
+  Позже можно заменить кнопки на input/checkbox и привязать к query params.
+--}}
+
+<section class="templates-filters-card">
+  <form class="templates-filters-form" method="GET" action="/">
+    <div class="filters-group">
+      <h2 class="filters-group__title">Категории</h2>
+
+      <div class="filters-group__chips">
+        <button type="button" class="filter-chip">Лендинги</button>
+        <button type="button" class="filter-chip">Интернет-магазины</button>
+        <button type="button" class="filter-chip">Блог / Медиа</button>
+        <button type="button" class="filter-chip">Портфолио</button>
+        <button type="button" class="filter-chip">SaaS / IT</button>
+        <button type="button" class="filter-chip">Рестораны / Кафе</button>
+        <button type="button" class="filter-chip">Недвижимость</button>
+        <button type="button" class="filter-chip">Образование</button>
+        <button type="button" class="filter-chip">События</button>
+        <button type="button" class="filter-chip">Медицина</button>
+      </div>
+    </div>
+
+    <div class="filters-group">
+      <h2 class="filters-group__title">Лицензия</h2>
+
+      <div class="filters-group__chips filters-group__chips--licenses">
+        <button type="button" class="filter-chip filter-chip--license">PU</button>
+        <button type="button" class="filter-chip filter-chip--license">CU</button>
+        <button type="button" class="filter-chip filter-chip--license">EL</button>
+        <button type="button" class="filter-chip filter-chip--license">SL</button>
+        <button type="button" class="filter-chip filter-chip--license">ML</button>
+        <button type="button" class="filter-chip filter-chip--license">EX</button>
+        <button type="button" class="filter-chip filter-chip--license">RF</button>
+      </div>
+    </div>
+
+    <div class="filters-actions">
+      <button type="submit" class="btn btn-primary btn-full">
+        Применить фильтры
+      </button>
+    </div>
+  </form>
+</section>
+
+

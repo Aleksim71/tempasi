@@ -1,0 +1,63 @@
+<section class="profile-page profile-layout">
+  <div class="profile-layout-inner">
+    {{> profile-sidebar }}
+
+    <div class="profile-main">
+      <section class="panel">
+        <h2>Billing</h2>
+        <p class="hint">
+          Демо-форма для настройки платёжного метода. В продакшене её заменим на Stripe/PayPal
+          виджеты для пользователя
+          <strong>{{user.username}}</strong>
+          ({{user.email}}).
+        </p>
+        <form class="account-billing-form">
+          <label>
+            <div class="caption">Имя держателя</div>
+            <input type="text" placeholder="Имя Фамилия" />
+          </label>
+          <label>
+            <div class="caption">Номер карты</div>
+            <input type="text" placeholder="4242 4242 4242 4242" inputmode="numeric" />
+          </label>
+          <div class="row two">
+            <label>
+              <div class="caption">MM/YY</div>
+              <input type="text" placeholder="MM/YY" inputmode="numeric" />
+            </label>
+            <label>
+              <div class="caption">CVC</div>
+              <input type="text" placeholder="CVC" inputmode="numeric" />
+            </label>
+          </div>
+          <button type="button" class="btn primary">Сохранить метод оплаты</button>
+        </form>
+      </section>
+
+      {{#if billingItems}}
+        <section class="panel billing-history">
+          <h2>История платежей</h2>
+          <div class="billing-table">
+            {{#each billingItems}}
+              <div class="billing-row">
+                <div class="billing-main">
+                  <div class="billing-name">{{this.name}}</div>
+                  <div class="billing-date">{{this.date}}</div>
+                </div>
+                <div class="billing-meta">
+                  <span class="billing-status">{{this.status}}</span>
+                  <span class="billing-price">{{this.price}}</span>
+                </div>
+              </div>
+            {{/each}}
+          </div>
+        </section>
+      {{else}}
+        <section class="panel billing-history">
+          <h2>История платежей</h2>
+          <p class="hint">Пока нет покупок.</p>
+        </section>
+      {{/if}}
+    </div>
+  </div>
+</section>
