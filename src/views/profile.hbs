@@ -1,0 +1,155 @@
+<section class="profile-layout">
+  <div class="profile-layout-inner">
+    {{> profile-sidebar }}
+
+    <div class="profile-main">
+      <!-- Шапка профиля -->
+      <section class="panel profile-header">
+        <img src="{{user.avatar}}" class="avatar-img" alt="{{user.username}}" />
+        <div>
+          <div class="title">{{user.username}}</div>
+          <div class="meta">{{user.email}}</div>
+          <div class="row inline" style="margin-top: 8px">
+            <button class="btn small">Изменить данные</button>
+            <button class="btn small">Скопировать ссылку профиля</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Основные данные -->
+      <section class="panel">
+        <h2>Основные данные</h2>
+        <div class="grid-min">
+          <div class="row">
+            <div class="label">Полное имя</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#user" /></svg>
+              <input id="fullNameInput" placeholder="Ваше имя" value="{{user.fullName}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Никнейм</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#user" /></svg>
+              <input id="nickInput" placeholder="Ваш никнейм" value="{{user.username}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Email</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#mail" /></svg>
+              <input id="emailInput" placeholder="you@example.com" value="{{user.email}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Роль</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#user" /></svg>
+              <input id="roleInput" placeholder="Ваша роль" value="{{user.role}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Локация</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#location" /></svg>
+              <input id="locationInput" placeholder="Город" value="{{user.location}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Веб‑сайт</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#link" /></svg>
+              <input id="websiteInput" placeholder="https://example.com" value="{{user.website}}" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">О себе</div>
+            <div class="input">
+              <textarea id="bioInput" placeholder="Краткое описание">{{user.bio}}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="row inline">
+          <button class="btn primary" id="saveProfile">Сохранить</button>
+          <span class="hint" id="saveHint" style="display: none">Сохранено (демо)</span>
+        </div>
+        <label class="row checkbox">
+          <input type="checkbox" id="isPublic" {{#if user.isPublic}}checked{{/if}} />
+          <span>Показывать профиль публично</span>
+        </label>
+      </section>
+
+      <!-- Безопасность -->
+      <section class="panel">
+        <h2>Безопасность</h2>
+        <div class="grid-min">
+          <div class="row">
+            <div class="label">Новый пароль</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#lock" /></svg>
+              <input type="password" id="newPass" placeholder="Минимум 6 символов" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Повторите пароль</div>
+            <div class="input">
+              <svg class="icon"><use href="/icons/symbols.svg#lock" /></svg>
+              <input type="password" id="newPass2" placeholder="Повторите новый пароль" />
+            </div>
+          </div>
+        </div>
+        <div class="row inline">
+          <button class="btn" id="changePassBtn">Сменить пароль</button>
+          <button class="btn" id="setup2faBtn">Настроить 2FA (демо)</button>
+        </div>
+      </section>
+
+      <!-- Уведомления -->
+      <section class="panel">
+        <h2>Уведомления</h2>
+        <label class="row checkbox">
+          <input type="checkbox" {{#if user.notifyDeals}}checked{{/if}} />
+          <span>Уведомления о скидках и сделках</span>
+        </label>
+        <label class="row checkbox">
+          <input type="checkbox" {{#if user.notifyMessages}}checked{{/if}} />
+          <span>Уведомления о сообщениях</span>
+        </label>
+        <label class="row checkbox">
+          <input type="checkbox" {{#if user.notifyDigest}}checked{{/if}} />
+          <span>Еженедельный дайджест</span>
+        </label>
+      </section>
+
+      <!-- Мои шаблоны — загрузка (демо) -->
+      <section class="panel">
+        <h2>Мои шаблоны — загрузка</h2>
+        <div class="uploader">
+          <div class="drop" id="dropzone">
+            <div>
+              <div class="title" style="font-weight: 800">Перетащите файлы сюда</div>
+              <div class="hint">или выберите вручную (изображения, ZIP)</div>
+            </div>
+            <input
+              id="fileInput"
+              type="file"
+              multiple
+              accept=".png,.jpg,.jpeg,.webp,.zip"
+              style="display: none"
+            />
+          </div>
+          <div class="row inline">
+            <button class="btn" id="pickBtn">
+              <i class="zmdi zmdi-file-plus"></i>&nbsp;Выбрать файлы
+            </button>
+            <button class="btn primary" id="uploadBtn" disabled>
+              <i class="zmdi zmdi-cloud-upload"></i>&nbsp;Загрузить (демо)
+            </button>
+            <span class="hint" id="uploadHint">Выбрано: <b id="count">0</b> файлов</span>
+          </div>
+          <div class="grid cards" id="previews" style="display: none"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
