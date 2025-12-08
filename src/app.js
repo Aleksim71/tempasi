@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
-// Папка с HTML/CSS/icons (статические файлы)
+// Папка с HTML-страницами (старый UI)
 const publicDir = path.join(__dirname, '..', 'mvp-tempasi');
 
 // ===== Handlebars =====
@@ -27,37 +27,83 @@ app.engine(
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Статика
+// Статика: CSS и иконки из src/
+app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/icons', express.static(path.join(__dirname, 'icons')));
+
+// Статика: старые HTML-страницы
 app.use(express.static(publicDir));
 
-// Главная страница → templates.hbs
+// Главная страница → редирект на /templates
 app.get('/', (req, res) => {
-  res.render('templates');
+  res.redirect('/templates');
 });
 
-// /index.html тоже ведёт на templates.hbs
+// /index.html тоже ведёт на /templates
 app.get('/index.html', (req, res) => {
-  res.render('templates');
+  res.redirect('/templates');
 });
 
-// Страницы, которые пока не переведены в HBS — временно отдаём напрямую
-const staticPages = [
-  'about.html',
-  'billing.html',
-  'community.html',
-  'contact.html',
-  'deals.html',
-  'favorites.html',
-  'login.html',
-  'profile.html',
-  'register.html',
-  'rentals.html',
-];
+// Страница каталога шаблонов
+app.get('/templates', (req, res) => {
+  res.render('templates', {
+    title: 'Tempasi Templates',
+    templates,
+  });
+});
 
-staticPages.forEach((file) => {
-  const route = '/' + file.replace('.html', '');
-  app.get(route, (req, res) => {
-    res.sendFile(path.join(publicDir, file));
+// Страница профиля (HBS)
+app.get('/profile', (req, res) => {
+  res.render('profile', {
+    title: 'Профиль — Tempasi Templates',
+  });
+});
+
+// Страница Billing (HBS)
+app.get('/billing', (req, res) => {
+  res.render('billing', {
+    title: 'Billing — Tempasi',
+    user: {
+      username: 'Demo User',
+      email: 'you@example.com',
+      avatar: '/icons/user-avatar-demo.png',
+    },
+    billingItems: [
+      {
+        name: 'Nova SaaS — Landing',
+        date: '2025-01-01',
+        price: '€89',
+        status: 'Оплачен',
+      },
+      {
+        name: 'E‑Com Pro',
+        date: '2025-01-15',
+        price: '€149',
+        status: 'Оплачен',
+      },
+      {
+        name: 'Portfolio Light',
+        date: '2025-02-02',
+        price: '€59',
+        status: 'В обработке',
+      },
+    ],
+  });
+});
+
+// Страница логина (HBS)
+app.get('/login', (req, res) => {
+  res.render('login', {
+    layout: 'auth',
+    title: 'Login — Tempasi',
+  });
+});
+
+// Страница регистрации (HBS)
+app.get('/register', (req, res) => {
+  res.render('register', {
+    layout: 'auth',
+    title: 'Register — Tempasi',
   });
 });
 
