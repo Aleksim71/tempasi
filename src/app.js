@@ -3,17 +3,22 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { engine } from 'express-handlebars';
-import { templates } from './data/templates.js';
+
+import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
 
 dotenv.config();
 
 const app = express();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
-// Папка с HTML-страницами (старый UI)
-const publicDir = path.join(__dirname, '..', 'mvp-tempasi');
+// Папки c CSS и иконками (Новая структура)
+const cssDir = path.join(__dirname, 'css');
+const iconsDir = path.join(__dirname, 'icons');
 
-// ===== Handlebars =====
+// СТАРАЯ статика (выносим в самый конец!)
+const oldUiDir = path.join(__dirname, '..', 'mvp-tempasi');
+
+// ====================== Handlebars ======================
 app.engine(
   'hbs',
   engine({
@@ -27,39 +32,62 @@ app.engine(
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Статика: CSS и иконки из src/
-app.use('/css', express.static(path.join(__dirname, 'css')));
-app.use('/icons', express.static(path.join(__dirname, 'icons')));
+// ====================== Маршруты (ВЫШЕ статики!) ======================
 
-// Статика: старые HTML-страницы
-app.use(express.static(publicDir));
-
-// Главная страница → редирект на /templates
+// Главная → каталог шаблонов
 app.get('/', (req, res) => {
   res.redirect('/templates');
 });
 
-// /index.html тоже ведёт на /templates
+// /index.html → тоже каталог
 app.get('/index.html', (req, res) => {
   res.redirect('/templates');
 });
 
-// Страница каталога шаблонов
-app.get('/templates', (req, res) => {
-  res.render('templates', {
-    title: 'Tempasi Templates',
-    templates,
-  });
+// ================== Каталог шаблонов ==================
+app.get('/templates', async (req, res, next) => {
+  try {
+    const templates = await getAllTemplates();
+
+    res.render('templates', {
+      title: 'Templates — Tempasi',
+      templates,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Страница профиля (HBS)
+// ================== Детализация шаблона ==================
+app.get('/templates/:slug', async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const tpl = await getTemplateBySlug(slug);
+
+    if (!tpl) {
+      return res.status(404).render('template-not-found', {
+        title: 'Шаблон не найден — Tempasi',
+        slug,
+      });
+    }
+
+    res.render('template-details', {
+      title: `${tpl.title} — Tempasi`,
+      template: tpl,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ================== Профиль ==================
 app.get('/profile', (req, res) => {
   res.render('profile', {
-    title: 'Профиль — Tempasi Templates',
+    title: 'Профиль — Tempasi',
   });
 });
 
-// Страница Billing (HBS)
+// ================== Billing ==================
 app.get('/billing', (req, res) => {
   res.render('billing', {
     title: 'Billing — Tempasi',
@@ -69,29 +97,14 @@ app.get('/billing', (req, res) => {
       avatar: '/icons/user-avatar-demo.png',
     },
     billingItems: [
-      {
-        name: 'Nova SaaS — Landing',
-        date: '2025-01-01',
-        price: '€89',
-        status: 'Оплачен',
-      },
-      {
-        name: 'E‑Com Pro',
-        date: '2025-01-15',
-        price: '€149',
-        status: 'Оплачен',
-      },
-      {
-        name: 'Portfolio Light',
-        date: '2025-02-02',
-        price: '€59',
-        status: 'В обработке',
-      },
+      { name: 'Nova SaaS — Landing', date: '2025-01-01', price: '€89', status: 'Оплачен' },
+      { name: 'E-Com Pro', date: '2025-01-15', price: '€149', status: 'Оплачен' },
+      { name: 'Portfolio Light', date: '2025-02-02', price: '€59', status: 'В обработке' },
     ],
   });
 });
 
-// Страница логина (HBS)
+// ================== Login ==================
 app.get('/login', (req, res) => {
   res.render('login', {
     layout: 'auth',
@@ -99,7 +112,7 @@ app.get('/login', (req, res) => {
   });
 });
 
-// Страница регистрации (HBS)
+// ================== Register ==================
 app.get('/register', (req, res) => {
   res.render('register', {
     layout: 'auth',
@@ -107,7 +120,7 @@ app.get('/register', (req, res) => {
   });
 });
 
-// === API-заглушка ===============================================
+// ================== API ==================
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -116,10 +129,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// === Запуск сервера =============================================
+// ====================== СТАТИКА (в самом конце!) ======================
+// Теперь статика НЕ ломает маршруты
+app.use('/css', express.static(cssDir));
+app.use('/icons', express.static(iconsDir));
+
+// Старый UI — только после всех маршрутов
+app.use(express.static(oldUiDir));
+
+// ====================== Запуск сервера ======================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Tempasi server running at: http://localhost:${PORT}`);
-  console.log(`📂 Serving static files from: ${publicDir}`);
+  console.log(`\n🚀 Tempasi server running at http://localhost:${PORT}`);
+  console.log(`📂 Serving old UI from: ${oldUiDir}`);
 });

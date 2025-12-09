@@ -1,24 +1,16 @@
-<section class="page page--template-not-found">
-  <div class="container tpl-layout">
-
-    {{> sidebar-filters}}
-
-    <main class="tpl-main tpl-main--details">
-      <div class="tpl-not-found">
-        <h1 class="tpl-not-found__title">Шаблон не найден</h1>
-        <p class="tpl-not-found__text">
-          К сожалению, шаблона с ID <strong>{{id}}</strong> не существует
-          или он временно недоступен.
-        </p>
-
-        <p class="tpl-not-found__text">
-          Попробуйте выбрать другой шаблон в каталоге.
-        </p>
-
-        <a href="/" class="btn btn--primary">
-          ← Вернуться к каталогу
-        </a>
-      </div>
-    </main>
-  </div>
+<section class="template-not-found">
+  <h1>Шаблон не найден</h1>
+  <p>
+    К сожалению, шаблона со слагом
+    <strong>{{slug}}</strong>
+    не существует или он был удалён.
+  </p>
+  <p>
+    Попробуйте выбрать другой шаблон в каталоге.
+  </p>
+  <p>
+    <a href="/templates" class="btn">
+      ← Вернуться к списку шаблонов
+    </a>
+  </p>
 </section>

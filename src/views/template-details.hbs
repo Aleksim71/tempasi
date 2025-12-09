@@ -1,100 +1,64 @@
 {{!-- src/views/template-details.hbs --}}
 
-<div class="templates-layout container">
-  <aside class="templates-sidebar">
-    {{!-- Те же фильтры, что и на главной --}}
-    {{> sidebar-filters filters=filters query=query }}
-  </aside>
+<section class="template-details">
+  <header class="template-details__header">
+    <h1 class="template-details__title">{{template.title}}</h1>
+    <p class="template-details__subtitle">{{template.short_desc}}</p>
+  </header>
 
-  <main class="templates-main templates-main--details">
-    <nav class="breadcrumb">
-      <a href="/">Главная</a> ›
-      <a href="/">Шаблоны</a> ›
-      {{template.name}}
-    </nav>
+  {{#if template.preview_image}}
+    <div class="template-details__preview">
+      <img
+        src="{{template.preview_image}}"
+        alt="{{template.title}}"
+        class="template-details__img"
+        loading="lazy"
+      />
+    </div>
+  {{/if}}
 
-    <div class="template-details">
-      <h1 class="template-details__title">
-        {{template.name}}
-      </h1>
-
-      <div class="template-details__meta">
-        {{template.category}} · {{template.type}} · Сложность: {{template.difficulty}}
-      </div>
-
-      <div class="template-details__columns">
-        <div class="template-details__info">
-          <div class="template-details__price">
-            {{template.price}} €
-          </div>
-
-          <div class="template-details__meta template-details__meta--secondary">
-            Лицензия: {{template.license}}<br />
-            Обновлён: {{template.updated}}
-          </div>
-
-          <div class="template-details__actions">
-            {{#if template.demoUrl}}
-              <a
-                href="{{template.demoUrl}}"
-                class="btn btn-ghost btn-sm"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                👁 Демо
-              </a>
-            {{/if}}
-
-            <a href="#" class="btn btn-ghost btn-sm">
-              В аренду
-            </a>
-
-            <a href="#" class="btn btn-primary btn-sm">
-              Купить
-            </a>
-
-            <a href="#" class="btn btn-ghost btn-sm">
-              ☆ В избранное
-            </a>
-          </div>
-        </div>
-
-        <div class="template-details__preview">
-          {{#if template.demoUrl}}
-            <iframe
-              src="{{template.demoUrl}}"
-              width="420"
-              height="280"
-              class="template-details__preview-frame"
-            ></iframe>
-
-            <small class="template-details__preview-note">
-              Если демо не отображается, откройте в новой вкладке:
-              <a href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">
-                {{template.demoUrl}}
-              </a>
-            </small>
-          {{else}}
-            <div class="template-details__preview-placeholder">
-              Превью скоро будет доступно
-            </div>
-          {{/if}}
-        </div>
-      </div>
-
-      <div class="template-details__section">
-        <h3>Описание</h3>
-        <p>{{template.description}}</p>
-      </div>
-
-      <div class="template-details__section">
-        <h3>Особенности</h3>
-        <ul class="template-details__list">
-          {{#each template.features}}
-            <li>{{this}}</li>
+  <div class="template-details__meta">
+    {{#if template.categories}}
+      <div class="template-details__categories">
+        <span>Категории:</span>
+        <ul>
+          {{#each template.categories}}
+            <li>{{name}}</li>
           {{/each}}
         </ul>
       </div>
-    </div>
-  </main>
-</div>
+    {{/if}}
+
+    {{#if template.demo_url}}
+      <a
+        href="{{template.demo_url}}"
+        class="btn primary"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Открыть демо
+      </a>
+    {{/if}}
+  </div>
+
+  {{#if template.full_desc}}
+    <article class="template-details__body">
+      <h2>Описание</h2>
+      <p>{{template.full_desc}}</p>
+    </article>
+  {{/if}}
+
+  {{#if template.licenses}}
+    <section class="template-details__pricing">
+      <h2>Лицензии и цены</h2>
+      <ul class="template-details__license-list">
+        {{#each template.licenses}}
+          <li class="template-details__license-item">
+            <strong>{{name}}</strong>
+            — {{price_cents}} €
+          </li>
+        {{/each}}
+      </ul>
+    </section>
+  {{/if}}
+</section>

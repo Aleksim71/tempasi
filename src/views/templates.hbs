@@ -1,14 +1,37 @@
-<section class="template-list">
-  {{#each templates}}
-    <article class="template-card">
-      <img src="{{img}}" alt="{{name}}" class="template-img" />
+<div class="page">
+  <header class="page-header">
+    <h1>Шаблоны</h1>
+  </header>
 
-      <h3 class="template-name">{{name}}</h3>
-      <p class="template-desc">{{desc}}</p>
+  <div class="layout">
+    <aside class="sidebar">
+      {{> sidebar-filters}}
+    </aside>
 
-      <div class="template-bottom">
-        <span class="template-price">{{price}} €</span>
-      </div>
-    </article>
-  {{/each}}
-</section>
+    <main>
+      <section class="grid">
+        {{#each templates}}
+          <article class="card">
+            <div class="thumb">
+              {{#if preview_image}}
+                <img src="{{preview_image}}" alt="{{title}}" />
+              {{/if}}
+            </div>
+
+            <div class="card-body">
+              <h3 class="card-title">{{title}}</h3>
+              <p class="card-desc">{{short_desc}}</p>
+            </div>
+
+            <div class="card-footer">
+              <div class="price">
+                от {{min_price_cents}} €
+              </div>
+              <a href="/templates/{{slug}}" class="btn primary">Подробнее</a>
+            </div>
+          </article>
+        {{/each}}
+      </section>
+    </main>
+  </div>
+</div>

@@ -1,48 +1,83 @@
-{{!--
-  Сайдбар фильтров.
-  Сейчас он статический — без реальной фильтрации.
-  Позже можно заменить кнопки на input/checkbox и привязать к query params.
---}}
-
-<section class="templates-filters-card">
-  <form class="templates-filters-form" method="GET" action="/">
-    <div class="filters-group">
-      <h2 class="filters-group__title">Категории</h2>
-
-      <div class="filters-group__chips">
-        <button type="button" class="filter-chip">Лендинги</button>
-        <button type="button" class="filter-chip">Интернет-магазины</button>
-        <button type="button" class="filter-chip">Блог / Медиа</button>
-        <button type="button" class="filter-chip">Портфолио</button>
-        <button type="button" class="filter-chip">SaaS / IT</button>
-        <button type="button" class="filter-chip">Рестораны / Кафе</button>
-        <button type="button" class="filter-chip">Недвижимость</button>
-        <button type="button" class="filter-chip">Образование</button>
-        <button type="button" class="filter-chip">События</button>
-        <button type="button" class="filter-chip">Медицина</button>
-      </div>
-    </div>
+<aside class="filters">
+  <div class="filters-section">
+    <h3 class="filters-title">Шаблоны</h3>
 
     <div class="filters-group">
-      <h2 class="filters-group__title">Лицензия</h2>
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="landing" />
+        Лендинги
+      </label>
 
-      <div class="filters-group__chips filters-group__chips--licenses">
-        <button type="button" class="filter-chip filter-chip--license">PU</button>
-        <button type="button" class="filter-chip filter-chip--license">CU</button>
-        <button type="button" class="filter-chip filter-chip--license">EL</button>
-        <button type="button" class="filter-chip filter-chip--license">SL</button>
-        <button type="button" class="filter-chip filter-chip--license">ML</button>
-        <button type="button" class="filter-chip filter-chip--license">EX</button>
-        <button type="button" class="filter-chip filter-chip--license">RF</button>
-      </div>
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="ecommerce" />
+        Интернет-магазины
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="blog" />
+        Блог / Медиа
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="portfolio" />
+        Портфолио
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="saas" />
+        SaaS / IT
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="food" />
+        Ресторан / Кафе
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="realty" />
+        Недвижимость
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="education" />
+        Образование
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="events" />
+        События
+      </label>
+
+      <label class="filter-pill">
+        <input type="checkbox" name="cat" value="medicine" />
+        Медицина
+      </label>
+    </div>
+  </div>
+
+  <div class="filters-section">
+    <h3 class="filters-title">Цена</h3>
+
+    <div class="price-slider">
+      <span>0$</span>
+      <input type="range" min="0" max="1000" value="0" />
+      <span>1000$</span>
+    </div>
+  </div>
+
+  <div class="filters-section">
+    <h3 class="filters-title">Лицензии</h3>
+
+    <div class="filters-group">
+      <label class="filter-pill"><input type="checkbox" /> PU</label>
+      <label class="filter-pill"><input type="checkbox" /> CU</label>
+      <label class="filter-pill"><input type="checkbox" /> EL</label>
+      <label class="filter-pill"><input type="checkbox" /> SL</label>
+      <label class="filter-pill"><input type="checkbox" /> ML</label>
+      <label class="filter-pill"><input type="checkbox" /> EX</label>
+      <label class="filter-pill"><input type="checkbox" /> RF</label>
     </div>
 
-    <div class="filters-actions">
-      <button type="submit" class="btn btn-primary btn-full">
-        Применить фильтры
-      </button>
-    </div>
-  </form>
-</section>
-
-
+    <button class="btn primary filters-apply">Применить фильтры</button>
+  </div>
+</aside>
