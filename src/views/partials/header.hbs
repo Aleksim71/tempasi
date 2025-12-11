@@ -1,38 +1,44 @@
-<header>
-  <div class="brand">
-    <a href="/templates"
-      ><i class="zmdi zmdi-collection-image-o"></i> Tempasi <b>Templates</b></a
-    >
-  </div>
-
-  <nav class="mainnav" aria-label="Главное меню">
-    <a href="/templates"><i class="zmdi zmdi-view-module"></i>Шаблоны</a>
-    <a href="/about"><i class="zmdi zmdi-info-outline"></i>About</a>
-    <a href="/contact"><i class="zmdi zmdi-email"></i>Contact</a>
-    <a href="/community"><i class="zmdi zmdi-accounts"></i>Community</a>
-    <a href="/deals"><i class="zmdi zmdi-label"></i>Скидки</a>
-    <a href="/profile">
-      <i class="zmdi zmdi-account-circle"></i>
-      Профиль
+{{!-- views/partials/header.hbs --}}
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">
+        Tempasi <span class="logo-text-accent">Templates</span>
+      </span>
     </a>
-  </nav>
 
-  <div class="actions" aria-label="Действия">
-    <button class="iconbtn tooltipped" data-title="Поиск">
-      <i class="zmdi zmdi-search"></i>
-    </button>
-    <div class="dropdown">
-      <button class="iconbtn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
-        <i class="zmdi zmdi-power"></i>
+    <nav class="nav-main">
+      <a href="/templates" class="nav-link {{#if (eq activePage "templates")}}is-active{{/if}}">
+        Шаблоны
+      </a>
+      <a href="/about" class="nav-link {{#if (eq activePage "about")}}is-active{{/if}}">
+        About
+      </a>
+      <a href="/contact" class="nav-link {{#if (eq activePage "contact")}}is-active{{/if}}">
+        Contact
+      </a>
+      <a href="/community" class="nav-link {{#if (eq activePage "community")}}is-active{{/if}}">
+        Community
+      </a>
+      <a href="/deals" class="nav-link {{#if (eq activePage "deals")}}is-active{{/if}}">
+        Скидки
+      </a>
+      <a href="/profile" class="nav-link {{#if (eq activePage "profile")}}is-active{{/if}}">
+        Профиль
+      </a>
+    </nav>
+
+    <div class="header-actions">
+      <button class="icon-btn" type="button" aria-label="Поиск">
+        <i class="zmdi zmdi-search"></i>
       </button>
-      <div class="dropdown-menu" id="userMenu">
-        <a href="/register">Регистрация</a>
-        <a href="/login">Вход</a>
-        <a href="javascript:void(0)" id="logoutBtn">Выход</a>
-      </div>
+      <button class="icon-btn" type="button" aria-label="Тема">
+        <i class="zmdi zmdi-brightness-6"></i>
+      </button>
+      <button class="icon-btn" type="button" aria-label="Корзина">
+        <i class="zmdi zmdi-shopping-cart"></i>
+      </button>
     </div>
-    <button class="iconbtn tooltipped" data-title="Корзина">
-      <i class="zmdi zmdi-shopping-cart"></i>
-    </button>
   </div>
 </header>

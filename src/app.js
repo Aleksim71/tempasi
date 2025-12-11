@@ -1,146 +1,183 @@
 // src/app.js
+import 'dotenv/config';
+import path from 'node:path';
 import express from 'express';
-import path from 'path';
-import dotenv from 'dotenv';
-import { engine } from 'express-handlebars';
+import { fileURLToPath } from 'node:url';
+import exphbs from 'express-handlebars';
 
 import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const PORT = process.env.PORT || 3000;
 
-// Папки c CSS и иконками (Новая структура)
-const cssDir = path.join(__dirname, 'css');
-const iconsDir = path.join(__dirname, 'icons');
+// =========================
+// Handlebars
+// =========================
+const hbs = exphbs.create({
+  extname: '.hbs',
+  defaultLayout: 'main',
+  layoutsDir: path.join(__dirname, 'views/layouts'),
+  partialsDir: path.join(__dirname, 'views/partials'),
+  helpers: {
+    eq(a, b) {
+      return a === b;
+    },
+    formatPrice(cents) {
+      if (cents == null) return '0 €';
+      const euros = cents / 100;
+      return `${euros.toLocaleString('de-DE', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })} €`;
+    },
+  },
+});
 
-// СТАРАЯ статика (выносим в самый конец!)
-const oldUiDir = path.join(__dirname, '..', 'mvp-tempasi');
-
-// ====================== Handlebars ======================
-app.engine(
-  'hbs',
-  engine({
-    extname: '.hbs',
-    defaultLayout: 'main',
-    layoutsDir: path.join(__dirname, 'views', 'layouts'),
-    partialsDir: path.join(__dirname, 'views', 'partials'),
-  }),
-);
-
-app.set('view engine', 'hbs');
+app.engine('.hbs', hbs.engine);
+app.set('view engine', '.hbs');
 app.set('views', path.join(__dirname, 'views'));
 
-// ====================== Маршруты (ВЫШЕ статики!) ======================
+// =========================
+// Мидлвары
+// =========================
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Главная → каталог шаблонов
-app.get('/', (req, res) => {
-  res.redirect('/templates');
+// статика из src/css, src/icons (мы монтируем их как /css и /icons)
+app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/icons', express.static(path.join(__dirname, 'icons')));
+
+// Текущий путь для подсветки активного пункта меню
+app.use((req, res, next) => {
+  res.locals.currentPath = req.path;
+  next();
 });
 
-// /index.html → тоже каталог
-app.get('/index.html', (req, res) => {
-  res.redirect('/templates');
+// =========================
+// Роуты
+// =========================
+
+// Главная = список шаблонов (как /templates)
+app.get('/', async (req, res, next) => {
+  try {
+    const templates = await getAllTemplates();
+
+    res.render('templates/index', {
+      title: 'Tempasi — шаблоны',
+      pageTitle: 'Шаблоны',
+      pageSubtitle:
+        'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
+      templates,
+      activeNav: 'templates',
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// ================== Каталог шаблонов ==================
+// Список шаблонов
 app.get('/templates', async (req, res, next) => {
   try {
     const templates = await getAllTemplates();
 
-    res.render('templates', {
-      title: 'Templates — Tempasi',
+    res.render('templates/index', {
+      title: 'Tempasi — шаблоны',
+      pageTitle: 'Шаблоны',
+      pageSubtitle:
+        'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
       templates,
+      activeNav: 'templates',
     });
   } catch (err) {
     next(err);
   }
 });
 
-// ================== Детализация шаблона ==================
+// Карточка отдельного шаблона
 app.get('/templates/:slug', async (req, res, next) => {
   try {
-    const { slug } = req.params;
-    const tpl = await getTemplateBySlug(slug);
+    const tmpl = await getTemplateBySlug(req.params.slug);
 
-    if (!tpl) {
-      return res.status(404).render('template-not-found', {
-        title: 'Шаблон не найден — Tempasi',
-        slug,
+    if (!tmpl) {
+      return res.status(404).render('errors/404', {
+        title: 'Шаблон не найден',
+        activeNav: 'templates',
       });
     }
 
-    res.render('template-details', {
-      title: `${tpl.title} — Tempasi`,
-      template: tpl,
+    res.render('templates/show', {
+      title: tmpl.title,
+      template: tmpl,
+      activeNav: 'templates',
     });
   } catch (err) {
     next(err);
   }
 });
 
-// ================== Профиль ==================
+// Профиль
 app.get('/profile', (req, res) => {
-  res.render('profile', {
-    title: 'Профиль — Tempasi',
+  res.render('profile/index', {
+    title: 'Профиль',
+    activeNav: 'profile',
   });
 });
 
-// ================== Billing ==================
-app.get('/billing', (req, res) => {
-  res.render('billing', {
-    title: 'Billing — Tempasi',
-    user: {
-      username: 'Demo User',
-      email: 'you@example.com',
-      avatar: '/icons/user-avatar-demo.png',
-    },
-    billingItems: [
-      { name: 'Nova SaaS — Landing', date: '2025-01-01', price: '€89', status: 'Оплачен' },
-      { name: 'E-Com Pro', date: '2025-01-15', price: '€149', status: 'Оплачен' },
-      { name: 'Portfolio Light', date: '2025-02-02', price: '€59', status: 'В обработке' },
-    ],
+// ---------- Статические страницы ----------
+app.get('/about', (req, res) => {
+  res.render('static/about', {
+    title: 'About',
+    activeNav: 'about',
   });
 });
 
-// ================== Login ==================
-app.get('/login', (req, res) => {
-  res.render('login', {
-    layout: 'auth',
-    title: 'Login — Tempasi',
+app.get('/contact', (req, res) => {
+  res.render('static/contact', {
+    title: 'Contact',
+    activeNav: 'contact',
   });
 });
 
-// ================== Register ==================
-app.get('/register', (req, res) => {
-  res.render('register', {
-    layout: 'auth',
-    title: 'Register — Tempasi',
+app.get('/community', (req, res) => {
+  res.render('static/community', {
+    title: 'Community',
+    activeNav: 'community',
   });
 });
 
-// ================== API ==================
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    uptime: process.uptime(),
-    env: process.env.NODE_ENV || 'dev',
+app.get('/deals', (req, res) => {
+  res.render('static/deals', {
+    title: 'Скидки',
+    activeNav: 'deals',
   });
 });
 
-// ====================== СТАТИКА (в самом конце!) ======================
-// Теперь статика НЕ ломает маршруты
-app.use('/css', express.static(cssDir));
-app.use('/icons', express.static(iconsDir));
+// =========================
+// 404 и 500
+// =========================
 
-// Старый UI — только после всех маршрутов
-app.use(express.static(oldUiDir));
+// 404
+app.use((req, res) => {
+  res.status(404).render('errors/404', {
+    title: 'Страница не найдена',
+  });
+});
 
-// ====================== Запуск сервера ======================
-const PORT = process.env.PORT || 3000;
+// 500
+app.use((err, req, res, _next) => {
+  console.error(err);
+  res.status(500).render('errors/500', {
+    title: 'Ошибка сервера',
+    error: process.env.NODE_ENV === 'development' ? err : null,
+  });
+});
 
+// =========================
+// Старт сервера
+// =========================
 app.listen(PORT, () => {
-  console.log(`\n🚀 Tempasi server running at http://localhost:${PORT}`);
-  console.log(`📂 Serving old UI from: ${oldUiDir}`);
+  console.log(`Tempasi running at http://localhost:${PORT}`);
 });

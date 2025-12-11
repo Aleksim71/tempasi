@@ -3,7 +3,22 @@
 <section class="template-details">
   <header class="template-details__header">
     <h1 class="template-details__title">{{template.title}}</h1>
-    <p class="template-details__subtitle">{{template.short_desc}}</p>
+
+    {{#if template.short_desc}}
+      <p class="template-details__subtitle">
+        {{template.short_desc}}
+      </p>
+    {{/if}}
+
+    {{#if template.author_name}}
+      <p class="template-details__author-line">
+        Автор: {{template.author_name}}
+      </p>
+    {{else if template.author_email}}
+      <p class="template-details__author-line">
+        Автор: {{template.author_email}}
+      </p>
+    {{/if}}
   </header>
 
   {{#if template.preview_image}}
@@ -59,6 +74,43 @@
           </li>
         {{/each}}
       </ul>
+    </section>
+  {{/if}}
+
+  {{!-- Блок "Об авторе" --}}
+  {{#if template.author_name}}
+    <section class="template-details__author">
+      <h2>Об авторе</h2>
+
+      <div class="template-details__author-card">
+        {{#if template.author_avatar}}
+          <div class="template-details__author-avatar">
+            <img
+              src="{{template.author_avatar}}"
+              alt="{{template.author_name}}"
+              loading="lazy"
+            />
+          </div>
+        {{/if}}
+
+        <div class="template-details__author-info">
+          <h3 class="template-details__author-name">
+            {{template.author_name}}
+          </h3>
+
+          {{#if template.author_bio}}
+            <p class="template-details__author-bio">
+              {{template.author_bio}}
+            </p>
+          {{/if}}
+
+          {{#if template.author_email}}
+            <p class="template-details__author-email">
+              Контакт: {{template.author_email}}
+            </p>
+          {{/if}}
+        </div>
+      </div>
     </section>
   {{/if}}
 </section>

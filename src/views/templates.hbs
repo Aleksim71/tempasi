@@ -1,6 +1,10 @@
+{{!-- src/views/templates.hbs --}}
 <div class="page">
   <header class="page-header">
     <h1>Шаблоны</h1>
+    <p>
+      Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.
+    </p>
   </header>
 
   <div class="layout">
@@ -10,27 +14,47 @@
 
     <main>
       <section class="grid">
-        {{#each templates}}
-          <article class="card">
-            <div class="thumb">
-              {{#if preview_image}}
-                <img src="{{preview_image}}" alt="{{title}}" />
-              {{/if}}
-            </div>
-
-            <div class="card-body">
-              <h3 class="card-title">{{title}}</h3>
-              <p class="card-desc">{{short_desc}}</p>
-            </div>
-
-            <div class="card-footer">
-              <div class="price">
-                от {{min_price_cents}} €
+        {{#if templates}}
+          {{#each templates}}
+            <article class="card">
+              <div class="thumb">
+                {{#if preview_image}}
+                  <img
+                    src="{{preview_image}}"
+                    alt="{{title}}"
+                    loading="lazy"
+                  />
+                {{/if}}
               </div>
-              <a href="/templates/{{slug}}" class="btn primary">Подробнее</a>
-            </div>
-          </article>
-        {{/each}}
+
+              <div class="card-body">
+                <h3 class="card-title">{{title}}</h3>
+                <p class="card-desc">{{short_desc}}</p>
+
+                {{!-- необязательный блок автора, если данные есть --}}
+                {{#if author_name}}
+                  <p class="card-author">Автор: {{author_name}}</p>
+                {{else if author_email}}
+                  <p class="card-author">Автор: {{author_email}}</p>
+                {{/if}}
+              </div>
+
+              <div class="card-footer">
+                <div class="price">
+                  от {{min_price_cents}} €
+                </div>
+
+                <a href="/templates/{{slug}}" class="btn primary">
+                  Подробнее
+                </a>
+              </div>
+            </article>
+          {{/each}}
+        {{else}}
+          <p class="templates-empty">
+            Пока нет шаблонов, но скоро будут 🙂
+          </p>
+        {{/if}}
       </section>
     </main>
   </div>

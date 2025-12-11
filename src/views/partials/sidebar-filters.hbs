@@ -1,83 +1,74 @@
-<aside class="filters">
-  <div class="filters-section">
-    <h3 class="filters-title">Шаблоны</h3>
+{{!-- views/partials/sidebar-filters.hbs --}}
+<aside class="sidebar">
+  <div class="sidebar-card">
+    <section class="sidebar-group">
+      <h3 class="sidebar-title">Шаблоны</h3>
 
-    <div class="filters-group">
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="landing" />
-        Лендинги
-      </label>
+      <div class="sidebar-chips">
+        <button type="button" class="chip chip-wide is-active">
+          Лендинги
+        </button>
+        <button type="button" class="chip chip-wide">
+          Интернет-магазины
+        </button>
+        <button type="button" class="chip chip-wide">
+          Блог / Медиа
+        </button>
+        <button type="button" class="chip chip-wide">
+          Портфолио
+        </button>
+        <button type="button" class="chip chip-wide">
+          SaaS / IT
+        </button>
+        <button type="button" class="chip chip-wide">
+          Ресторан / Кафе
+        </button>
+        <button type="button" class="chip chip-wide">
+          Недвижимость
+        </button>
+        <button type="button" class="chip chip-wide">
+          Образование
+        </button>
+        <button type="button" class="chip chip-wide">
+          События
+        </button>
+        <button type="button" class="chip chip-wide">
+          Медицина
+        </button>
+      </div>
+    </section>
 
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="ecommerce" />
-        Интернет-магазины
-      </label>
+    <section class="sidebar-group">
+      <h3 class="sidebar-title">Цена</h3>
+      <div class="sidebar-range">
+        <span class="range-min">0$</span>
+        <input
+          type="range"
+          min="0"
+          max="1000"
+          value="250"
+          class="range-input"
+        />
+        <span class="range-max">1000$</span>
+      </div>
+    </section>
 
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="blog" />
-        Блог / Медиа
-      </label>
+    <section class="sidebar-group">
+      <h3 class="sidebar-title">Лицензии</h3>
 
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="portfolio" />
-        Портфолио
-      </label>
+      <div class="sidebar-chips grid-licenses">
+        <button type="button" class="chip chip-small">PU</button>
+        <button type="button" class="chip chip-small">CU</button>
+        <button type="button" class="chip chip-small">EL</button>
+        <button type="button" class="chip chip-small">SL</button>
+        <button type="button" class="chip chip-small">ML</button>
+        <button type="button" class="chip chip-small">EX</button>
+        <button type="button" class="chip chip-small">RF</button>
+      </div>
 
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="saas" />
-        SaaS / IT
-      </label>
-
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="food" />
-        Ресторан / Кафе
-      </label>
-
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="realty" />
-        Недвижимость
-      </label>
-
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="education" />
-        Образование
-      </label>
-
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="events" />
-        События
-      </label>
-
-      <label class="filter-pill">
-        <input type="checkbox" name="cat" value="medicine" />
-        Медицина
-      </label>
-    </div>
-  </div>
-
-  <div class="filters-section">
-    <h3 class="filters-title">Цена</h3>
-
-    <div class="price-slider">
-      <span>0$</span>
-      <input type="range" min="0" max="1000" value="0" />
-      <span>1000$</span>
-    </div>
-  </div>
-
-  <div class="filters-section">
-    <h3 class="filters-title">Лицензии</h3>
-
-    <div class="filters-group">
-      <label class="filter-pill"><input type="checkbox" /> PU</label>
-      <label class="filter-pill"><input type="checkbox" /> CU</label>
-      <label class="filter-pill"><input type="checkbox" /> EL</label>
-      <label class="filter-pill"><input type="checkbox" /> SL</label>
-      <label class="filter-pill"><input type="checkbox" /> ML</label>
-      <label class="filter-pill"><input type="checkbox" /> EX</label>
-      <label class="filter-pill"><input type="checkbox" /> RF</label>
-    </div>
-
-    <button class="btn primary filters-apply">Применить фильтры</button>
+      <button type="button" class="btn primary sidebar-apply">
+        Применить фильтры
+      </button>
+    </section>
   </div>
 </aside>
