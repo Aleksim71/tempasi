@@ -1,0 +1,34 @@
+<div class="page">
+
+  <div class="layout">
+    <!-- ЛЕВАЯ КОЛОНКА — фильтры -->
+    <aside class="sidebar">
+      {{> sidebar-filters }}
+    </aside>
+
+    <!-- ПРАВАЯ КОЛОНКА — карточки -->
+    <section class="grid">
+      {{#each templates}}
+        <article class="card">
+          <div class="thumb">
+            {{#if preview_image}}
+              <img src="{{preview_image}}" alt="{{title}}" />
+            {{/if}}
+          </div>
+
+          <div class="card-body">
+            <h2 class="card-title">{{title}}</h2>
+            <p class="card-desc">{{short_desc}}</p>
+            <p class="card-author">Автор: {{author_email}}</p>
+          </div>
+
+          <div class="card-footer">
+            <span class="price">{{formatPrice min_price_cents}}</span>
+            <a href="/templates/{{slug}}" class="btn primary">Подробнее</a>
+          </div>
+        </article>
+      {{/each}}
+    </section>
+  </div>
+
+</div>

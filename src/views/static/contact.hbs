@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tempasi — Контакты</title>
+
+  {{!-- те же стили, что и на / и /templates --}}
+  <link rel="stylesheet" href="/css/core.css" />
+  <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+  {{!-- ШАПКА --}}
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="/" class="logo">
+        <span class="logo-mark"></span>
+        <span class="logo-text">
+          Tempasi <span class="logo-text-accent">Templates</span>
+        </span>
+      </a>
+
+      <nav class="nav-main">
+        <a href="/templates" class="nav-link">Шаблоны</a>
+        <a href="/about" class="nav-link">About</a>
+        <a href="/contact" class="nav-link is-active">Contact</a>
+        <a href="/community" class="nav-link">Community</a>
+        <a href="/deals" class="nav-link">Скидки</a>
+        <a href="/profile" class="nav-link">Профиль</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-btn" type="button">
+          <i class="i-search"></i>
+        </button>
+        <button class="icon-btn" type="button">
+          <i class="i-user"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    {{!-- ЗАГОЛОВОК СТРАНИЦЫ --}}
+    <section class="page-intro">
+      <h1>Контакты</h1>
+      <p class="page-intro__subtitle">
+        Напишите нам по любым вопросам о шаблонах, лицензиях и сотрудничестве.
+      </p>
+    </section>
+
+    {{!-- КОНТАКТНЫЕ КАРТОЧКИ --}}
+    <section class="contact-grid">
+      <article class="contact-card">
+        <h2>Поддержка клиентов</h2>
+        <p>Вопросы по покупке, лицензиям и загрузкам.</p>
+        <ul class="contact-list">
+          <li><strong>Email:</strong> support@tempasi.com</li>
+          <li><strong>Ответ:</strong> в течение 24 часов в будние дни</li>
+        </ul>
+      </article>
+
+      <article class="contact-card">
+        <h2>Партнёрство</h2>
+        <p>Хотите продавать свои шаблоны или сделать спец-проект?</p>
+        <ul class="contact-list">
+          <li><strong>Email:</strong> partners@tempasi.com</li>
+          <li><strong>Тема письма:</strong> Partnership / Collaboration</li>
+        </ul>
+      </article>
+
+      <article class="contact-card">
+        <h2>Юридические вопросы</h2>
+        <p>Лицензионные соглашения, права использования, документы.</p>
+        <ul class="contact-list">
+          <li><strong>Email:</strong> legal@tempasi.com</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span class="site-footer__copy">
+        © 2025 Tempasi. Все права защищены.
+      </span>
+      <nav class="site-footer-nav">
+        <a href="/terms">Условия сервиса</a>
+        <a href="/privacy">Политика конфиденциальности</a>
+        <a href="/investors">Инвесторам</a>
+        <a href="/partners">Партнёрам</a>
+        <a href="/about">О проекте</a>
+        <a href="/contact">Контакты</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<div class="page">
+  <div class="layout">
+    <!-- ЛЕВАЯ КОЛОНКА — меню профиля -->
+    <aside class="sidebar">
+      <nav class="profile-nav">
+        <a href="/profile" class="chip chip-wide is-active">Профиль</a>
+        <a href="/profile/favorites" class="chip chip-wide">Мои избранные</a>
+        <a href="/profile/rentals" class="chip chip-wide">Мои аренды</a>
+        <a href="/billing" class="chip chip-wide">Billing</a>
+        <a href="/deals" class="chip chip-wide">Сделки</a>
+      </nav>
+    </aside>
+
+    <!-- ПРАВАЯ КОЛОНКА — карточки форм -->
+    <section class="profile-content">
+
+      <!-- Основные данные -->
+      <div class="profile-card">
+        <div class="profile-card__header">
+          <div>
+            <h2>Основные данные</h2>
+            <p class="profile-card__subtitle">
+              Имя, ник и email будут использоваться в карточке автора и на страницах шаблонов.
+            </p>
+          </div>
+
+          <div class="profile-card__actions">
+            <button type="button" class="btn ghost">Отменить</button>
+            <button type="submit" form="profile-main-form" class="btn primary">
+              Сохранить
+            </button>
+          </div>
+        </div>
+
+        <form id="profile-main-form" class="profile-form">
+          <div class="field-group">
+            <label for="fullName">Полное имя</label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              placeholder="Ваше имя"
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="nickname">Никнейм</label>
+            <input
+              id="nickname"
+              name="nickname"
+              type="text"
+              placeholder="Ваш никнейм"
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="role">Роль</label>
+            <input
+              id="role"
+              name="role"
+              type="text"
+              placeholder="Дизайнер, студия, агентство…"
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="aboutShort">Кратко о себе</label>
+            <textarea
+              id="aboutShort"
+              name="aboutShort"
+              rows="3"
+              placeholder="Пара предложений о том, чем вы занимаетесь."
+            ></textarea>
+          </div>
+        </form>
+      </div>
+
+      <!-- Публичный профиль -->
+      <div class="profile-card">
+        <div class="profile-card__header">
+          <div>
+            <h2>Публичный профиль</h2>
+            <p class="profile-card__subtitle">
+              Эти поля отображаются на странице автора и помогают покупателям вас запомнить.
+            </p>
+          </div>
+        </div>
+
+        <form class="profile-form">
+          <div class="field-group">
+            <label for="portfolioUrl">Сайт или портфолио</label>
+            <input
+              id="portfolioUrl"
+              name="portfolioUrl"
+              type="url"
+              placeholder="https://ваш-сайт.ru"
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="avatarUrl">Ссылка на аватар</label>
+            <input
+              id="avatarUrl"
+              name="avatarUrl"
+              type="url"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div class="field-group">
+            <label for="publicBio">Биография</label>
+            <textarea
+              id="publicBio"
+              name="publicBio"
+              rows="4"
+              placeholder="Расскажите немного о себе для страницы автора."
+            ></textarea>
+          </div>
+        </form>
+      </div>
+
+    </section>
+  </div>
+</div>
