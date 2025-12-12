@@ -1,60 +1,47 @@
-{{!-- src/views/templates.hbs --}}
 <div class="page">
   <header class="page-header">
     <h1>Шаблоны</h1>
     <p>
-      Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.
+      Выбирайте готовые дизайны для лендингов, интернет-магазинов, SaaS и других проектов.
     </p>
   </header>
 
   <div class="layout">
+    <!-- Боковой фильтр -->
     <aside class="sidebar">
       {{> sidebar-filters}}
     </aside>
 
+    <!-- Список шаблонов -->
     <main>
       <section class="grid">
-        {{#if templates}}
-          {{#each templates}}
-            <article class="card">
-              <div class="thumb">
-                {{#if preview_image}}
-                  <img
-                    src="{{preview_image}}"
-                    alt="{{title}}"
-                    loading="lazy"
-                  />
-                {{/if}}
+        {{#each templates}}
+          <article class="card">
+            <div class="thumb">
+              {{!-- сюда потом можно будет подставить превью --}}
+            </div>
+
+            <div class="card-body">
+              <h2 class="card-title">{{this.name}}</h2>
+              <p class="card-desc">
+                {{this.description}}
+              </p>
+            </div>
+
+            <div class="card-footer">
+              <div>
+                <div>Автор: {{this.author}}</div>
+                <div class="muted">{{this.category}}</div>
               </div>
-
-              <div class="card-body">
-                <h3 class="card-title">{{title}}</h3>
-                <p class="card-desc">{{short_desc}}</p>
-
-                {{!-- необязательный блок автора, если данные есть --}}
-                {{#if author_name}}
-                  <p class="card-author">Автор: {{author_name}}</p>
-                {{else if author_email}}
-                  <p class="card-author">Автор: {{author_email}}</p>
-                {{/if}}
-              </div>
-
-              <div class="card-footer">
-                <div class="price">
-                  от {{min_price_cents}} €
-                </div>
-
-                <a href="/templates/{{slug}}" class="btn primary">
+              <div>
+                <div>{{this.price}} $</div>
+                <a href="/templates/{{this.id}}" class="btn primary">
                   Подробнее
                 </a>
               </div>
-            </article>
-          {{/each}}
-        {{else}}
-          <p class="templates-empty">
-            Пока нет шаблонов, но скоро будут 🙂
-          </p>
-        {{/if}}
+            </div>
+          </article>
+        {{/each}}
       </section>
     </main>
   </div>

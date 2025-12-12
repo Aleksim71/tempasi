@@ -1,4 +1,10 @@
 <div class="page">
+  <header class="page-header">
+    <h1>{{pageTitle}}</h1>
+    <p class="muted">
+      {{pageSubtitle}}
+    </p>
+  </header>
 
   <div class="layout">
     <!-- ЛЕВАЯ КОЛОНКА — фильтры -->
@@ -6,7 +12,7 @@
       {{> sidebar-filters }}
     </aside>
 
-    <!-- ПРАВАЯ КОЛОНКА — карточки -->
+    <!-- ПРАВАЯ КОЛОНКА — карточки шаблонов -->
     <section class="grid">
       {{#each templates}}
         <article class="card">
@@ -30,5 +36,4 @@
       {{/each}}
     </section>
   </div>
-
 </div>

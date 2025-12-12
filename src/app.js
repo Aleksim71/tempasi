@@ -50,14 +50,14 @@ app.use(express.json());
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/icons', express.static(path.join(__dirname, 'icons')));
 
-// Текущий путь для подсветки активного пункта меню
+// Текущий путь для подсветки активного пункта меню (если пригодится)
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   next();
 });
 
 // =========================
-// Роуты
+/* Роуты */
 // =========================
 
 // Главная = список шаблонов (как /templates)
@@ -71,7 +71,7 @@ app.get('/', async (req, res, next) => {
       pageSubtitle:
         'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
       templates,
-      activeNav: 'templates',
+      activePage: 'templates',
     });
   } catch (err) {
     next(err);
@@ -89,7 +89,7 @@ app.get('/templates', async (req, res, next) => {
       pageSubtitle:
         'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
       templates,
-      activeNav: 'templates',
+      activePage: 'templates',
     });
   } catch (err) {
     next(err);
@@ -104,14 +104,14 @@ app.get('/templates/:slug', async (req, res, next) => {
     if (!tmpl) {
       return res.status(404).render('errors/404', {
         title: 'Шаблон не найден',
-        activeNav: 'templates',
+        activePage: 'templates',
       });
     }
 
     res.render('templates/show', {
       title: tmpl.title,
       template: tmpl,
-      activeNav: 'templates',
+      activePage: 'templates',
     });
   } catch (err) {
     next(err);
@@ -122,7 +122,7 @@ app.get('/templates/:slug', async (req, res, next) => {
 app.get('/profile', (req, res) => {
   res.render('profile/index', {
     title: 'Профиль',
-    activeNav: 'profile',
+    activePage: 'profile',
   });
 });
 
@@ -130,28 +130,28 @@ app.get('/profile', (req, res) => {
 app.get('/about', (req, res) => {
   res.render('static/about', {
     title: 'About',
-    activeNav: 'about',
+    activePage: 'about',
   });
 });
 
 app.get('/contact', (req, res) => {
   res.render('static/contact', {
     title: 'Contact',
-    activeNav: 'contact',
+    activePage: 'contact',
   });
 });
 
 app.get('/community', (req, res) => {
   res.render('static/community', {
     title: 'Community',
-    activeNav: 'community',
+    activePage: 'community',
   });
 });
 
 app.get('/deals', (req, res) => {
   res.render('static/deals', {
     title: 'Скидки',
-    activeNav: 'deals',
+    activePage: 'deals',
   });
 });
 

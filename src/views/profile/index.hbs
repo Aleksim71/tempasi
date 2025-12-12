@@ -1,134 +1,77 @@
-<div class="page">
-  <div class="layout">
-    <!-- ЛЕВАЯ КОЛОНКА — меню профиля -->
-    <aside class="sidebar">
-      <nav class="profile-nav">
-        <a href="/profile" class="chip chip-wide is-active">Профиль</a>
-        <a href="/profile/favorites" class="chip chip-wide">Мои избранные</a>
-        <a href="/profile/rentals" class="chip chip-wide">Мои аренды</a>
-        <a href="/billing" class="chip chip-wide">Billing</a>
-        <a href="/deals" class="chip chip-wide">Сделки</a>
-      </nav>
+<main class="page">
+  <div class="profile-layout">
+
+    <!-- ЛЕВОЕ МЕНЮ -->
+    <aside class="profile-menu">
+      <a class="menu-item is-active">Профиль</a>
+      <a class="menu-item">Мои избранные</a>
+      <a class="menu-item">Мои аренды</a>
+      <a class="menu-item">Billing</a>
+      <a class="menu-item">Сделки</a>
     </aside>
 
-    <!-- ПРАВАЯ КОЛОНКА — карточки форм -->
+    <!-- ПРАВАЯ КОЛОНКА — Основные данные + Публичный профиль -->
     <section class="profile-content">
 
-      <!-- Основные данные -->
-      <div class="profile-card">
-        <div class="profile-card__header">
-          <div>
-            <h2>Основные данные</h2>
-            <p class="profile-card__subtitle">
-              Имя, ник и email будут использоваться в карточке автора и на страницах шаблонов.
-            </p>
+      <!-- ОСНОВНЫЕ ДАННЫЕ -->
+      <div class="profile-section card">
+        <h2 class="section-title">Основные данные</h2>
+
+        <form class="profile-form">
+          <div class="form-row">
+            <label>Полное имя</label>
+            <input type="text" placeholder="Ваше имя" />
           </div>
 
-          <div class="profile-card__actions">
-            <button type="button" class="btn ghost">Отменить</button>
-            <button type="submit" form="profile-main-form" class="btn primary">
-              Сохранить
-            </button>
-          </div>
-        </div>
-
-        <form id="profile-main-form" class="profile-form">
-          <div class="field-group">
-            <label for="fullName">Полное имя</label>
-            <input
-              id="fullName"
-              name="fullName"
-              type="text"
-              placeholder="Ваше имя"
-            />
+          <div class="form-row">
+            <label>Никнейм</label>
+            <input type="text" placeholder="Ваш никнейм" />
           </div>
 
-          <div class="field-group">
-            <label for="nickname">Никнейм</label>
-            <input
-              id="nickname"
-              name="nickname"
-              type="text"
-              placeholder="Ваш никнейм"
-            />
+          <div class="form-row">
+            <label>Email</label>
+            <input type="email" placeholder="you@example.com" />
           </div>
 
-          <div class="field-group">
-            <label for="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-            />
+          <div class="form-row">
+            <label>Роль</label>
+            <input type="text" placeholder="Дизайнер, студия, агентство..." />
           </div>
 
-          <div class="field-group">
-            <label for="role">Роль</label>
-            <input
-              id="role"
-              name="role"
-              type="text"
-              placeholder="Дизайнер, студия, агентство…"
-            />
+          <div class="form-row">
+            <label>Кратко о себе</label>
+            <textarea placeholder="Пара предложений о том, чем вы занимаетесь."></textarea>
           </div>
 
-          <div class="field-group">
-            <label for="aboutShort">Кратко о себе</label>
-            <textarea
-              id="aboutShort"
-              name="aboutShort"
-              rows="3"
-              placeholder="Пара предложений о том, чем вы занимаетесь."
-            ></textarea>
+          <div class="form-actions">
+            <button type="button" class="btn alt">Отменить</button>
+            <button type="submit" class="btn primary">Сохранить</button>
           </div>
         </form>
       </div>
 
-      <!-- Публичный профиль -->
-      <div class="profile-card">
-        <div class="profile-card__header">
-          <div>
-            <h2>Публичный профиль</h2>
-            <p class="profile-card__subtitle">
-              Эти поля отображаются на странице автора и помогают покупателям вас запомнить.
-            </p>
-          </div>
-        </div>
+      <!-- ПУБЛИЧНЫЙ ПРОФИЛЬ -->
+      <div class="profile-section card">
+        <h2 class="section-title">Публичный профиль</h2>
 
         <form class="profile-form">
-          <div class="field-group">
-            <label for="portfolioUrl">Сайт или портфолио</label>
-            <input
-              id="portfolioUrl"
-              name="portfolioUrl"
-              type="url"
-              placeholder="https://ваш-сайт.ru"
-            />
+          <div class="form-row">
+            <label>Сайт или портфолио</label>
+            <input type="text" placeholder="https://dribbble.com/username" />
           </div>
 
-          <div class="field-group">
-            <label for="avatarUrl">Ссылка на аватар</label>
-            <input
-              id="avatarUrl"
-              name="avatarUrl"
-              type="url"
-              placeholder="https://..."
-            />
+          <div class="form-row">
+            <label>Социальные сети</label>
+            <input type="text" placeholder="@behance, @instagram, @twitter" />
           </div>
 
-          <div class="field-group">
-            <label for="publicBio">Биография</label>
-            <textarea
-              id="publicBio"
-              name="publicBio"
-              rows="4"
-              placeholder="Расскажите немного о себе для страницы автора."
-            ></textarea>
+          <div class="form-row">
+            <label>Биография</label>
+            <textarea placeholder="Расскажите немного о себе для страницы автора."></textarea>
           </div>
         </form>
       </div>
 
     </section>
   </div>
-</div>
+</main>

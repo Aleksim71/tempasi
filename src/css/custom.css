@@ -1,5 +1,5 @@
 /* =========================================================
-   Глобальные переменные
+   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И БАЗА
 ========================================================= */
 :root {
   --text: #ffffff;
@@ -12,32 +12,122 @@
   --chip-bg-hover: rgba(148, 163, 255, 0.25);
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'Segoe UI',
+    sans-serif;
+  background: radial-gradient(circle at 0% 0%, #111827, #020617 60%);
+  color: var(--text);
+}
+
+/* ссылки */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* заголовки */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* базовый muted текст */
+.muted {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* кнопки */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  color: #ffffff;
+  border: none;
+}
+
+.btn.primary:hover {
+  opacity: 0.9;
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.5);
+  color: var(--text-muted);
+}
+
+.btn.ghost:hover {
+  border-color: #c4b5fd;
+  color: #e5e7eb;
+}
+
 /* =========================================================
-   БАЗОВАЯ СЕТКА СТРАНИЦЫ
+   ОБЩАЯ СЕТКА СТРАНИЦЫ
 ========================================================= */
+
 .page {
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
-  padding: 24px 64px 64px;
+  padding: 32px 64px 64px;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 32px;
-  align-items: flex-start;
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.page-header__subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* шапка и футер в layout main.hbs */
+main.page {
+  padding-top: 32px;
 }
 
 /* =========================================================
-   ШАПКА TEMPASI (как на /templates)
+   ШАПКА TEMPASI
 ========================================================= */
-header {
-  position: static;
-  background: none;
-  padding: 0;
-  border: 0;
-}
 
 .site-header {
   width: 100%;
@@ -62,7 +152,6 @@ header {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  text-decoration: none;
 }
 
 .logo-mark {
@@ -105,7 +194,7 @@ header {
 }
 
 .nav-link.is-active {
-  color: #fff;
+  color: #ffffff;
   border-color: var(--accent);
 }
 
@@ -120,7 +209,7 @@ header {
   height: 32px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
-  background: radial-gradient(circle at 30% 0%, rgba(148, 163, 255, 0.4), rgba(15, 23, 42, 0.95));
+  background: radial-gradient(circle at 30% 0%, rgba(148, 163, 255, 0.4), #020617);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -139,33 +228,21 @@ header {
 }
 
 /* =========================================================
-   БОКОВОЕ МЕНЮ (общие стили)
+   ШАБЛОНЫ: СЕТКА + ФИЛЬТРЫ
 ========================================================= */
+
+.templates-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 40px;
+  align-items: flex-start;
+}
+
+/* левая колонка фильтров */
 .sidebar {
   position: sticky;
-  top: 20px;
+  top: 24px;
   width: 260px;
-}
-
-/* Адаптивный отступ бокового меню на странице профиля */
-.profile-sidebar-wrapper {
-  width: 260px;
-  /* базовый отступ для небольших экранов по высоте */
-  margin-top: 80px;
-}
-
-/* экраны повыше (по высоте окна) */
-@media (min-height: 800px) {
-  .profile-sidebar-wrapper {
-    margin-top: 140px;
-  }
-}
-
-/* очень высокие экраны — как у тебя, делаем ~200px */
-@media (min-height: 950px) {
-  .profile-sidebar-wrapper {
-    margin-top: 200px;
-  }
 }
 
 .sidebar-card {
@@ -178,12 +255,8 @@ header {
     0 24px 60px rgba(15, 23, 42, 0.95);
 }
 
-.sidebar-group + .sidebar-group {
-  margin-top: 18px;
-}
-
 .sidebar-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -234,22 +307,16 @@ header {
     0 16px 40px rgba(30, 64, 175, 0.9);
 }
 
-.grid-licenses {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
+/* ползунок цены */
 .sidebar-range {
   display: grid;
   grid-template-columns: auto 1fr auto;
   column-gap: 8px;
   align-items: center;
+  font-size: 13px;
 }
 
-/* =========================================================
-   КАРТОЧКИ ШАБЛОНОВ
-========================================================= */
+/* правая колонка — карточки шаблонов */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -272,12 +339,20 @@ header {
 
 .thumb {
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   background:
     linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(159, 103, 255, 0.12)),
     radial-gradient(200px 120px at 80% -20%, rgba(255, 255, 255, 0.18), transparent 60%),
     rgb(15, 18, 34);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .card-body {
@@ -295,6 +370,12 @@ header {
   color: var(--text-muted);
 }
 
+.card-author {
+  font-size: 12px;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
 .card-footer {
   padding: 16px 22px 20px;
   display: flex;
@@ -302,28 +383,61 @@ header {
   align-items: center;
 }
 
-.btn.primary {
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(90deg, #a855f7, #7c3aed);
-  color: white;
-  padding: 10px 20px;
+.price {
   font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.btn.primary:hover {
-  opacity: 0.85;
+  font-weight: 600;
 }
 
 /* =========================================================
    PROFILE PAGE
 ========================================================= */
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 40px;
+  align-items: flex-start;
+  margin-top: 24px;
+}
+
+/* меню профиля слева */
 .profile-nav {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.pill {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.96);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.pill:hover {
+  border-color: #c4b5fd;
+  color: #e5e7eb;
+  box-shadow:
+    0 0 0 1px rgba(196, 181, 253, 0.25),
+    0 10px 24px rgba(15, 23, 42, 0.9);
+  transform: translateY(-1px);
+}
+
+.pill.active {
+  border-color: #a855f7;
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.1), rgba(79, 70, 229, 0.5));
+  color: #ffffff;
+}
+
+/* карточки и формы справа */
+.profile-main {
+  max-width: 840px;
 }
 
 .profile-card {
@@ -333,7 +447,6 @@ header {
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.04);
   margin-bottom: 24px;
-  max-width: 840px;
 }
 
 .profile-card__header {
@@ -342,6 +455,17 @@ header {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 16px;
+}
+
+.profile-card__header h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.profile-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .profile-form {
@@ -356,6 +480,11 @@ header {
   gap: 6px;
 }
 
+.field-group label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .field-group textarea,
 .field-group input {
   width: 100%;
@@ -364,6 +493,12 @@ header {
   background: rgba(6, 6, 14, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text);
+  font-size: 14px;
+}
+
+.field-group input::placeholder,
+.field-group textarea::placeholder {
+  color: rgba(148, 163, 184, 0.8);
 }
 
 .field-group input:focus,
@@ -465,5 +600,172 @@ header {
 }
 
 .site-footer-nav a:hover {
-  color: #fff;
+  color: #ffffff;
+}
+
+/* =========================================================
+   АДАПТИВ
+========================================================= */
+
+@media (max-width: 1100px) {
+  .templates-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .site-header-inner {
+    padding-inline: 24px;
+  }
+
+  .page {
+    padding-inline: 24px;
+  }
+
+  .site-footer-inner {
+    padding-inline: 24px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-inline: 16px;
+  }
+
+  .site-header-inner {
+    padding-inline: 16px;
+  }
+}
+/* =========================================================
+   PROFILE PAGE LAYOUT
+========================================================= */
+
+.profile-sidebar {
+  align-self: flex-start;
+}
+
+.profile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-nav__item {
+  width: 100%;
+  border-radius: 999px;
+  padding: 10px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: radial-gradient(
+    circle at top left,
+    rgba(148, 163, 255, 0.25),
+    rgba(15, 23, 42, 0.96)
+  );
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.1s ease;
+}
+
+.profile-nav__item:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.profile-nav__item.is-active {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+
+/* Правая колонка профиля */
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-card {
+  padding: 24px 28px;
+}
+
+.profile-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.profile-card__title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.profile-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-form .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.profile-form label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.profile-form input,
+.profile-form textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(7, 9, 27, 0.98);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.profile-form input::placeholder,
+.profile-form textarea::placeholder {
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.profile-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+/* Кнопка "Отменить" в стиле вторичной */
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: var(--text-muted);
+}
+/* Profile: убрать старый заголовок и подзаголовок под шапкой (если где-то остались) */
+.profile-hero,
+.profile-intro,
+.page-intro.profile,
+h1.page-title,
+p.page-subtitle {
+  display: none !important;
 }

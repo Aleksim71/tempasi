@@ -1,127 +1,93 @@
-<div class="page page-profile">
-  <header class="page-header">
-    <h1>Профиль</h1>
-    <p>Управляйте своими данными, чтобы показывать красивую карточку автора в Tempasi.</p>
-  </header>
-
+<main class="page">
   <div class="layout">
-    <!-- Боковое меню профиля: обёртка + штатный .sidebar -->
-    <aside class="profile-sidebar-wrapper">
-      <div class="sidebar">
-        <nav class="sidebar-nav profile-nav">
-          <a href="/profile" class="pill active">Профиль</a>
-          <a href="/favorites" class="pill">Мои избранные</a>
-          <a href="/rentals" class="pill">Мои аренды</a>
-          <a href="/billing" class="pill">Billing</a>
-          <a href="/deals" class="pill">Сделки</a>
-        </nav>
-      </div>
+
+    <!-- ЛЕВАЯ КОЛОНКА — МЕНЮ ПРОФИЛЯ -->
+    <aside class="sidebar profile-sidebar">
+      <nav class="profile-nav">
+        <button type="button" class="profile-nav__item is-active">Профиль</button>
+        <button type="button" class="profile-nav__item">Мои избранные</button>
+        <button type="button" class="profile-nav__item">Мои аренды</button>
+        <button type="button" class="profile-nav__item">Billing</button>
+        <button type="button" class="profile-nav__item">Сделки</button>
+      </nav>
     </aside>
 
-    <!-- Основное содержимое -->
-    <main>
-      <!-- Карточка с основными данными -->
-      <section class="profile-card">
-        <header class="profile-card__header">
-          <div>
-            <h2>Основные данные</h2>
-            <p class="muted">
-              Имя, ник и email будут использоваться в карточке автора и на страницах шаблонов.
-            </p>
-          </div>
+    <!-- ПРАВАЯ КОЛОНКА — САМИ ФОРМЫ -->
+    <section class="profile-main">
 
+      <!-- ОСНОВНЫЕ ДАННЫЕ -->
+      <section class="card profile-card">
+        <header class="profile-card__header">
+          <h2 class="profile-card__title">Основные данные</h2>
           <div class="profile-card__actions">
             <button type="button" class="btn ghost">Отменить</button>
-            <button type="submit" form="profile-main" class="btn primary">Сохранить</button>
+            <button type="submit" class="btn primary">Сохранить</button>
           </div>
         </header>
 
-        <form id="profile-main" class="profile-form">
-          <div class="field-group">
-            <label for="full_name">Полное имя</label>
-            <input
-              id="full_name"
-              name="full_name"
-              type="text"
-              placeholder="Ваше имя"
-            />
+        <form class="profile-form">
+          <div class="form-row">
+            <label for="fullName">Полное имя</label>
+            <input id="fullName" type="text" placeholder="Ваше имя" />
           </div>
 
-          <div class="field-group">
+          <div class="form-row">
             <label for="nickname">Никнейм</label>
-            <input
-              id="nickname"
-              name="nickname"
-              type="text"
-              placeholder="Ваш никнейм"
-            />
+            <input id="nickname" type="text" placeholder="Ваш никнейм" />
           </div>
 
-          <div class="field-group">
+          <div class="form-row">
             <label for="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-            />
+            <input id="email" type="email" placeholder="you@example.com" />
           </div>
 
-          <div class="field-group">
+          <div class="form-row">
             <label for="role">Роль</label>
-            <input
-              id="role"
-              name="role"
-              type="text"
-              placeholder="Дизайнер, студия, агентство…"
-            />
+            <input id="role" type="text" placeholder="Дизайнер, студия, агентство..." />
           </div>
 
-          <div class="field-group">
-            <label for="bio">Кратко о себе</label>
+          <div class="form-row">
+            <label for="about">Кратко о себе</label>
             <textarea
-              id="bio"
-              name="bio"
-              rows="4"
+              id="about"
               placeholder="Пара предложений о том, чем вы занимаетесь."
             ></textarea>
           </div>
         </form>
       </section>
 
-      <!-- Карточка с публичными данными -->
-      <section class="profile-card">
-        <header class="profile-card__header">
-          <div>
-            <h2>Публичный профиль</h2>
-            <p class="muted">
-              Эти поля отображаются на странице автора и помогают покупателям вас запомнить.
-            </p>
-          </div>
-        </header>
+      <!-- ПУБЛИЧНЫЙ ПРОФИЛЬ -->
+      <section class="card profile-card">
+        <h2 class="profile-card__title">Публичный профиль</h2>
 
         <form class="profile-form">
-          <div class="field-group">
-            <label for="site">Сайт или портфолио</label>
+          <div class="form-row">
+            <label for="portfolio">Сайт или портфолио</label>
             <input
-              id="site"
-              name="site"
-              type="url"
+              id="portfolio"
+              type="text"
               placeholder="https://dribbble.com/username"
             />
           </div>
 
-          <div class="field-group">
-            <label for="social">Социальные сети</label>
+          <div class="form-row">
+            <label for="socials">Социальные сети</label>
             <input
-              id="social"
-              name="social"
+              id="socials"
               type="text"
               placeholder="@behance, @instagram, @twitter"
             />
           </div>
+
+          <div class="form-row">
+            <label for="bio">Биография</label>
+            <textarea
+              id="bio"
+              placeholder="Расскажите немного о себе для страницы автора."
+            ></textarea>
+          </div>
         </form>
       </section>
-    </main>
+    </section>
   </div>
-</div>
+</main>
