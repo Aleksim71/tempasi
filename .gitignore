@@ -52,3 +52,4 @@ storage/zips/
 # Tempasi storage (seed packs)
 # ==========================
 storage/templates/
+storage/templates/**/preview/preview.png
