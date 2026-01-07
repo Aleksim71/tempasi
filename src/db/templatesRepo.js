@@ -5,6 +5,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const TEMPLATES_ROOT = path.resolve(process.cwd(), 'storage', 'templates');
+const ZIPS_DIR = path.resolve(process.cwd(), 'storage', 'zips');
+
+function normalizeLicense(raw) {
+  if (!raw) return 'PU';
+  const v = String(raw).trim().toUpperCase();
+  if (v === 'FREE') return 'FREE';
+  if (v === 'PERSONAL' || v === 'PU') return 'PU';
+  if (v === 'COMMERCIAL' || v === 'CU') return 'CU';
+  if (v === 'EXTENDED' || v === 'EL') return 'EL';
+  return v;
+}
+
+function normalizeType(raw) {
+  if (!raw) return 'buy';
+  const v = String(raw).trim().toLowerCase();
+  if (['buy', 'rent', 'free'].includes(v)) return v;
+  return 'buy';
+}
+
+function computeHasZip(slug) {
+  // ожидаем: storage/zips/seed-001_v1.0.0.zip (любой v*)
+  if (!fs.existsSync(ZIPS_DIR)) return false;
+  const prefix = `${slug}_v`;
+  try {
+    const files = fs.readdirSync(ZIPS_DIR);
+    return files.some((name) => name.startsWith(prefix) && name.endsWith('.zip'));
+  } catch {
+    return false;
+  }
+}
 
 export async function getAllTemplates() {
   if (!fs.existsSync(TEMPLATES_ROOT)) return [];
@@ -24,6 +54,9 @@ export async function getAllTemplates() {
     try {
       const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
 
+      const license = normalizeLicense(meta.license);
+      const type = normalizeType(meta.type);
+
       result.push({
         slug,
         title: meta.title ?? slug,
@@ -31,12 +64,10 @@ export async function getAllTemplates() {
         price: meta.price ?? 0,
         version: meta.version ?? '',
         description: meta.description ?? '',
-
-        // B7:
-        license: meta.license ?? 'PU', // PU/CU/EL/FREE
-        type: meta.type ?? 'buy', // buy/rent/free
-
+        license,
+        type,
         preview: `/seeds/${slug}/preview/preview.png`,
+        hasZip: computeHasZip(slug),
       });
     } catch (err) {
       console.warn(`[templatesRepo] broken metadata in ${slug}:`, err.message);
@@ -55,6 +86,9 @@ export async function getTemplateBySlug(slug) {
   try {
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
 
+    const license = normalizeLicense(meta.license);
+    const type = normalizeType(meta.type);
+
     return {
       slug,
       title: meta.title ?? slug,
@@ -62,12 +96,10 @@ export async function getTemplateBySlug(slug) {
       price: meta.price ?? 0,
       version: meta.version ?? '',
       description: meta.description ?? '',
-
-      // B7:
-      license: meta.license ?? 'PU',
-      type: meta.type ?? 'buy',
-
+      license,
+      type,
       preview: `/seeds/${slug}/preview/preview.png`,
+      hasZip: computeHasZip(slug),
     };
   } catch (err) {
     console.warn(`[templatesRepo] broken metadata in ${slug}:`, err.message);

@@ -1,23 +1,82 @@
 {{!-- src/web/views/pages/templates/index.hbs --}}
 
 <section class="container" style="padding: 24px 0;">
-  <header style="margin-bottom: 18px;">
+  <header style="margin-bottom: 16px;">
     <h1 style="margin: 0 0 6px; font-size: 28px; line-height: 1.2;">
       {{pageTitle}}
     </h1>
-
     {{#if pageSubtitle}}
-      <p style="margin: 0; opacity: .8;">
-        {{pageSubtitle}}
-      </p>
+      <p style="margin: 0; opacity: .8;">{{pageSubtitle}}</p>
     {{/if}}
   </header>
+
+  <form class="tp-filters" method="GET" action="/templates">
+    <div class="tp-filters__row">
+      <label class="tp-field">
+        <span class="tp-field__label">Search</span>
+        <input class="tp-input" type="search" name="q" value="{{filters.q}}" placeholder="title or description" />
+      </label>
+
+      <label class="tp-field">
+        <span class="tp-field__label">Category</span>
+        <select class="tp-select" name="category">
+          <option value="">All</option>
+          {{#each options.categories}}
+            <option value="{{this}}" {{#if (eq ../filters.category this)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </label>
+
+      <label class="tp-field">
+        <span class="tp-field__label">License</span>
+        <select class="tp-select" name="license">
+          <option value="">All</option>
+          {{#each options.licenses}}
+            <option value="{{this}}" {{#if (eq ../filters.license this)}}selected{{/if}}>{{licenseLabel this}}</option>
+          {{/each}}
+        </select>
+      </label>
+
+      <label class="tp-field">
+        <span class="tp-field__label">Type</span>
+        <select class="tp-select" name="type">
+          <option value="">All</option>
+          {{#each options.types}}
+            <option value="{{this}}" {{#if (eq ../filters.type this)}}selected{{/if}}>{{typeLabel this}}</option>
+          {{/each}}
+        </select>
+      </label>
+
+      <label class="tp-field">
+        <span class="tp-field__label">Sort</span>
+        <select class="tp-select" name="sort">
+          {{#each options.sorts}}
+            <option value="{{value}}" {{#if (eq ../filters.sort value)}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+      </label>
+    </div>
+
+    <div class="tp-filters__row tp-filters__row--bottom">
+      <label class="tp-check">
+        <input type="checkbox" name="ready" value="1" {{#if (eq filters.ready "1")}}checked{{/if}} />
+        <span>Only ready (zip exists)</span>
+      </label>
+
+      <div class="tp-actions">
+        <button class="tp-btn tp-btn--primary" type="submit">Apply</button>
+        <a class="tp-btn" href="/templates">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="tp-divider"></div>
 
   {{#if templates.length}}
     <div class="tp-grid">
       {{#each templates}}
         <article class="tp-card">
-          <a class="tp-card__media" href="/templates/{{slug}}" aria-label="Открыть {{title}}">
+          <a class="tp-card__media" href="/templates/{{slug}}" aria-label="Open {{title}}">
             {{#if preview}}
               <img class="tp-card__img" src="{{preview}}" alt="{{title}}" loading="lazy" />
             {{else}}
@@ -30,15 +89,31 @@
               <h3 class="tp-card__title">
                 <a href="/templates/{{slug}}">{{title}}</a>
               </h3>
-
               {{#if category}}
                 <span class="tp-badge">{{category}}</span>
               {{/if}}
             </div>
 
+            <div class="tp-tags">
+              <span class="tp-badge tp-badge--soft">{{licenseLabel license}}</span>
+              <span class="tp-badge tp-badge--soft">{{typeLabel type}}</span>
+              {{#unless hasZip}}
+                <span class="tp-badge tp-badge--warn" title="Zip ещё не собран">Coming soon</span>
+              {{/unless}}
+            </div>
+
             <div class="tp-card__bottom">
               <div class="tp-price">{{formatPrice price}}</div>
-              <a class="tp-btn" href="/templates/{{slug}}">Подробнее</a>
+
+              <div class="tp-ctas">
+                <a class="tp-btn tp-btn--sm" href="/templates/{{slug}}">View</a>
+
+                {{#if hasZip}}
+                  <a class="tp-btn tp-btn--sm tp-btn--primary" href="/download/{{slug}}">Download</a>
+                {{else}}
+                  <span class="tp-btn tp-btn--sm tp-btn--disabled" title="Zip ещё не собран">Download</span>
+                {{/if}}
+              </div>
             </div>
           </div>
         </article>
@@ -46,7 +121,7 @@
     </div>
   {{else}}
     <div class="tp-empty">
-      Пока нет шаблонов.
+      Ничего не найдено по текущим фильтрам.
     </div>
   {{/if}}
 </section>
@@ -54,19 +129,62 @@
 <style>
   .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 
+  .tp-filters {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+  }
+
+  .tp-filters__row {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(4, 1fr);
+    gap: 12px;
+    align-items: end;
+  }
+
+  @media (max-width: 980px) {
+    .tp-filters__row { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 620px) {
+    .tp-filters__row { grid-template-columns: 1fr; }
+  }
+
+  .tp-filters__row--bottom {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tp-field { display: grid; gap: 6px; }
+  .tp-field__label { font-size: 12px; opacity: .75; }
+
+  .tp-input, .tp-select {
+    border: 1px solid rgba(0,0,0,.14);
+    border-radius: 10px;
+    padding: 10px 10px;
+    font-size: 14px;
+    background: #fff;
+    width: 100%;
+  }
+
+  .tp-check { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; opacity: .9; }
+
+  .tp-actions { display: inline-flex; gap: 10px; align-items: center; }
+
+  .tp-divider { height: 1px; background: rgba(0,0,0,.08); margin: 16px 0; }
+
   .tp-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
   }
-
-  @media (max-width: 980px) {
-    .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  @media (max-width: 620px) {
-    .tp-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 980px) { .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .tp-grid { grid-template-columns: 1fr; } }
 
   .tp-card {
     border: 1px solid rgba(0,0,0,.08);
@@ -82,21 +200,8 @@
     overflow: hidden;
   }
 
-  .tp-card__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .tp-card__img--placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    font-size: 14px;
-    opacity: .6;
-  }
+  .tp-card__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tp-card__img--placeholder { display:flex; align-items:center; justify-content:center; height:100%; opacity:.6; }
 
   .tp-card__body { padding: 14px; }
 
@@ -105,21 +210,14 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
-  .tp-card__title {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.25;
-  }
-
-  .tp-card__title a {
-    color: inherit;
-    text-decoration: none;
-  }
-
+  .tp-card__title { margin: 0; font-size: 16px; line-height: 1.25; }
+  .tp-card__title a { color: inherit; text-decoration: none; }
   .tp-card__title a:hover { text-decoration: underline; }
+
+  .tp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 
   .tp-badge {
     display: inline-flex;
@@ -129,9 +227,12 @@
     font-size: 12px;
     line-height: 1;
     border: 1px solid rgba(0,0,0,.12);
-    opacity: .9;
     white-space: nowrap;
+    background: rgba(0,0,0,.02);
   }
+
+  .tp-badge--soft { opacity: .9; }
+  .tp-badge--warn { border-color: rgba(0,0,0,.22); opacity: .85; }
 
   .tp-card__bottom {
     display: flex;
@@ -140,16 +241,15 @@
     gap: 12px;
   }
 
-  .tp-price {
-    font-weight: 700;
-    font-size: 16px;
-  }
+  .tp-price { font-weight: 800; font-size: 16px; }
+
+  .tp-ctas { display: inline-flex; gap: 10px; align-items: center; }
 
   .tp-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 12px;
+    padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid rgba(0,0,0,.14);
     text-decoration: none;
@@ -157,14 +257,23 @@
     font-size: 14px;
     line-height: 1;
     white-space: nowrap;
+    background: transparent;
+    cursor: pointer;
   }
-
   .tp-btn:hover { background: rgba(0,0,0,.04); }
+  .tp-btn--primary { border-color: rgba(0,0,0,.22); font-weight: 700; }
+  .tp-btn--sm { padding: 8px 10px; font-size: 13px; }
+
+  .tp-btn--disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    user-select: none;
+  }
 
   .tp-empty {
     border: 1px dashed rgba(0,0,0,.2);
     border-radius: 14px;
     padding: 18px;
-    opacity: .7;
+    opacity: .75;
   }
 </style>

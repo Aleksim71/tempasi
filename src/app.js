@@ -21,12 +21,11 @@ const VIEWS_ROOT = path.join(__dirname, 'web', 'views');
 function normalizeLicense(raw) {
   if (!raw) return 'PU';
   const v = String(raw).trim().toUpperCase();
-  // поддержим несколько вариантов написания
   if (v === 'FREE') return 'FREE';
   if (v === 'PERSONAL' || v === 'PU') return 'PU';
   if (v === 'COMMERCIAL' || v === 'CU') return 'CU';
   if (v === 'EXTENDED' || v === 'EL') return 'EL';
-  return v; // если потом добавишь свои коды
+  return v;
 }
 
 function licenseLabel(raw) {
@@ -50,6 +49,70 @@ function typeLabel(raw) {
   if (v === 'rent') return 'Rent';
   if (v === 'free') return 'Free';
   return 'Buy';
+}
+
+function toStr(v) {
+  return v == null ? '' : String(v);
+}
+
+function uniqSorted(arr) {
+  return Array.from(new Set(arr.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'en'));
+}
+
+function applyFilters(all, q) {
+  const query = toStr(q.q).trim().toLowerCase();
+  const category = toStr(q.category).trim();
+  const license = normalizeLicense(toStr(q.license).trim() || '');
+  const type = normalizeType(toStr(q.type).trim() || '');
+  const onlyReady = toStr(q.ready).trim() === '1';
+  const sort = toStr(q.sort).trim() || 'name_asc';
+
+  let items = all.slice();
+
+  if (query) {
+    items = items.filter((t) => {
+      const hay = `${t.title ?? ''} ${t.description ?? ''}`.toLowerCase();
+      return hay.includes(query);
+    });
+  }
+
+  if (category) {
+    items = items.filter((t) => (t.category ?? '') === category);
+  }
+
+  if (toStr(q.license).trim()) {
+    items = items.filter((t) => normalizeLicense(t.license) === license);
+  }
+
+  if (toStr(q.type).trim()) {
+    items = items.filter((t) => normalizeType(t.type) === type);
+  }
+
+  if (onlyReady) {
+    items = items.filter((t) => Boolean(t.hasZip));
+  }
+
+  // сортировка
+  if (sort === 'price_asc') {
+    items.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+  } else if (sort === 'price_desc') {
+    items.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+  } else {
+    // name_asc
+    items.sort((a, b) => String(a.title ?? '').localeCompare(String(b.title ?? ''), 'en'));
+  }
+
+  return {
+    items,
+    filters: {
+      q: query ? toStr(q.q).trim() : '',
+      category,
+      license: toStr(q.license).trim(),
+      type: toStr(q.type).trim(),
+      ready: onlyReady ? '1' : '',
+      sort,
+    },
+  };
 }
 
 const hbs = exphbs.create({
@@ -83,8 +146,6 @@ const hbs = exphbs.create({
 
 app.engine('.hbs', hbs.engine);
 app.set('view engine', '.hbs');
-
-// pages лежат в src/web/views/pages
 app.set('views', path.join(VIEWS_ROOT, 'pages'));
 
 // =========================
@@ -96,12 +157,9 @@ app.use(express.json());
 // =========================
 // Static
 // =========================
-
-// public/*
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
-// seeds/*  → storage/templates/*
 const SEEDS_DIR = path.resolve(process.cwd(), 'storage', 'templates');
 app.use('/seeds', express.static(SEEDS_DIR));
 
@@ -116,38 +174,46 @@ app.use((req, res, next) => {
 // =========================
 // Routes
 // =========================
-app.get('/', async (req, res, next) => {
+async function renderCatalog(req, res, next) {
   try {
-    const templates = await getAllTemplates();
+    const all = await getAllTemplates();
+
+    // опции для фильтров
+    const categories = uniqSorted(all.map((t) => t.category));
+    const licenses = uniqSorted(all.map((t) => normalizeLicense(t.license)));
+    const types = uniqSorted(all.map((t) => normalizeType(t.type)));
+
+    const { items, filters } = applyFilters(all, req.query);
+
     res.render('templates/index', {
       title: 'Tempasi — шаблоны',
       pageTitle: 'Шаблоны',
-      pageSubtitle:
-        'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
-      templates,
+      pageSubtitle: 'Фильтруй по категории/лицензии/типу и скачивай готовые zip (если доступно).',
+      templates: items,
       activeNav: 'templates',
+
+      // для UI фильтров
+      options: {
+        categories,
+        licenses,
+        types,
+        sorts: [
+          { value: 'name_asc', label: 'Name (A→Z)' },
+          { value: 'price_asc', label: 'Price (low→high)' },
+          { value: 'price_desc', label: 'Price (high→low)' },
+        ],
+      },
+      filters,
     });
   } catch (err) {
     next(err);
   }
-});
+}
 
-app.get('/templates', async (req, res, next) => {
-  try {
-    const templates = await getAllTemplates();
-    res.render('templates/index', {
-      title: 'Tempasi — шаблоны',
-      pageTitle: 'Шаблоны',
-      pageSubtitle:
-        'Готовые лендинги и сайты. Нажмите «Подробнее», чтобы открыть страницу шаблона.',
-      templates,
-      activeNav: 'templates',
-    });
-  } catch (err) {
-    next(err);
-  }
-});
+app.get('/', renderCatalog);
+app.get('/templates', renderCatalog);
 
+// Деталка
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmpl = await getTemplateBySlug(req.params.slug);
@@ -169,9 +235,7 @@ app.get('/templates/:slug', async (req, res, next) => {
   }
 });
 
-// =========================
-// B6: Download zip
-// =========================
+// Download zip
 app.get('/download/:slug', async (req, res) => {
   const { slug } = req.params;
 
@@ -203,13 +267,9 @@ app.get('/contact', (req, res) => {
   });
 });
 
-// =========================
-// 404 и 500
-// =========================
+// 404 / 500
 app.use((req, res) => {
-  res.status(404).render('errors/404', {
-    title: 'Страница не найдена',
-  });
+  res.status(404).render('errors/404', { title: 'Страница не найдена' });
 });
 
 app.use((err, req, res, _next) => {
