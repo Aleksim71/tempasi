@@ -1,0 +1,17 @@
+Tempasi Seed Pack scriptsS scripts
+
+1) Copy files into your repo:
+   - scripts/check-template.js
+   - scripts/build-zip.js
+
+2) Make them executable (optional):
+   chmod +x scripts/check-template.js scripts/build-zip.js
+
+3) Validate:
+   node scripts/check-template.js seed-001
+
+4) Build zip (requires zip):
+   sudo apt install zip
+   node scripts/build-zip.js seed-001
+
+Output: storage/zips/<slug>_v<version>.zip
