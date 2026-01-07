@@ -14,6 +14,10 @@
           <span class="tp-badge tp-badge--soft">{{licenseLabel template.license}}</span>
           <span class="tp-badge tp-badge--soft">{{typeLabel template.type}}</span>
 
+          {{#unless template.hasZip}}
+            <span class="tp-badge tp-badge--warn" title="Zip ещё не собран">Coming soon</span>
+          {{/unless}}
+
           {{#if template.version}}
             <span class="tp-muted">v{{template.version}}</span>
           {{/if}}
@@ -31,35 +35,61 @@
       <div class="tp-head__right">
         <div class="tp-price">{{formatPrice template.price}}</div>
 
-        <div class="tp-actions">
-          {{!-- B7: CTA по типу --}}
+        <div class="tp-ctaBlock">
+          {{!-- PRIMARY CTA (всегда один, явно выделен) --}}
           {{#if (eq template.type "rent")}}
-            <a class="tp-btn tp-btn--primary" href="#" aria-disabled="true" title="Платёжная часть будет в B8/B9">
-              Арендовать
-            </a>
+            <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Аренда появится позже">
+              Rent — soon
+            </span>
+
           {{else if (eq template.type "free")}}
-            <a class="tp-btn tp-btn--primary" href="/download/{{template.slug}}">
-              Скачать бесплатно
-            </a>
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                Download free ZIP
+              </a>
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                Download free — soon
+              </span>
+            {{/if}}
+
           {{else}}
             {{!-- buy --}}
             {{#if (isFree template.price)}}
-              <a class="tp-btn tp-btn--primary" href="/download/{{template.slug}}">
-                Скачать бесплатно
-              </a>
+              {{#if template.hasZip}}
+                <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                  Download ZIP
+                </a>
+              {{else}}
+                <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                  Download — soon
+                </span>
+              {{/if}}
             {{else}}
-              <a class="tp-btn tp-btn--primary" href="#" aria-disabled="true" title="Оплата будет позже (B8/B9)">
-                Купить
-              </a>
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Оплата появится позже">
+                Buy — soon
+              </span>
             {{/if}}
           {{/if}}
 
-          <a class="tp-btn" href="/templates">← Назад в каталог</a>
+          <div class="tp-ctaRow">
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--sm" href="/download/{{template.slug}}">Download</a>
+            {{else}}
+              <span class="tp-btn tp-btn--sm tp-btn--disabled" title="Zip ещё не собран">Download</span>
+            {{/if}}
+
+            <a class="tp-btn tp-btn--sm" href="/templates">← Back to catalog</a>
+          </div>
         </div>
 
         <div class="tp-note">
-          ZIP берётся из <code>storage/zips/</code>. Если архива нет — собери:
-          <code>node scripts/build-zip.cjs {{template.slug}}</code>
+          ZIP берётся из <code>storage/zips/</code>.
+          {{#unless template.hasZip}}
+            <br />
+            Сейчас zip нет. Собери:
+            <code>node scripts/build-zip.cjs {{template.slug}}</code>
+          {{/unless}}
         </div>
       </div>
     </header>
@@ -71,6 +101,43 @@
             <img class="tp-preview__img" src="{{template.preview}}" alt="{{template.title}}" />
           {{else}}
             <div class="tp-preview__placeholder">No preview</div>
+          {{/if}}
+        </div>
+
+        {{!-- SECOND CTA under preview (после просмотра скрина сразу видно, куда жать) --}}
+        <div class="tp-underCta">
+          {{#if (eq template.type "rent")}}
+            <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Аренда появится позже">
+              Rent — soon
+            </span>
+
+          {{else if (eq template.type "free")}}
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                Download free ZIP
+              </a>
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                Download free — soon
+              </span>
+            {{/if}}
+
+          {{else}}
+            {{#if (isFree template.price)}}
+              {{#if template.hasZip}}
+                <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                  Download ZIP
+                </a>
+              {{else}}
+                <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                  Download — soon
+                </span>
+              {{/if}}
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Оплата появится позже">
+                Buy — soon
+              </span>
+            {{/if}}
           {{/if}}
         </div>
       </main>
@@ -90,6 +157,10 @@
             <div class="tp-dl__row">
               <dt>Тип</dt>
               <dd>{{typeLabel template.type}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Zip</dt>
+              <dd>{{#if template.hasZip}}Ready{{else}}Coming soon{{/if}}</dd>
             </div>
             <div class="tp-dl__row">
               <dt>Версия</dt>
@@ -160,6 +231,7 @@
     background: rgba(0,0,0,.02);
   }
   .tp-badge--soft { opacity: .9; }
+  .tp-badge--warn { border-color: rgba(0,0,0,.22); opacity: .85; }
 
   .tp-muted { opacity: .75; font-size: 13px; }
 
@@ -172,24 +244,9 @@
 
   .tp-price { font-weight: 800; font-size: 22px; margin-bottom: 10px; }
 
-  .tp-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tp-ctaBlock { display: grid; gap: 10px; }
 
-  .tp-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(0,0,0,.14);
-    text-decoration: none;
-    color: inherit;
-    font-size: 14px;
-    line-height: 1;
-    white-space: nowrap;
-    background: transparent;
-  }
-  .tp-btn:hover { background: rgba(0,0,0,.04); }
-  .tp-btn--primary { border-color: rgba(0,0,0,.22); font-weight: 700; }
+  .tp-ctaRow { display: inline-flex; gap: 10px; flex-wrap: wrap; }
 
   .tp-note { opacity: .75; font-size: 13px; line-height: 1.35; }
 
@@ -199,6 +256,8 @@
   .tp-preview { border: 1px solid rgba(0,0,0,.08); border-radius: 14px; overflow: hidden; background: #fff; }
   .tp-preview__img { width: 100%; height: auto; display: block; }
   .tp-preview__placeholder { padding: 28px; opacity: .6; }
+
+  .tp-underCta { margin-top: 14px; display: flex; justify-content: flex-start; }
 
   .tp-side { display: grid; gap: 16px; }
 
@@ -221,6 +280,46 @@
   .tp-list li { margin: 6px 0; }
 
   .tp-empty { border: 1px dashed rgba(0,0,0,.2); border-radius: 14px; padding: 18px; opacity: .8; }
+
+  .tp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,.14);
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    background: transparent;
+  }
+  .tp-btn:hover { background: rgba(0,0,0,.04); }
+
+  .tp-btn--sm { padding: 8px 10px; font-size: 13px; border-radius: 10px; }
+
+  .tp-btn--xl {
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    border-radius: 14px;
+  }
+
+  .tp-btn--primary {
+    color: #fff;
+    border: none;
+    background: linear-gradient(135deg, #7c5cff, #5b8cff);
+    box-shadow: 0 10px 20px rgba(0,0,0,.12);
+  }
+  .tp-btn--primary:hover { opacity: .92; }
+
+  .tp-btn--disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    user-select: none;
+    pointer-events: none;
+  }
 
   code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 </style>
