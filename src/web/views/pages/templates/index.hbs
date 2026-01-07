@@ -1,34 +1,170 @@
-<div class="page">
+{{!-- src/web/views/pages/templates/index.hbs --}}
 
-  <div class="layout">
-    <!-- ЛЕВАЯ КОЛОНКА — фильтры -->
-    <aside class="sidebar">
-      {{> sidebar-filters }}
-    </aside>
+<section class="container" style="padding: 24px 0;">
+  <header style="margin-bottom: 18px;">
+    <h1 style="margin: 0 0 6px; font-size: 28px; line-height: 1.2;">
+      {{pageTitle}}
+    </h1>
 
-    <!-- ПРАВАЯ КОЛОНКА — карточки -->
-    <section class="grid">
+    {{#if pageSubtitle}}
+      <p style="margin: 0; opacity: .8;">
+        {{pageSubtitle}}
+      </p>
+    {{/if}}
+  </header>
+
+  {{#if templates.length}}
+    <div class="tp-grid">
       {{#each templates}}
-        <article class="card">
-          <div class="thumb">
-            {{#if preview_image}}
-              <img src="{{preview_image}}" alt="{{title}}" />
+        <article class="tp-card">
+          <a class="tp-card__media" href="/templates/{{slug}}" aria-label="Открыть {{title}}">
+            {{#if preview}}
+              <img class="tp-card__img" src="{{preview}}" alt="{{title}}" loading="lazy" />
+            {{else}}
+              <div class="tp-card__img tp-card__img--placeholder">No preview</div>
             {{/if}}
-          </div>
+          </a>
 
-          <div class="card-body">
-            <h2 class="card-title">{{title}}</h2>
-            <p class="card-desc">{{short_desc}}</p>
-            <p class="card-author">Автор: {{author_email}}</p>
-          </div>
+          <div class="tp-card__body">
+            <div class="tp-card__top">
+              <h3 class="tp-card__title">
+                <a href="/templates/{{slug}}">{{title}}</a>
+              </h3>
 
-          <div class="card-footer">
-            <span class="price">{{formatPrice min_price_cents}}</span>
-            <a href="/templates/{{slug}}" class="btn primary">Подробнее</a>
+              {{#if category}}
+                <span class="tp-badge">{{category}}</span>
+              {{/if}}
+            </div>
+
+            <div class="tp-card__bottom">
+              <div class="tp-price">{{formatPrice price}}</div>
+              <a class="tp-btn" href="/templates/{{slug}}">Подробнее</a>
+            </div>
           </div>
         </article>
       {{/each}}
-    </section>
-  </div>
+    </div>
+  {{else}}
+    <div class="tp-empty">
+      Пока нет шаблонов.
+    </div>
+  {{/if}}
+</section>
 
-</div>
+<style>
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  .tp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  @media (max-width: 980px) {
+    .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 620px) {
+    .tp-grid { grid-template-columns: 1fr; }
+  }
+
+  .tp-card {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .tp-card__media {
+    display: block;
+    background: rgba(0,0,0,.03);
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
+
+  .tp-card__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .tp-card__img--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 14px;
+    opacity: .6;
+  }
+
+  .tp-card__body { padding: 14px; }
+
+  .tp-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .tp-card__title {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .tp-card__title a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .tp-card__title a:hover { text-decoration: underline; }
+
+  .tp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid rgba(0,0,0,.12);
+    opacity: .9;
+    white-space: nowrap;
+  }
+
+  .tp-card__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .tp-price {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .tp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,.14);
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .tp-btn:hover { background: rgba(0,0,0,.04); }
+
+  .tp-empty {
+    border: 1px dashed rgba(0,0,0,.2);
+    border-radius: 14px;
+    padding: 18px;
+    opacity: .7;
+  }
+</style>

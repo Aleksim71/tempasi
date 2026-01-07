@@ -18,6 +18,40 @@ const app = express();
 // =========================
 const VIEWS_ROOT = path.join(__dirname, 'web', 'views');
 
+function normalizeLicense(raw) {
+  if (!raw) return 'PU';
+  const v = String(raw).trim().toUpperCase();
+  // поддержим несколько вариантов написания
+  if (v === 'FREE') return 'FREE';
+  if (v === 'PERSONAL' || v === 'PU') return 'PU';
+  if (v === 'COMMERCIAL' || v === 'CU') return 'CU';
+  if (v === 'EXTENDED' || v === 'EL') return 'EL';
+  return v; // если потом добавишь свои коды
+}
+
+function licenseLabel(raw) {
+  const v = normalizeLicense(raw);
+  if (v === 'FREE') return 'Free';
+  if (v === 'PU') return 'PU (Personal)';
+  if (v === 'CU') return 'CU (Commercial)';
+  if (v === 'EL') return 'EL (Extended)';
+  return v;
+}
+
+function normalizeType(raw) {
+  if (!raw) return 'buy';
+  const v = String(raw).trim().toLowerCase();
+  if (['buy', 'rent', 'free'].includes(v)) return v;
+  return 'buy';
+}
+
+function typeLabel(raw) {
+  const v = normalizeType(raw);
+  if (v === 'rent') return 'Rent';
+  if (v === 'free') return 'Free';
+  return 'Buy';
+}
+
 const hbs = exphbs.create({
   extname: '.hbs',
   defaultLayout: 'main',
@@ -28,12 +62,21 @@ const hbs = exphbs.create({
       return a === b;
     },
     formatPrice(cents) {
-      if (cents == null) return '0 €';
+      if (!cents) return 'Free';
       const euros = cents / 100;
       return `${euros.toLocaleString('de-DE', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       })} €`;
+    },
+    licenseLabel(v) {
+      return licenseLabel(v);
+    },
+    typeLabel(v) {
+      return typeLabel(v);
+    },
+    isFree(price) {
+      return !price || Number(price) <= 0;
     },
   },
 });
@@ -65,8 +108,6 @@ app.use('/seeds', express.static(SEEDS_DIR));
 // =========================
 // Helpers
 // =========================
-
-// Текущий путь для подсветки активного пункта меню
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   next();
@@ -75,8 +116,6 @@ app.use((req, res, next) => {
 // =========================
 // Routes
 // =========================
-
-// Главная = список шаблонов
 app.get('/', async (req, res, next) => {
   try {
     const templates = await getAllTemplates();
@@ -109,7 +148,6 @@ app.get('/templates', async (req, res, next) => {
   }
 });
 
-// Деталка шаблона
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmpl = await getTemplateBySlug(req.params.slug);
@@ -146,7 +184,6 @@ app.get('/download/:slug', async (req, res) => {
     });
   }
 
-  // Отдаём скачивание (Express сам выставит нужные заголовки)
   return res.download(hit.absPath, hit.fileName);
 });
 
