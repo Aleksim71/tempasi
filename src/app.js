@@ -54,8 +54,6 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
 // На всякий (если пока статика ещё живёт в src/css, src/icons)
-app.use('/css', express.static(path.join(__dirname, 'css')));
-app.use('/icons', express.static(path.join(__dirname, 'icons')));
 
 // Текущий путь для подсветки активного пункта меню
 app.use((req, res, next) => {
@@ -149,7 +147,6 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, _next) => {
-   
   console.error(err);
   res.status(500).render('errors/500', {
     title: 'Ошибка сервера',
