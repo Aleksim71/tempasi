@@ -1,116 +1,265 @@
-{{!-- src/views/template-details.hbs --}}
+{{!-- src/web/views/pages/template-details.hbs --}}
 
-<section class="template-details">
-  <header class="template-details__header">
-    <h1 class="template-details__title">{{template.title}}</h1>
+<section class="container" style="padding: 24px 0;">
+  {{#if template}}
+    <header class="tp-head">
+      <div class="tp-head__left">
+        <h1 class="tp-title">{{template.title}}</h1>
 
-    {{#if template.short_desc}}
-      <p class="template-details__subtitle">
-        {{template.short_desc}}
-      </p>
-    {{/if}}
-
-    {{#if template.author_name}}
-      <p class="template-details__author-line">
-        Автор: {{template.author_name}}
-      </p>
-    {{else if template.author_email}}
-      <p class="template-details__author-line">
-        Автор: {{template.author_email}}
-      </p>
-    {{/if}}
-  </header>
-
-  {{#if template.preview_image}}
-    <div class="template-details__preview">
-      <img
-        src="{{template.preview_image}}"
-        alt="{{template.title}}"
-        class="template-details__img"
-        loading="lazy"
-      />
-    </div>
-  {{/if}}
-
-  <div class="template-details__meta">
-    {{#if template.categories}}
-      <div class="template-details__categories">
-        <span>Категории:</span>
-        <ul>
-          {{#each template.categories}}
-            <li>{{name}}</li>
-          {{/each}}
-        </ul>
-      </div>
-    {{/if}}
-
-    {{#if template.demo_url}}
-      <a
-        href="{{template.demo_url}}"
-        class="btn primary"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Открыть демо
-      </a>
-    {{/if}}
-  </div>
-
-  {{#if template.full_desc}}
-    <article class="template-details__body">
-      <h2>Описание</h2>
-      <p>{{template.full_desc}}</p>
-    </article>
-  {{/if}}
-
-  {{#if template.licenses}}
-    <section class="template-details__pricing">
-      <h2>Лицензии и цены</h2>
-      <ul class="template-details__license-list">
-        {{#each template.licenses}}
-          <li class="template-details__license-item">
-            <strong>{{name}}</strong>
-            — {{price_cents}} €
-          </li>
-        {{/each}}
-      </ul>
-    </section>
-  {{/if}}
-
-  {{!-- Блок "Об авторе" --}}
-  {{#if template.author_name}}
-    <section class="template-details__author">
-      <h2>Об авторе</h2>
-
-      <div class="template-details__author-card">
-        {{#if template.author_avatar}}
-          <div class="template-details__author-avatar">
-            <img
-              src="{{template.author_avatar}}"
-              alt="{{template.author_name}}"
-              loading="lazy"
-            />
-          </div>
-        {{/if}}
-
-        <div class="template-details__author-info">
-          <h3 class="template-details__author-name">
-            {{template.author_name}}
-          </h3>
-
-          {{#if template.author_bio}}
-            <p class="template-details__author-bio">
-              {{template.author_bio}}
-            </p>
+        <div class="tp-meta">
+          {{#if template.category}}
+            <span class="tp-badge">{{template.category}}</span>
           {{/if}}
 
-          {{#if template.author_email}}
-            <p class="template-details__author-email">
-              Контакт: {{template.author_email}}
-            </p>
+          {{#if template.version}}
+            <span class="tp-muted">v{{template.version}}</span>
+          {{/if}}
+
+          {{#if template.slug}}
+            <span class="tp-muted">• {{template.slug}}</span>
           {{/if}}
         </div>
+
+        {{#if template.description}}
+          <p class="tp-desc">{{template.description}}</p>
+        {{/if}}
       </div>
-    </section>
+
+      <div class="tp-head__right">
+        <div class="tp-price">{{formatPrice template.price}}</div>
+
+        <div class="tp-actions">
+          <a class="tp-btn tp-btn--primary" href="/download/{{template.slug}}">
+            Скачать .zip
+          </a>
+          <a class="tp-btn" href="/templates">← Назад в каталог</a>
+        </div>
+
+        <div class="tp-note">
+          Если архива ещё нет — собери его командой <code>node scripts/build-zip.cjs {{template.slug}}</code>.
+        </div>
+      </div>
+    </header>
+
+    <div class="tp-layout">
+      <main class="tp-main">
+        <div class="tp-preview">
+          {{#if template.preview}}
+            <img class="tp-preview__img" src="{{template.preview}}" alt="{{template.title}}" />
+          {{else}}
+            <div class="tp-preview__placeholder">No preview</div>
+          {{/if}}
+        </div>
+      </main>
+
+      <aside class="tp-side">
+        <div class="tp-box">
+          <div class="tp-box__title">Характеристики</div>
+          <dl class="tp-dl">
+            <div class="tp-dl__row">
+              <dt>Категория</dt>
+              <dd>{{#if template.category}}{{template.category}}{{else}}—{{/if}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Версия</dt>
+              <dd>{{#if template.version}}v{{template.version}}{{else}}—{{/if}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Slug</dt>
+              <dd>{{#if template.slug}}{{template.slug}}{{else}}—{{/if}}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="tp-box">
+          <div class="tp-box__title">Что внутри</div>
+          <ul class="tp-list">
+            <li><code>metadata.json</code></li>
+            <li><code>docs/README.md</code></li>
+            <li><code>preview/preview.png</code></li>
+            <li><code>src/index.html</code>, <code>src/main.js</code></li>
+            <li><code>assets/style.css</code></li>
+          </ul>
+          <div class="tp-note" style="margin-top: 10px;">
+            Архив берётся из <code>storage/zips/</code>.
+          </div>
+        </div>
+      </aside>
+    </div>
+  {{else}}
+    <div class="tp-empty">
+      Шаблон не найден.
+      <div style="margin-top: 10px;">
+        <a class="tp-btn" href="/templates">← Назад в каталог</a>
+      </div>
+    </div>
   {{/if}}
 </section>
+
+<style>
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  .tp-head {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 980px) {
+    .tp-head { grid-template-columns: 1fr; }
+  }
+
+  .tp-title {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.15;
+  }
+
+  .tp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .tp-desc {
+    margin: 0;
+    opacity: .85;
+    max-width: 70ch;
+  }
+
+  .tp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid rgba(0,0,0,.12);
+    white-space: nowrap;
+    background: rgba(0,0,0,.02);
+  }
+
+  .tp-muted { opacity: .75; font-size: 13px; }
+
+  .tp-head__right {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+  }
+
+  .tp-price {
+    font-weight: 800;
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .tp-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .tp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,.14);
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    background: transparent;
+  }
+
+  .tp-btn:hover { background: rgba(0,0,0,.04); }
+
+  .tp-btn--primary {
+    border-color: rgba(0,0,0,.22);
+    font-weight: 700;
+  }
+
+  .tp-note {
+    opacity: .75;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .tp-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  @media (max-width: 980px) {
+    .tp-layout { grid-template-columns: 1fr; }
+  }
+
+  .tp-preview {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .tp-preview__img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .tp-preview__placeholder {
+    padding: 28px;
+    opacity: .6;
+  }
+
+  .tp-side {
+    display: grid;
+    gap: 16px;
+  }
+
+  .tp-box {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+  }
+
+  .tp-box__title {
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .tp-dl { margin: 0; }
+  .tp-dl__row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(0,0,0,.06);
+  }
+  .tp-dl__row:first-child { border-top: none; padding-top: 0; }
+  .tp-dl dt { opacity: .7; }
+  .tp-dl dd { margin: 0; font-weight: 600; }
+
+  .tp-list { margin: 0; padding-left: 18px; }
+  .tp-list li { margin: 6px 0; }
+
+  .tp-empty {
+    border: 1px dashed rgba(0,0,0,.2);
+    border-radius: 14px;
+    padding: 18px;
+    opacity: .8;
+  }
+
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>

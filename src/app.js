@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import exphbs from 'express-handlebars';
 
 import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
+import { findZipForSlug } from './server/downloads/findZipForSlug.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,7 +109,7 @@ app.get('/templates', async (req, res, next) => {
   }
 });
 
-// Карточка шаблона
+// Деталка шаблона
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmpl = await getTemplateBySlug(req.params.slug);
@@ -128,6 +129,25 @@ app.get('/templates/:slug', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// =========================
+// B6: Download zip
+// =========================
+app.get('/download/:slug', async (req, res) => {
+  const { slug } = req.params;
+
+  const hit = findZipForSlug(slug);
+
+  if (!hit) {
+    return res.status(404).render('errors/404', {
+      title: 'Архив не найден',
+      activeNav: 'templates',
+    });
+  }
+
+  // Отдаём скачивание (Express сам выставит нужные заголовки)
+  return res.download(hit.absPath, hit.fileName);
 });
 
 // Профиль
