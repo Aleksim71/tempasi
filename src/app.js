@@ -92,13 +92,11 @@ function applyFilters(all, q) {
     items = items.filter((t) => Boolean(t.hasZip));
   }
 
-  // сортировка
   if (sort === 'price_asc') {
     items.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
   } else if (sort === 'price_desc') {
     items.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
   } else {
-    // name_asc
     items.sort((a, b) => String(a.title ?? '').localeCompare(String(b.title ?? ''), 'en'));
   }
 
@@ -160,8 +158,14 @@ app.use(express.json());
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
-const SEEDS_DIR = path.resolve(process.cwd(), 'storage', 'templates');
-app.use('/seeds', express.static(SEEDS_DIR));
+// ВАЖНО (B5/B6/B7): превью-картинки лежат в storage/templates/<seed>/preview/preview.png
+// Раздаём их по /seeds/seed-xxx/...
+const STORAGE_TEMPLATES_DIR = path.resolve(process.cwd(), 'storage', 'templates');
+app.use('/seeds', express.static(STORAGE_TEMPLATES_DIR));
+
+// B9: Live preview ассеты самого шаблона:
+// /t/seed-001/src/index.html (и его относительные ../assets/... )
+app.use('/t', express.static(STORAGE_TEMPLATES_DIR));
 
 // =========================
 // Helpers
@@ -178,7 +182,6 @@ async function renderCatalog(req, res, next) {
   try {
     const all = await getAllTemplates();
 
-    // опции для фильтров
     const categories = uniqSorted(all.map((t) => t.category));
     const licenses = uniqSorted(all.map((t) => normalizeLicense(t.license)));
     const types = uniqSorted(all.map((t) => normalizeType(t.type)));
@@ -192,7 +195,6 @@ async function renderCatalog(req, res, next) {
       templates: items,
       activeNav: 'templates',
 
-      // для UI фильтров
       options: {
         categories,
         licenses,
@@ -230,6 +232,63 @@ app.get('/templates/:slug', async (req, res, next) => {
       template: tmpl,
       activeNav: 'templates',
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// B9: Страница “Live preview” (удобна для ручной проверки)
+app.get('/preview/:slug', async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+
+    const tmpl = await getTemplateBySlug(slug);
+    if (!tmpl) {
+      return res.status(404).render('errors/404', {
+        title: 'Шаблон не найден',
+        activeNav: 'templates',
+      });
+    }
+
+    const iframeSrc = `/t/${encodeURIComponent(slug)}/src/index.html`;
+
+    res.type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preview — ${escapeHtml(tmpl.title)}</title>
+  <style>
+    html,body { height:100%; margin:0; }
+    body { background:#0b1020; display:flex; flex-direction:column; }
+    header { padding:12px 16px; color:rgba(255,255,255,.85); font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    header a { color:#9fb3ff; text-decoration:none; }
+    header a:hover { text-decoration:underline; }
+    .wrap { flex:1; padding:16px; }
+    .frame {
+      width:100%;
+      height:100%;
+      border:0;
+      border-radius:14px;
+      background:#fff;
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>${escapeHtml(tmpl.title)}</strong>
+    <span style="opacity:.7;"> • ${escapeHtml(slug)}</span>
+    <span style="opacity:.7;"> • </span>
+    <a href="/templates/${encodeURIComponent(slug)}">back</a>
+    <span style="opacity:.7;"> • </span>
+    <a href="${iframeSrc}" target="_blank" rel="noreferrer">open raw</a>
+  </header>
+  <div class="wrap">
+    <iframe class="frame" src="${iframeSrc}"></iframe>
+  </div>
+</body>
+</html>`);
   } catch (err) {
     next(err);
   }
@@ -281,3 +340,13 @@ app.use((err, req, res, _next) => {
 });
 
 export default app;
+
+// ===== helpers =====
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
