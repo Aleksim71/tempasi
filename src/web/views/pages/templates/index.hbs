@@ -1,179 +1,186 @@
 {{!-- src/web/views/pages/templates/index.hbs --}}
 
 <style>
-  /* ===== B10.3: hover preview overlay on thumbnail ===== */
-  .t-card { position: relative; overflow: hidden; }
+  /* =========================
+     Grid
+     ========================= */
+  .templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
 
+  .t-card {
+    background: #0e1426;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,.25);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* =========================
+     Thumbnail + preview UX
+     ========================= */
   .t-thumb {
     position: relative;
     display: block;
-    border-radius: 18px;
     overflow: hidden;
-    text-decoration: none;
-    outline: none;
   }
 
   .t-thumb img {
     width: 100%;
-    height: 100%;
+    height: 200px;
     object-fit: cover;
     display: block;
   }
 
+  /* Overlay */
   .t-previewOverlay {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     background: rgba(10, 16, 32, 0.45);
     opacity: 0;
     transition: opacity .18s ease;
-    color: #fff;
   }
 
-  .t-thumb:hover .t-previewOverlay,
-  .t-thumb:focus-visible .t-previewOverlay {
-    opacity: 1;
+  /* Desktop hover */
+  @media (hover: hover) and (pointer: fine) {
+    .t-thumb:hover .t-previewOverlay {
+      opacity: 1;
+    }
+  }
+
+  /* Mobile: overlay always visible */
+  @media (hover: none) and (pointer: coarse) {
+    .t-previewOverlay {
+      opacity: 1;
+      background: linear-gradient(
+        to top,
+        rgba(10,16,32,.75),
+        rgba(10,16,32,.25) 55%,
+        rgba(10,16,32,.05)
+      );
+      align-items: flex-end;
+      padding: 12px;
+    }
+  }
+
+  .t-previewPill,
+  .t-previewHint {
+    pointer-events: auto;
+    padding: 12px 16px;
+    border-radius: 999px;
+    font: 600 14px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    white-space: nowrap;
+    text-decoration: none;
   }
 
   .t-previewPill {
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(120, 102, 255, 0.92);
-    box-shadow: 0 14px 30px rgba(0,0,0,.25);
-    font: 600 14px/1.1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    letter-spacing: .2px;
+    background: rgba(120, 102, 255, 0.95);
     color: #fff;
-    text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 12px 26px rgba(0,0,0,.3);
   }
-
-  .t-previewPill:hover { filter: brightness(1.03); }
 
   .t-previewHint {
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.18);
-    font: 500 14px/1.1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.2);
     color: #fff;
-    text-decoration: none;
   }
 
-  .t-previewHint:hover { background: rgba(255,255,255,0.16); }
+  /* =========================
+     Card body
+     ========================= */
+  .t-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
 
-  /* make overlay buttons clickable */
-  .t-previewOverlay a { pointer-events: auto; }
+  .t-title {
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .t-meta {
+    font-size: 13px;
+    opacity: .75;
+  }
+
+  .t-footer {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+
+  .t-price {
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .t-actions a {
+    font-size: 13px;
+    color: #9fb3ff;
+    text-decoration: none;
+  }
 </style>
 
-<section class="page">
-  <header class="page-head">
-    <h1 class="page-title">{{pageTitle}}</h1>
+<section class="templates-page">
+  <header class="page-header">
+    <h1>{{pageTitle}}</h1>
     {{#if pageSubtitle}}
-      <p class="page-subtitle">{{pageSubtitle}}</p>
+      <p class="subtitle">{{pageSubtitle}}</p>
     {{/if}}
   </header>
 
-  {{!-- Filters (B8) --}}
-  <form class="filters" method="get" action="/templates">
-    <div class="filters-row">
-      <input
-        class="input"
-        type="search"
-        name="q"
-        placeholder="title or description"
-        value="{{filters.q}}"
-        autocomplete="off"
-      />
-
-      <select class="select" name="category">
-        <option value="">All</option>
-        {{#each options.categories}}
-          <option value="{{this}}" {{#if (eq ../filters.category this)}}selected{{/if}}>{{this}}</option>
-        {{/each}}
-      </select>
-
-      <select class="select" name="license">
-        <option value="">All</option>
-        {{#each options.licenses}}
-          <option value="{{this}}" {{#if (eq ../filters.license this)}}selected{{/if}}>{{licenseLabel this}}</option>
-        {{/each}}
-      </select>
-
-      <select class="select" name="type">
-        <option value="">All</option>
-        {{#each options.types}}
-          <option value="{{this}}" {{#if (eq ../filters.type this)}}selected{{/if}}>{{typeLabel this}}</option>
-        {{/each}}
-      </select>
-
-      <select class="select" name="sort">
-        {{#each options.sorts}}
-          <option value="{{value}}" {{#if (eq ../filters.sort value)}}selected{{/if}}>{{label}}</option>
-        {{/each}}
-      </select>
-    </div>
-
-    <div class="filters-row filters-row--bottom">
-      <label class="checkbox">
-        <input type="checkbox" name="ready" value="1" {{#if (eq filters.ready "1")}}checked{{/if}} />
-        <span>Only ZIP-ready</span>
-      </label>
-
-      <div class="filters-actions">
-        <button class="btn" type="submit">Apply</button>
-        <a class="btn btn--ghost" href="/templates">Reset</a>
-      </div>
-    </div>
-  </form>
-
-  {{!-- Grid --}}
   <div class="templates-grid">
     {{#each templates}}
       <article class="t-card">
-        <div class="t-top">
-          <div class="t-meta">
-            <div class="t-title">
-              <a href="/templates/{{slug}}">{{title}}</a>
-            </div>
-            <div class="t-sub">
-              <span class="t-chip">{{category}}</span>
-              <span class="t-chip">{{licenseLabel license}}</span>
-              <span class="t-chip">{{typeLabel type}}</span>
-              <span class="t-chip">v{{version}}</span>
-              <span class="t-chip">{{slug}}</span>
-            </div>
-          </div>
 
-          <div class="t-price">
-            {{formatPrice price}}
-          </div>
-        </div>
-
-        {{!-- Thumbnail with hover overlay (B10.3) --}}
-        <div class="t-thumb" tabindex="0" aria-label="Template preview actions">
+        <div class="t-thumb">
           <img src="{{preview}}" alt="{{title}}" loading="lazy" />
-          <div class="t-previewOverlay" aria-hidden="true">
-            <a class="t-previewPill" href="/preview/{{slug}}" target="_blank" rel="noreferrer">Preview</a>
-            <a class="t-previewHint" href="/templates/{{slug}}">Details</a>
+
+          <div class="t-previewOverlay">
+            <a
+              class="t-previewPill"
+              href="/preview/{{slug}}"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ▶ Preview
+            </a>
+
+            <a
+              class="t-previewHint"
+              href="/templates/{{slug}}"
+            >
+              Details
+            </a>
           </div>
         </div>
 
-        <div class="t-bottom">
-          <div class="t-desc">{{description}}</div>
+        <div class="t-body">
+          <div class="t-title">{{title}}</div>
+          <div class="t-meta">
+            {{category}} · {{licenseLabel license}}
+          </div>
+        </div>
 
+        <div class="t-footer">
+          <div class="t-price">{{formatPrice price}}</div>
           <div class="t-actions">
-            <a class="btn btn--ghost" href="/templates/{{slug}}">More</a>
-
-            {{#if hasZip}}
-              <a class="btn" href="/download/{{slug}}">Download ZIP</a>
-            {{else}}
-              <span class="badge badge--muted">ZIP not ready</span>
-            {{/if}}
+            <a href="/templates/{{slug}}">Open →</a>
           </div>
         </div>
+
       </article>
     {{/each}}
   </div>
