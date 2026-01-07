@@ -1,18 +1,21 @@
 // src/server/catalog/templates.repo.js
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const TEMPLATES_ROOT = path.resolve(process.cwd(), 'seeds');
+const TEMPLATES_ROOT = path.resolve(process.cwd(), 'storage', 'templates');
+
+function isSafeSlug(slug) {
+  return typeof slug === 'string' && /^seed-\d{3}$/.test(slug);
+}
 
 /**
- * Читает все seed-XXX и возвращает данные для витрины
+ * B7-compatible: читает все seed-XXX из storage/templates
+ * и возвращает данные для витрины/каталога
  */
-function listTemplates() {
-  if (!fs.existsSync(TEMPLATES_ROOT)) {
-    return [];
-  }
+export function listTemplates() {
+  if (!fs.existsSync(TEMPLATES_ROOT)) return [];
 
   const dirs = fs
     .readdirSync(TEMPLATES_ROOT, { withFileTypes: true })
@@ -22,31 +25,62 @@ function listTemplates() {
 
   const result = [];
 
-  for (const dir of dirs) {
-    const metaPath = path.join(TEMPLATES_ROOT, dir, 'metadata.json');
-
+  for (const slug of dirs) {
+    const metaPath = path.join(TEMPLATES_ROOT, slug, 'metadata.json');
     if (!fs.existsSync(metaPath)) continue;
 
     try {
       const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
 
       result.push({
-        id: dir,
-        title: meta.title,
-        price: meta.price,
-        category: meta.category,
-        version: meta.version,
-        preview: `/seeds/${dir}/preview/preview.png`,
-        description: meta.description || '',
+        slug,
+        title: meta.title ?? slug,
+        price: meta.price ?? 0,
+        category: meta.category ?? '',
+        version: meta.version ?? '',
+        description: meta.description ?? '',
+
+        // B7:
+        license: meta.license ?? 'PU',
+        type: meta.type ?? 'buy',
+
+        preview: `/seeds/${slug}/preview/preview.png`,
       });
     } catch (err) {
-      console.warn(`[catalog] broken metadata in ${dir}`, err.message);
+      console.warn(`[catalog] broken metadata in ${slug}:`, err.message);
     }
   }
 
   return result;
 }
 
-module.exports = {
-  listTemplates,
-};
+/**
+ * Один шаблон по slug (для будущих API/страниц)
+ */
+export function getTemplate(slug) {
+  if (!isSafeSlug(slug)) return null;
+
+  const metaPath = path.join(TEMPLATES_ROOT, slug, 'metadata.json');
+  if (!fs.existsSync(metaPath)) return null;
+
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+
+    return {
+      slug,
+      title: meta.title ?? slug,
+      price: meta.price ?? 0,
+      category: meta.category ?? '',
+      version: meta.version ?? '',
+      description: meta.description ?? '',
+
+      license: meta.license ?? 'PU',
+      type: meta.type ?? 'buy',
+
+      preview: `/seeds/${slug}/preview/preview.png`,
+    };
+  } catch (err) {
+    console.warn(`[catalog] broken metadata in ${slug}:`, err.message);
+    return null;
+  }
+}
