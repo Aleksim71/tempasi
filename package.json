@@ -3,10 +3,10 @@
   "name": "tempasi",
   "version": "1.0.0",
   "description": "Tempasi MVP backend + static frontend",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",

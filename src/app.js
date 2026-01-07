@@ -11,16 +11,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // =========================
-// Handlebars
+// Handlebars (SSR)
 // =========================
+const VIEWS_ROOT = path.join(__dirname, 'web', 'views');
+
 const hbs = exphbs.create({
   extname: '.hbs',
   defaultLayout: 'main',
-  layoutsDir: path.join(__dirname, 'views/layouts'),
-  partialsDir: path.join(__dirname, 'views/partials'),
+  layoutsDir: path.join(VIEWS_ROOT, 'layouts'),
+  partialsDir: path.join(VIEWS_ROOT, 'partials'),
   helpers: {
     eq(a, b) {
       return a === b;
@@ -38,15 +39,21 @@ const hbs = exphbs.create({
 
 app.engine('.hbs', hbs.engine);
 app.set('view engine', '.hbs');
-app.set('views', path.join(__dirname, 'views'));
+
+// Важно: pages лежат в src/web/views/pages
+app.set('views', path.join(VIEWS_ROOT, 'pages'));
 
 // =========================
-// Мидлвары
+// Middleware
 // =========================
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// статика из src/css, src/icons (мы монтируем их как /css и /icons)
+// Static (из public/…)
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+app.use(express.static(PUBLIC_DIR));
+
+// На всякий (если пока статика ещё живёт в src/css, src/icons)
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/icons', express.static(path.join(__dirname, 'icons')));
 
@@ -57,14 +64,13 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// Роуты
+// Routes
 // =========================
 
-// Главная = список шаблонов (как /templates)
+// Главная = список шаблонов
 app.get('/', async (req, res, next) => {
   try {
     const templates = await getAllTemplates();
-
     res.render('templates/index', {
       title: 'Tempasi — шаблоны',
       pageTitle: 'Шаблоны',
@@ -78,11 +84,9 @@ app.get('/', async (req, res, next) => {
   }
 });
 
-// Список шаблонов
 app.get('/templates', async (req, res, next) => {
   try {
     const templates = await getAllTemplates();
-
     res.render('templates/index', {
       title: 'Tempasi — шаблоны',
       pageTitle: 'Шаблоны',
@@ -96,7 +100,7 @@ app.get('/templates', async (req, res, next) => {
   }
 });
 
-// Карточка отдельного шаблона
+// Карточка шаблона
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmpl = await getTemplateBySlug(req.params.slug);
@@ -108,7 +112,8 @@ app.get('/templates/:slug', async (req, res, next) => {
       });
     }
 
-    res.render('templates/show', {
+    // В твоей структуре есть template-details.hbs (а templates/show может не быть)
+    res.render('template-details', {
       title: tmpl.title,
       template: tmpl,
       activeNav: 'templates',
@@ -118,7 +123,7 @@ app.get('/templates/:slug', async (req, res, next) => {
   }
 });
 
-// Профиль
+// Профиль (есть profile/index.hbs)
 app.get('/profile', (req, res) => {
   res.render('profile/index', {
     title: 'Профиль',
@@ -126,14 +131,7 @@ app.get('/profile', (req, res) => {
   });
 });
 
-// ---------- Статические страницы ----------
-app.get('/about', (req, res) => {
-  res.render('static/about', {
-    title: 'About',
-    activeNav: 'about',
-  });
-});
-
+// Контакты (есть static/contact.hbs)
 app.get('/contact', (req, res) => {
   res.render('static/contact', {
     title: 'Contact',
@@ -141,33 +139,17 @@ app.get('/contact', (req, res) => {
   });
 });
 
-app.get('/community', (req, res) => {
-  res.render('static/community', {
-    title: 'Community',
-    activeNav: 'community',
-  });
-});
-
-app.get('/deals', (req, res) => {
-  res.render('static/deals', {
-    title: 'Скидки',
-    activeNav: 'deals',
-  });
-});
-
 // =========================
 // 404 и 500
 // =========================
-
-// 404
 app.use((req, res) => {
   res.status(404).render('errors/404', {
     title: 'Страница не найдена',
   });
 });
 
-// 500
 app.use((err, req, res, _next) => {
+   
   console.error(err);
   res.status(500).render('errors/500', {
     title: 'Ошибка сервера',
@@ -175,9 +157,4 @@ app.use((err, req, res, _next) => {
   });
 });
 
-// =========================
-// Старт сервера
-// =========================
-app.listen(PORT, () => {
-  console.log(`Tempasi running at http://localhost:${PORT}`);
-});
+export default app;
