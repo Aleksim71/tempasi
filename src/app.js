@@ -40,7 +40,7 @@ const hbs = exphbs.create({
 app.engine('.hbs', hbs.engine);
 app.set('view engine', '.hbs');
 
-// Важно: pages лежат в src/web/views/pages
+// pages лежат в src/web/views/pages
 app.set('views', path.join(VIEWS_ROOT, 'pages'));
 
 // =========================
@@ -49,11 +49,21 @@ app.set('views', path.join(VIEWS_ROOT, 'pages'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Static (из public/…)
+// =========================
+// Static
+// =========================
+
+// public/*
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
-// На всякий (если пока статика ещё живёт в src/css, src/icons)
+// seeds/*  → storage/templates/*
+const SEEDS_DIR = path.resolve(process.cwd(), 'storage', 'templates');
+app.use('/seeds', express.static(SEEDS_DIR));
+
+// =========================
+// Helpers
+// =========================
 
 // Текущий путь для подсветки активного пункта меню
 app.use((req, res, next) => {
@@ -110,7 +120,6 @@ app.get('/templates/:slug', async (req, res, next) => {
       });
     }
 
-    // В твоей структуре есть template-details.hbs (а templates/show может не быть)
     res.render('template-details', {
       title: tmpl.title,
       template: tmpl,
@@ -121,7 +130,7 @@ app.get('/templates/:slug', async (req, res, next) => {
   }
 });
 
-// Профиль (есть profile/index.hbs)
+// Профиль
 app.get('/profile', (req, res) => {
   res.render('profile/index', {
     title: 'Профиль',
@@ -129,7 +138,7 @@ app.get('/profile', (req, res) => {
   });
 });
 
-// Контакты (есть static/contact.hbs)
+// Контакты
 app.get('/contact', (req, res) => {
   res.render('static/contact', {
     title: 'Contact',

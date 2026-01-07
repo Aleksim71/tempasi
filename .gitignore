@@ -48,3 +48,7 @@ logs/
 .npm/
 .husky/_/
 storage/zips/
+# ==========================
+# Tempasi storage (seed packs)
+# ==========================
+storage/templates/
