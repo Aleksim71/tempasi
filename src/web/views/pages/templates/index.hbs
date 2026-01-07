@@ -10,6 +10,7 @@
     gap: 20px;
   }
 
+  /* content-visibility boosts large lists */
   .t-card {
     background: #0e1426;
     border-radius: 18px;
@@ -17,6 +18,9 @@
     box-shadow: 0 12px 30px rgba(0,0,0,.25);
     display: flex;
     flex-direction: column;
+
+    content-visibility: auto;
+    contain-intrinsic-size: 340px; /* reserve space to reduce jumps */
   }
 
   /* =========================
@@ -26,11 +30,17 @@
     position: relative;
     display: block;
     overflow: hidden;
+
+    /* CLS killer: reserve space before image loads */
+    aspect-ratio: 16 / 9;
+    background: rgba(255,255,255,.04);
   }
 
   .t-thumb img {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 200px;
+    height: 100%;
     object-fit: cover;
     display: block;
   }
@@ -61,8 +71,8 @@
       opacity: 1;
       background: linear-gradient(
         to top,
-        rgba(10,16,32,.75),
-        rgba(10,16,32,.25) 55%,
+        rgba(10,16,32,.78),
+        rgba(10,16,32,.28) 55%,
         rgba(10,16,32,.05)
       );
       align-items: flex-end;
@@ -146,22 +156,12 @@
       <article class="t-card">
 
         <div class="t-thumb">
-          <img src="{{preview}}" alt="{{title}}" loading="lazy" />
-
+          <img src="{{preview}}" alt="{{title}}" loading="lazy" decoding="async" />
           <div class="t-previewOverlay">
-            <a
-              class="t-previewPill"
-              href="/preview/{{slug}}"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a class="t-previewPill" href="/preview/{{slug}}" target="_blank" rel="noreferrer">
               ▶ Preview
             </a>
-
-            <a
-              class="t-previewHint"
-              href="/templates/{{slug}}"
-            >
+            <a class="t-previewHint" href="/templates/{{slug}}">
               Details
             </a>
           </div>
