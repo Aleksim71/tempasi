@@ -130,12 +130,8 @@ const hbs = exphbs.create({
         maximumFractionDigits: 0,
       })} €`;
     },
-    licenseLabel(v) {
-      return licenseLabel(v);
-    },
-    typeLabel(v) {
-      return typeLabel(v);
-    },
+    licenseLabel,
+    typeLabel,
     isFree(price) {
       return !price || Number(price) <= 0;
     },
@@ -158,13 +154,13 @@ app.use(express.json());
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
-// ВАЖНО (B5/B6/B7): превью-картинки лежат в storage/templates/<seed>/preview/preview.png
-// Раздаём их по /seeds/seed-xxx/...
+// IMPORTANT (B5/B6/B7): preview images live in storage/templates/**/preview/preview.png
+// We serve them under /seeds/seed-xxx/...
 const STORAGE_TEMPLATES_DIR = path.resolve(process.cwd(), 'storage', 'templates');
 app.use('/seeds', express.static(STORAGE_TEMPLATES_DIR));
 
-// B9: Live preview ассеты самого шаблона:
-// /t/seed-001/src/index.html (и его относительные ../assets/... )
+// B9/B10: Live preview assets of template itself
+// /t/seed-001/src/index.html (and relative ../assets)
 app.use('/t', express.static(STORAGE_TEMPLATES_DIR));
 
 // =========================
@@ -189,12 +185,11 @@ async function renderCatalog(req, res, next) {
     const { items, filters } = applyFilters(all, req.query);
 
     res.render('templates/index', {
-      title: 'Tempasi — шаблоны',
-      pageTitle: 'Шаблоны',
-      pageSubtitle: 'Фильтруй по категории/лицензии/типу и скачивай готовые zip (если доступно).',
+      title: 'Tempasi — Templates',
+      pageTitle: 'Templates',
+      pageSubtitle: 'Filter by category / license / type and download ready ZIPs.',
       templates: items,
       activeNav: 'templates',
-
       options: {
         categories,
         licenses,
@@ -215,14 +210,14 @@ async function renderCatalog(req, res, next) {
 app.get('/', renderCatalog);
 app.get('/templates', renderCatalog);
 
-// Деталка
+// Template details
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmpl = await getTemplateBySlug(req.params.slug);
 
     if (!tmpl) {
       return res.status(404).render('errors/404', {
-        title: 'Шаблон не найден',
+        title: 'Template not found',
         activeNav: 'templates',
       });
     }
@@ -237,15 +232,15 @@ app.get('/templates/:slug', async (req, res, next) => {
   }
 });
 
-// B9: Страница “Live preview” (удобна для ручной проверки)
+// B10/B10.2: Live preview page with sticky CTA
 app.get('/preview/:slug', async (req, res, next) => {
   try {
     const { slug } = req.params;
-
     const tmpl = await getTemplateBySlug(slug);
+
     if (!tmpl) {
       return res.status(404).render('errors/404', {
-        title: 'Шаблон не найден',
+        title: 'Template not found',
         activeNav: 'templates',
       });
     }
@@ -255,38 +250,50 @@ app.get('/preview/:slug', async (req, res, next) => {
     res.type('html').send(`<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Preview — ${escapeHtml(tmpl.title)}</title>
-  <style>
-    html,body { height:100%; margin:0; }
-    body { background:#0b1020; display:flex; flex-direction:column; }
-    header { padding:12px 16px; color:rgba(255,255,255,.85); font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    header a { color:#9fb3ff; text-decoration:none; }
-    header a:hover { text-decoration:underline; }
-    .wrap { flex:1; padding:16px; }
-    .frame {
-      width:100%;
-      height:100%;
-      border:0;
-      border-radius:14px;
-      background:#fff;
-      box-shadow: 0 18px 40px rgba(0,0,0,.35);
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preview — ${escapeHtml(tmpl.title)}</title>
+<style>
+html,body{height:100%;margin:0}
+body{background:#0b1020;font-family:system-ui,-apple-system,Segoe UI,Roboto}
+header{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;
+  background:rgba(10,16,32,.85);
+  backdrop-filter:blur(10px);
+  color:#fff
+}
+header a{color:#9fb3ff;text-decoration:none}
+header a:hover{text-decoration:underline}
+.cta{
+  margin-left:auto;
+  padding:10px 16px;
+  border-radius:999px;
+  background:#7a66ff;
+  color:#fff;
+  font-weight:600;
+  text-decoration:none
+}
+.wrap{height:calc(100% - 56px);padding:16px}
+iframe{
+  width:100%;height:100%;
+  border:0;border-radius:16px;
+  background:#fff;
+  box-shadow:0 18px 40px rgba(0,0,0,.35)
+}
+</style>
 </head>
 <body>
-  <header>
-    <strong>${escapeHtml(tmpl.title)}</strong>
-    <span style="opacity:.7;"> • ${escapeHtml(slug)}</span>
-    <span style="opacity:.7;"> • </span>
-    <a href="/templates/${encodeURIComponent(slug)}">back</a>
-    <span style="opacity:.7;"> • </span>
-    <a href="${iframeSrc}" target="_blank" rel="noreferrer">open raw</a>
-  </header>
-  <div class="wrap">
-    <iframe class="frame" src="${iframeSrc}"></iframe>
-  </div>
+<header>
+  <strong>${escapeHtml(tmpl.title)}</strong>
+  <span style="opacity:.7">• ${escapeHtml(slug)}</span>
+  <a href="/templates/${encodeURIComponent(slug)}">Back</a>
+  <a class="cta" href="/download/${encodeURIComponent(slug)}">Download ZIP</a>
+</header>
+<div class="wrap">
+  <iframe src="${iframeSrc}"></iframe>
+</div>
 </body>
 </html>`);
   } catch (err) {
@@ -295,30 +302,26 @@ app.get('/preview/:slug', async (req, res, next) => {
 });
 
 // Download zip
-app.get('/download/:slug', async (req, res) => {
-  const { slug } = req.params;
-
-  const hit = findZipForSlug(slug);
-
+app.get('/download/:slug', (req, res) => {
+  const hit = findZipForSlug(req.params.slug);
   if (!hit) {
     return res.status(404).render('errors/404', {
-      title: 'Архив не найден',
+      title: 'Archive not found',
       activeNav: 'templates',
     });
   }
-
-  return res.download(hit.absPath, hit.fileName);
+  res.download(hit.absPath, hit.fileName);
 });
 
-// Профиль
+// Profile
 app.get('/profile', (req, res) => {
   res.render('profile/index', {
-    title: 'Профиль',
+    title: 'Profile',
     activeNav: 'profile',
   });
 });
 
-// Контакты
+// Contact
 app.get('/contact', (req, res) => {
   res.render('static/contact', {
     title: 'Contact',
@@ -326,22 +329,24 @@ app.get('/contact', (req, res) => {
   });
 });
 
-// 404 / 500
+// Errors
 app.use((req, res) => {
-  res.status(404).render('errors/404', { title: 'Страница не найдена' });
+  res.status(404).render('errors/404', { title: 'Page not found' });
 });
 
 app.use((err, req, res, _next) => {
   console.error(err);
   res.status(500).render('errors/500', {
-    title: 'Ошибка сервера',
+    title: 'Server error',
     error: process.env.NODE_ENV === 'development' ? err : null,
   });
 });
 
 export default app;
 
-// ===== helpers =====
+// =========================
+// Utils
+// =========================
 function escapeHtml(s) {
   return String(s ?? '')
     .replaceAll('&', '&amp;')
