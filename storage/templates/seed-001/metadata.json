@@ -3,10 +3,19 @@
   "slug": "seed-001",
   "title": "Seed 001 — Base Landing",
   "category": "landing",
-  "pages": ["index.html"],
-  "tech": ["html", "css", "js"],
+  "pages": [
+    "index.html"
+  ],
+  "tech": [
+    "html",
+    "css",
+    "js"
+  ],
   "price_cents": 3900,
   "license_default": "PU",
   "author": "Tempasi",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "license": "PU",
+  "deal": "BUY",
+  "zipReady": true
 }

@@ -3,10 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Tempasi — Шаблоны</title>
+
+    <title>{{#if title}}{{title}}{{else}}Tempasi{{/if}}</title>
 
     <link rel="stylesheet" href="/css/core.css" />
     <link rel="stylesheet" href="/css/custom.css" />
+
+    {{!-- Page-specific CSS (optional) --}}
+    {{#if pageCss}}
+      <link rel="stylesheet" href="{{pageCss}}" />
+    {{/if}}
 
     <!-- Icons (local + CDN fallback) -->
     <link
@@ -24,6 +30,7 @@
       href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
     />
   </head>
+
   <body>
     {{> header}}
 
@@ -32,5 +39,10 @@
     </main>
 
     {{> footer}}
+
+    {{!-- Page-specific JS (optional) --}}
+    {{#if pageJs}}
+      <script src="{{pageJs}}" defer></script>
+    {{/if}}
   </body>
 </html>

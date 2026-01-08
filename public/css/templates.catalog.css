@@ -1,0 +1,198 @@
+/* ======================================================
+   Tempasi Templates Catalog
+   B10 (preview UX) + B11 (badges, filters)
+   ====================================================== */
+
+/* ===== Page ===== */
+.templates-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.templates-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 40px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  opacity: 0.85;
+}
+
+/* ===== Chip bar ===== */
+.chipbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 20px 0 28px;
+}
+
+.chip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip.is-active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.chip--ghost {
+  background: transparent;
+  opacity: 0.7;
+}
+
+/* ===== GRID ===== */
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+/* ===== CARD ===== */
+.tpl-card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.tpl-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
+}
+
+/* ZIP not ready */
+.tpl-card.is-zip-not-ready {
+  opacity: 0.75;
+  filter: grayscale(0.2);
+}
+
+/* FREE highlight */
+.tpl-card.is-free {
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline-offset: -2px;
+}
+
+/* ===== Preview ===== */
+.tpl-card__preview {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.tpl-card__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== Badges ===== */
+.tpl-card__badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.badge {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* ZIP */
+.badge--zip.badge--NOT_READY {
+  border-color: rgba(255, 90, 90, 0.7);
+}
+
+.badge--zip.badge--READY {
+  border-color: rgba(90, 255, 160, 0.7);
+}
+
+/* FREE */
+.badge--FREE {
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+}
+
+/* ===== Footer ===== */
+.tpl-card__footer {
+  padding: 16px;
+}
+
+.tpl-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.tpl-card__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #8f6bff, #5e9cff);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .templates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+}

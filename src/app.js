@@ -174,9 +174,39 @@ app.use((req, res, next) => {
 // =========================
 // Routes
 // =========================
+function mapTemplateForCatalog(t) {
+  const slug = toStr(t.slug).trim();
+  const hasZip = Boolean(t.hasZip);
+
+  // B11 fields used by templates/index.hbs
+  const license = normalizeLicense(t.license);
+  const deal =
+    license === 'FREE' || normalizeType(t.type) === 'free'
+      ? 'FREE'
+      : normalizeType(t.type) === 'rent'
+        ? 'RENT'
+        : 'BUY';
+
+  // IMPORTANT:
+  // Preview image is a STATIC FILE under /seeds/... (NOT /t/..., because /t is for live demo HTML assets).
+  // It can be PNG, SVG, etc — главное чтобы это был image/*.
+  const previewUrl = slug ? `/seeds/${encodeURIComponent(slug)}/preview/preview.png` : '';
+
+  return {
+    ...t,
+    slug,
+    title: t.title ?? slug,
+    license,
+    deal,
+    zipReady: hasZip,
+    previewUrl,
+  };
+}
+
 async function renderCatalog(req, res, next) {
   try {
-    const all = await getAllTemplates();
+    const allRaw = await getAllTemplates();
+    const all = allRaw.map(mapTemplateForCatalog);
 
     const categories = uniqSorted(all.map((t) => t.category));
     const licenses = uniqSorted(all.map((t) => normalizeLicense(t.license)));
@@ -186,6 +216,11 @@ async function renderCatalog(req, res, next) {
 
     res.render('templates/index', {
       title: 'Tempasi — Templates',
+
+      // optional: if you updated layouts/main.hbs to support these:
+      pageCss: '/css/templates.catalog.css',
+      pageJs: '/js/templates.filters.js',
+
       pageTitle: 'Templates',
       pageSubtitle: 'Filter by category / license / type and download ready ZIPs.',
       templates: items,
@@ -213,14 +248,15 @@ app.get('/templates', renderCatalog);
 // Template details
 app.get('/templates/:slug', async (req, res, next) => {
   try {
-    const tmpl = await getTemplateBySlug(req.params.slug);
-
-    if (!tmpl) {
+    const tmplRaw = await getTemplateBySlug(req.params.slug);
+    if (!tmplRaw) {
       return res.status(404).render('errors/404', {
         title: 'Template not found',
         activeNav: 'templates',
       });
     }
+
+    const tmpl = mapTemplateForCatalog(tmplRaw);
 
     res.render('template-details', {
       title: tmpl.title,
@@ -236,16 +272,21 @@ app.get('/templates/:slug', async (req, res, next) => {
 app.get('/preview/:slug', async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const tmpl = await getTemplateBySlug(slug);
+    const tmplRaw = await getTemplateBySlug(slug);
 
-    if (!tmpl) {
+    if (!tmplRaw) {
       return res.status(404).render('errors/404', {
         title: 'Template not found',
         activeNav: 'templates',
       });
     }
 
-    const iframeSrc = `/t/${encodeURIComponent(slug)}/src/index.html`;
+    const tmpl = mapTemplateForCatalog(tmplRaw);
+    const iframeSrc = `/t/${encodeURIComponent(tmpl.slug)}/src/index.html`;
+
+    const ctaHtml = tmpl.zipReady
+      ? `<a class="cta" href="/download/${encodeURIComponent(tmpl.slug)}">Download ZIP</a>`
+      : `<span class="cta cta--disabled" aria-disabled="true">ZIP soon</span>`;
 
     res.type('html').send(`<!doctype html>
 <html lang="en">
@@ -275,6 +316,11 @@ header a:hover{text-decoration:underline}
   font-weight:600;
   text-decoration:none
 }
+.cta--disabled{
+  background:rgba(255,255,255,.14);
+  color:rgba(255,255,255,.75);
+  cursor:not-allowed
+}
 .wrap{height:calc(100% - 56px);padding:16px}
 iframe{
   width:100%;height:100%;
@@ -287,9 +333,9 @@ iframe{
 <body>
 <header>
   <strong>${escapeHtml(tmpl.title)}</strong>
-  <span style="opacity:.7">• ${escapeHtml(slug)}</span>
-  <a href="/templates/${encodeURIComponent(slug)}">Back</a>
-  <a class="cta" href="/download/${encodeURIComponent(slug)}">Download ZIP</a>
+  <span style="opacity:.7">• ${escapeHtml(tmpl.slug)}</span>
+  <a href="/templates/${encodeURIComponent(tmpl.slug)}">Back</a>
+  ${ctaHtml}
 </header>
 <div class="wrap">
   <iframe src="${iframeSrc}"></iframe>
