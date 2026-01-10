@@ -4,14 +4,25 @@ import path from 'node:path';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import exphbs from 'express-handlebars';
+import { createRequire } from 'node:module';
 
 import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
-import { findZipForSlug } from './server/downloads/findZipForSlug.js';
+
+const require = createRequire(import.meta.url);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.get('/__whoami', (_req, res) => {
+  res.json({ ok: true, file: 'src/app.js', ts: new Date().toISOString() });
+});
+
+// DEBUG: log every request (temporary)
+app.use((req, _res, next) => {
+  console.log('[REQ]', req.method, req.url);
+  next();
+});
 
 // =========================
 // Handlebars (SSR)
@@ -154,13 +165,8 @@ app.use(express.json());
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.use(express.static(PUBLIC_DIR));
 
-// IMPORTANT (B5/B6/B7): preview images live in storage/templates/**/preview/preview.png
-// We serve them under /seeds/seed-xxx/...
 const STORAGE_TEMPLATES_DIR = path.resolve(process.cwd(), 'storage', 'templates');
 app.use('/seeds', express.static(STORAGE_TEMPLATES_DIR));
-
-// B9/B10: Live preview assets of template itself
-// /t/seed-001/src/index.html (and relative ../assets)
 app.use('/t', express.static(STORAGE_TEMPLATES_DIR));
 
 // =========================
@@ -172,13 +178,29 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// Routes
+// B12 API + Downloads (CJS routers mounted from ESM via createRequire)
+// =========================
+try {
+  const orders = require('./modules/orders/orders.routes.cjs');
+  const payments = require('./modules/payments/payments.routes.cjs');
+  const downloads = require('./modules/downloads/downloads.routes.cjs');
+
+  app.use('/api/orders', orders);
+  app.use('/api/payments', payments);
+  app.use('/download', downloads);
+
+  console.log('[B12] routes mounted: /api/orders, /api/payments, /download');
+} catch (e) {
+  console.error('[B12] mount failed:', e?.message || e);
+}
+
+// =========================
+// Routes (SSR)
 // =========================
 function mapTemplateForCatalog(t) {
   const slug = toStr(t.slug).trim();
   const hasZip = Boolean(t.hasZip);
 
-  // B11 fields used by templates/index.hbs
   const license = normalizeLicense(t.license);
   const deal =
     license === 'FREE' || normalizeType(t.type) === 'free'
@@ -187,9 +209,6 @@ function mapTemplateForCatalog(t) {
         ? 'RENT'
         : 'BUY';
 
-  // IMPORTANT:
-  // Preview image is a STATIC FILE under /seeds/... (NOT /t/..., because /t is for live demo HTML assets).
-  // It can be PNG, SVG, etc — главное чтобы это был image/*.
   const previewUrl = slug ? `/seeds/${encodeURIComponent(slug)}/preview/preview.png` : '';
 
   return {
@@ -216,11 +235,8 @@ async function renderCatalog(req, res, next) {
 
     res.render('templates/index', {
       title: 'Tempasi — Templates',
-
-      // optional: if you updated layouts/main.hbs to support these:
       pageCss: '/css/templates.catalog.css',
       pageJs: '/js/templates.filters.js',
-
       pageTitle: 'Templates',
       pageSubtitle: 'Filter by category / license / type and download ready ZIPs.',
       templates: items,
@@ -242,10 +258,62 @@ async function renderCatalog(req, res, next) {
   }
 }
 
+// DEBUG: show routes with mount prefixes (temporary)
+app.get('/__debug/routes2', (_req, res) => {
+  const stack =
+    (app && app._router && app._router.stack) || (app && app.router && app.router.stack) || [];
+
+  function methods(route) {
+    return Object.keys(route.methods || {})
+      .filter((k) => route.methods[k])
+      .map((k) => k.toUpperCase());
+  }
+
+  function prefixFromLayer(layer) {
+    // layer.regexp обычно выглядит так: /^\/api\/orders\/?(?=\/|$)/i
+    const re = String(layer.regexp || '');
+    const anchor = '^\\/';
+    const i = re.indexOf(anchor);
+    if (i === -1) return '';
+
+    let rest = re.slice(i + anchor.length);
+
+    // отрежем всё после \ /? или (?=
+    const cut1 = rest.indexOf('\\/?');
+    const cut2 = rest.indexOf('(?=');
+    let cut = -1;
+    if (cut1 !== -1 && cut2 !== -1) cut = Math.min(cut1, cut2);
+    else cut = cut1 !== -1 ? cut1 : cut2;
+
+    if (cut !== -1) rest = rest.slice(0, cut);
+
+    // rest сейчас типа: api\/orders
+    const p = '/' + rest.replaceAll('\\/', '/');
+    return p === '/' ? '' : p;
+  }
+
+  const routes = [];
+  for (const layer of stack) {
+    if (layer.route) {
+      for (const m of methods(layer.route)) routes.push({ method: m, path: layer.route.path });
+      continue;
+    }
+    if (layer.name === 'router' && layer.handle && Array.isArray(layer.handle.stack)) {
+      const pfx = prefixFromLayer(layer);
+      for (const l of layer.handle.stack) {
+        if (!l.route) continue;
+        for (const m of methods(l.route)) routes.push({ method: m, path: pfx + l.route.path });
+      }
+    }
+  }
+
+  routes.sort((a, b) => (a.path + a.method).localeCompare(b.path + b.method));
+  res.json({ count: routes.length, routes });
+});
+
 app.get('/', renderCatalog);
 app.get('/templates', renderCatalog);
 
-// Template details
 app.get('/templates/:slug', async (req, res, next) => {
   try {
     const tmplRaw = await getTemplateBySlug(req.params.slug);
@@ -268,7 +336,6 @@ app.get('/templates/:slug', async (req, res, next) => {
   }
 });
 
-// B10/B10.2: Live preview page with sticky CTA
 app.get('/preview/:slug', async (req, res, next) => {
   try {
     const { slug } = req.params;
@@ -347,52 +414,107 @@ iframe{
   }
 });
 
-// Download zip
-app.get('/download/:slug', (req, res) => {
-  const hit = findZipForSlug(req.params.slug);
-  if (!hit) {
-    return res.status(404).render('errors/404', {
-      title: 'Archive not found',
-      activeNav: 'templates',
-    });
+// =========================
+// Checkout success (DEV) — thin route only
+// =========================
+// Логика вынесена в CJS контроллер: src/modules/payments/checkoutSuccessDev.controller.cjs
+app.get('/checkout/success', async (req, res, next) => {
+  try {
+    const mod = require('./modules/payments/checkoutSuccessDev.controller.cjs');
+    const fn = mod?.handleCheckoutSuccessDev;
+    if (typeof fn !== 'function') {
+      const err = new Error('CHECKOUT_SUCCESS_HANDLER_MISSING');
+      err.status = 500;
+      throw err;
+    }
+    await fn(req, res);
+  } catch (err) {
+    next(err);
   }
-  res.download(hit.absPath, hit.fileName);
 });
 
-// Profile
 app.get('/profile', (req, res) => {
-  res.render('profile/index', {
-    title: 'Profile',
-    activeNav: 'profile',
-  });
+  res.render('profile/index', { title: 'Profile', activeNav: 'profile' });
 });
 
-// Contact
 app.get('/contact', (req, res) => {
-  res.render('static/contact', {
-    title: 'Contact',
-    activeNav: 'contact',
-  });
+  res.render('static/contact', { title: 'Contact', activeNav: 'contact' });
 });
 
-// Errors
+// =========================
+// DEBUG: dump routes
+// =========================
+app.get('/__debug/routes', (req, res) => {
+  function getStack(app) {
+    return (
+      (app && app._router && app._router.stack) || (app && app.router && app.router.stack) || []
+    );
+  }
+
+  function methods(route) {
+    return Object.keys(route.methods || {})
+      .filter((k) => route.methods[k])
+      .map((k) => k.toUpperCase())
+      .sort()
+      .join(',');
+  }
+
+  function dump(layer, prefix = '') {
+    const out = [];
+
+    if (layer?.route) {
+      out.push({ method: methods(layer.route), path: prefix + layer.route.path });
+      return out;
+    }
+
+    // nested router
+    const stack = layer?.handle?.stack || layer?.handle?._router?.stack;
+    if (!stack) return out;
+
+    // try to extract readable prefix from regexp
+    const re = String(layer.regexp || '');
+    let p = '';
+    const m = re.match(/\\\/([A-Za-z0-9_\\\/\-]+)\\\/\?\(\?=\\\/\|\$\)/);
+    if (m) p = '/' + m[1].replaceAll('\\/', '/');
+
+    for (const l of stack) out.push(...dump(l, prefix + p));
+    return out;
+  }
+
+  const stack = getStack(req.app);
+  let routes = [];
+  for (const layer of stack) routes.push(...dump(layer, ''));
+
+  routes = routes
+    .filter((r) => r.method && r.path)
+    .sort((a, b) => (a.path + a.method).localeCompare(b.path + b.method));
+
+  res.json({ count: routes.length, routes });
+});
+
 app.use((req, res) => {
   res.status(404).render('errors/404', { title: 'Page not found' });
 });
 
+// ✅ FIX: respect err.status (401/403/400 must not become 500)
 app.use((err, req, res, _next) => {
+  const status = Number.isFinite(err?.status) ? err.status : 500;
+
+  console.error('[ERR]', status, err && (err.stack || err));
   console.error(err);
-  res.status(500).render('errors/500', {
-    title: 'Server error',
+
+  if (status === 404) {
+    return res.status(404).render('errors/404', { title: 'Page not found' });
+  }
+
+  return res.status(status).render('errors/500', {
+    title: status === 500 ? 'Server error' : 'Request error',
     error: process.env.NODE_ENV === 'development' ? err : null,
   });
 });
 
 export default app;
 
-// =========================
-// Utils
-// =========================
 function escapeHtml(s) {
   return String(s ?? '')
     .replaceAll('&', '&amp;')
