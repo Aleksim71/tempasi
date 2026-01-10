@@ -6,6 +6,33 @@ function toStr(v) {
   return v == null ? '' : String(v);
 }
 
+function toInt(v) {
+  const n = Number(toStr(v).trim());
+  return Number.isFinite(n) ? Math.trunc(n) : NaN;
+}
+
+function pickAuthUserId(req) {
+  // Primary: cookie session middleware sets req.user
+  const u = req.user;
+  if (u && typeof u === 'object') {
+    const id1 = toInt(u.id);
+    if (Number.isFinite(id1) && id1 > 0) return id1;
+
+    const id2 = toInt(u.userId);
+    if (Number.isFinite(id2) && id2 > 0) return id2;
+  }
+
+  // Secondary: some apps attach req.userId
+  const id3 = toInt(req.userId);
+  if (Number.isFinite(id3) && id3 > 0) return id3;
+
+  // Legacy fallback (B12): dev router used to attach req.devUserId
+  const id4 = toInt(req.devUserId);
+  if (Number.isFinite(id4) && id4 > 0) return id4;
+
+  return NaN;
+}
+
 function makeDevSessionId() {
   const rand = Math.random().toString(16).slice(2);
   return `dev_session_${Date.now()}_${rand}`;
@@ -19,10 +46,9 @@ async function buy(req, res) {
     throw err;
   }
 
-  // Временно: DEV auth через req.devUserId (прокидывает router)
-  const userId = req.devUserId ?? null;
+  const userId = pickAuthUserId(req);
 
-  if (!userId) {
+  if (!Number.isFinite(userId) || userId <= 0) {
     const err = new Error('AUTH_REQUIRED');
     err.status = 401;
     throw err;
