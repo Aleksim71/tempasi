@@ -53,3 +53,7 @@ storage/zips/
 # ==========================
 storage/templates/
 storage/templates/**/preview/preview.png
+nodemon
+sql/
+tempasi@*
+tempasi-b12-ready-files/
