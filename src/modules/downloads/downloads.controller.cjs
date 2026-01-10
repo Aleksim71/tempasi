@@ -1,14 +1,11 @@
 'use strict';
 
 /**
- * Tempasi Downloads (B12)
+ * Tempasi Downloads (B12/B13.1)
  * Strict download: requires entitlement for (user_id, template_slug).
  *
- * DEV convenience:
- * - If NODE_ENV=development and no auth user found,
- *   allow passing user id via:
- *     - header:  x-dev-user-id: <number>
- *     - query:   ?dev_user_id=<number>
+ * B13.1: no DEV header/query bypass.
+ * Auth must attach req.user (via cookie sessions middleware).
  */
 
 function toStr(v) {
@@ -20,27 +17,14 @@ function toInt(v) {
   return Number.isFinite(n) ? Math.trunc(n) : NaN;
 }
 
-function isDev() {
-  return String(process.env.NODE_ENV || '').toLowerCase() === 'development';
-}
-
 function pickUserId(req) {
-  // 1) normal auth (if your auth middleware attaches something)
-  // try a few common shapes to avoid coupling
+  // Expect auth middleware to attach req.user
   const u = req.user;
   if (u && typeof u === 'object') {
-    if (Number.isFinite(Number(u.id))) return Number(u.id);
-    if (Number.isFinite(Number(u.userId))) return Number(u.userId);
+    if (Number.isFinite(toInt(u.id))) return toInt(u.id);
+    if (Number.isFinite(toInt(u.userId))) return toInt(u.userId);
   }
-  if (Number.isFinite(Number(req.userId))) return Number(req.userId);
-
-  // 2) DEV override
-  if (isDev()) {
-    const h = req.headers['x-dev-user-id'];
-    const q = req.query && req.query.dev_user_id;
-    const id = Number.isFinite(toInt(h)) ? toInt(h) : toInt(q);
-    if (Number.isFinite(id) && id > 0) return id;
-  }
+  if (Number.isFinite(toInt(req.userId))) return toInt(req.userId);
 
   return NaN;
 }
@@ -67,7 +51,7 @@ async function downloadZip(req, res) {
   }
 
   const userId = pickUserId(req);
-  if (!Number.isFinite(userId)) {
+  if (!Number.isFinite(userId) || userId <= 0) {
     const err = new Error('AUTH_REQUIRED');
     err.status = 401;
     throw err;
