@@ -1,0 +1,325 @@
+{{!-- src/web/views/pages/template-details.hbs --}}
+
+<section class="container" style="padding: 24px 0;">
+  {{#if template}}
+    <header class="tp-head">
+      <div class="tp-head__left">
+        <h1 class="tp-title">{{template.title}}</h1>
+
+        <div class="tp-meta">
+          {{#if template.category}}
+            <span class="tp-badge">{{template.category}}</span>
+          {{/if}}
+
+          <span class="tp-badge tp-badge--soft">{{licenseLabel template.license}}</span>
+          <span class="tp-badge tp-badge--soft">{{typeLabel template.type}}</span>
+
+          {{#unless template.hasZip}}
+            <span class="tp-badge tp-badge--warn" title="Zip ещё не собран">Coming soon</span>
+          {{/unless}}
+
+          {{#if template.version}}
+            <span class="tp-muted">v{{template.version}}</span>
+          {{/if}}
+
+          {{#if template.slug}}
+            <span class="tp-muted">• {{template.slug}}</span>
+          {{/if}}
+        </div>
+
+        {{#if template.description}}
+          <p class="tp-desc">{{template.description}}</p>
+        {{/if}}
+      </div>
+
+      <div class="tp-head__right">
+        <div class="tp-price">{{formatPrice template.price}}</div>
+
+        <div class="tp-ctaBlock">
+          {{!-- PRIMARY CTA (всегда один, явно выделен) --}}
+          {{#if (eq template.type "rent")}}
+            <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Аренда появится позже">
+              Rent — soon
+            </span>
+
+          {{else if (eq template.type "free")}}
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                Download free ZIP
+              </a>
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                Download free — soon
+              </span>
+            {{/if}}
+
+          {{else}}
+            {{!-- buy --}}
+            {{#if (isFree template.price)}}
+              {{#if template.hasZip}}
+                <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                  Download ZIP
+                </a>
+              {{else}}
+                <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                  Download — soon
+                </span>
+              {{/if}}
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Оплата появится позже">
+                Buy — soon
+              </span>
+            {{/if}}
+          {{/if}}
+
+          <div class="tp-ctaRow">
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--sm" href="/download/{{template.slug}}">Download</a>
+            {{else}}
+              <span class="tp-btn tp-btn--sm tp-btn--disabled" title="Zip ещё не собран">Download</span>
+            {{/if}}
+
+            <a class="tp-btn tp-btn--sm" href="/templates">← Back to catalog</a>
+          </div>
+        </div>
+
+        <div class="tp-note">
+          ZIP берётся из <code>storage/zips/</code>.
+          {{#unless template.hasZip}}
+            <br />
+            Сейчас zip нет. Собери:
+            <code>node scripts/build-zip.cjs {{template.slug}}</code>
+          {{/unless}}
+        </div>
+      </div>
+    </header>
+
+    <div class="tp-layout">
+      <main class="tp-main">
+        <div class="tp-preview">
+          {{#if template.preview}}
+            <img class="tp-preview__img" src="{{template.preview}}" alt="{{template.title}}" />
+          {{else}}
+            <div class="tp-preview__placeholder">No preview</div>
+          {{/if}}
+        </div>
+
+        {{!-- SECOND CTA under preview (после просмотра скрина сразу видно, куда жать) --}}
+        <div class="tp-underCta">
+          {{#if (eq template.type "rent")}}
+            <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Аренда появится позже">
+              Rent — soon
+            </span>
+
+          {{else if (eq template.type "free")}}
+            {{#if template.hasZip}}
+              <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                Download free ZIP
+              </a>
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                Download free — soon
+              </span>
+            {{/if}}
+
+          {{else}}
+            {{#if (isFree template.price)}}
+              {{#if template.hasZip}}
+                <a class="tp-btn tp-btn--primary tp-btn--xl" href="/download/{{template.slug}}">
+                  Download ZIP
+                </a>
+              {{else}}
+                <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Zip ещё не собран">
+                  Download — soon
+                </span>
+              {{/if}}
+            {{else}}
+              <span class="tp-btn tp-btn--primary tp-btn--xl tp-btn--disabled" title="Оплата появится позже">
+                Buy — soon
+              </span>
+            {{/if}}
+          {{/if}}
+        </div>
+      </main>
+
+      <aside class="tp-side">
+        <div class="tp-box">
+          <div class="tp-box__title">Характеристики</div>
+          <dl class="tp-dl">
+            <div class="tp-dl__row">
+              <dt>Категория</dt>
+              <dd>{{#if template.category}}{{template.category}}{{else}}—{{/if}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Лицензия</dt>
+              <dd>{{licenseLabel template.license}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Тип</dt>
+              <dd>{{typeLabel template.type}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Zip</dt>
+              <dd>{{#if template.hasZip}}Ready{{else}}Coming soon{{/if}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Версия</dt>
+              <dd>{{#if template.version}}v{{template.version}}{{else}}—{{/if}}</dd>
+            </div>
+            <div class="tp-dl__row">
+              <dt>Slug</dt>
+              <dd>{{#if template.slug}}{{template.slug}}{{else}}—{{/if}}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="tp-box">
+          <div class="tp-box__title">Что внутри</div>
+          <ul class="tp-list">
+            <li><code>metadata.json</code></li>
+            <li><code>docs/README.md</code></li>
+            <li><code>preview/preview.png</code></li>
+            <li><code>src/index.html</code>, <code>src/main.js</code></li>
+            <li><code>assets/style.css</code></li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  {{else}}
+    <div class="tp-empty">
+      Шаблон не найден.
+      <div style="margin-top: 10px;">
+        <a class="tp-btn" href="/templates">← Назад в каталог</a>
+      </div>
+    </div>
+  {{/if}}
+</section>
+
+<style>
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  .tp-head {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 980px) { .tp-head { grid-template-columns: 1fr; } }
+
+  .tp-title { margin: 0 0 8px; font-size: 30px; line-height: 1.15; }
+
+  .tp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .tp-desc { margin: 0; opacity: .85; max-width: 70ch; }
+
+  .tp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid rgba(0,0,0,.12);
+    white-space: nowrap;
+    background: rgba(0,0,0,.02);
+  }
+  .tp-badge--soft { opacity: .9; }
+  .tp-badge--warn { border-color: rgba(0,0,0,.22); opacity: .85; }
+
+  .tp-muted { opacity: .75; font-size: 13px; }
+
+  .tp-head__right {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+  }
+
+  .tp-price { font-weight: 800; font-size: 22px; margin-bottom: 10px; }
+
+  .tp-ctaBlock { display: grid; gap: 10px; }
+
+  .tp-ctaRow { display: inline-flex; gap: 10px; flex-wrap: wrap; }
+
+  .tp-note { opacity: .75; font-size: 13px; line-height: 1.35; }
+
+  .tp-layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .tp-layout { grid-template-columns: 1fr; } }
+
+  .tp-preview { border: 1px solid rgba(0,0,0,.08); border-radius: 14px; overflow: hidden; background: #fff; }
+  .tp-preview__img { width: 100%; height: auto; display: block; }
+  .tp-preview__placeholder { padding: 28px; opacity: .6; }
+
+  .tp-underCta { margin-top: 14px; display: flex; justify-content: flex-start; }
+
+  .tp-side { display: grid; gap: 16px; }
+
+  .tp-box { border: 1px solid rgba(0,0,0,.08); border-radius: 14px; background: #fff; padding: 14px; }
+  .tp-box__title { font-weight: 800; margin-bottom: 10px; }
+
+  .tp-dl { margin: 0; }
+  .tp-dl__row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(0,0,0,.06);
+  }
+  .tp-dl__row:first-child { border-top: none; padding-top: 0; }
+  .tp-dl dt { opacity: .7; }
+  .tp-dl dd { margin: 0; font-weight: 600; }
+
+  .tp-list { margin: 0; padding-left: 18px; }
+  .tp-list li { margin: 6px 0; }
+
+  .tp-empty { border: 1px dashed rgba(0,0,0,.2); border-radius: 14px; padding: 18px; opacity: .8; }
+
+  .tp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,.14);
+    text-decoration: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    background: transparent;
+  }
+  .tp-btn:hover { background: rgba(0,0,0,.04); }
+
+  .tp-btn--sm { padding: 8px 10px; font-size: 13px; border-radius: 10px; }
+
+  .tp-btn--xl {
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    border-radius: 14px;
+  }
+
+  .tp-btn--primary {
+    color: #fff;
+    border: none;
+    background: linear-gradient(135deg, #7c5cff, #5b8cff);
+    box-shadow: 0 10px 20px rgba(0,0,0,.12);
+  }
+  .tp-btn--primary:hover { opacity: .92; }
+
+  .tp-btn--disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>

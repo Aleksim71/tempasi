@@ -47,3 +47,16 @@ logs/
 # ==========================
 .npm/
 .husky/_/
+storage/zips/
+# ==========================
+# Tempasi storage (seed packs)
+# ==========================
+storage/templates/
+storage/templates/**/preview/preview.png
+nodemon
+sql/
+tempasi@*
+tempasi-b12-ready-files/
+# dev-buy artifacts
+*_*.zip
+seed-*.zip

@@ -3,15 +3,16 @@
   "name": "tempasi",
   "version": "1.0.0",
   "description": "Tempasi MVP backend + static frontend",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:buy": "bash scripts/dev-buy.sh"
   },
   "author": "",
   "license": "ISC",
@@ -21,10 +22,12 @@
     "@types/ws": "^8.18.1",
     "eslint": "^9.37.0",
     "eslint-config-metarhia": "^9.1.2",
+    "globals": "^17.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.9",
     "nodemon": "^3.1.11",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "puppeteer": "^24.34.0"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
