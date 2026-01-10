@@ -1,81 +1,57 @@
 'use strict';
 
-const OrdersService = require('./orders.service.cjs');
-const OrdersRepo = require('./orders.repo.cjs');
+const { pool } = require('../../config/db.cjs');
 
-// ВАЖНО: payments модуль может экспортировать
-// 1) объект { createCheckoutSession }
-// 2) или саму функцию createCheckoutSession (module.exports = function ...)
-// Поэтому ниже — адаптер.
-const Payments = require('../payments/payments.service.cjs');
-
-function resolveCreateCheckoutSession(PaymentsModule) {
-  if (PaymentsModule && typeof PaymentsModule.createCheckoutSession === 'function') {
-    return PaymentsModule.createCheckoutSession.bind(PaymentsModule);
-  }
-  if (typeof PaymentsModule === 'function') {
-    return PaymentsModule; // module.exports = function createCheckoutSession(...)
-  }
-  throw new TypeError('Payments.createCheckoutSession is not a function');
+function toStr(v) {
+  return v == null ? '' : String(v);
 }
 
-/**
- * POST /api/orders/:slug/buy
- * body: { amountCents, currency }
- * headers (dev): x-demo-user-id: 1
- */
-async function buyTemplate(req, res) {
-  const slug = String(req.params.slug || '').trim();
+function makeDevSessionId() {
+  const rand = Math.random().toString(16).slice(2);
+  return `dev_session_${Date.now()}_${rand}`;
+}
+
+async function buy(req, res) {
+  const slug = toStr(req.params.slug).trim();
   if (!slug) {
-    const err = new Error('SLUG_REQUIRED');
+    const err = new Error('TEMPLATE_SLUG_REQUIRED');
     err.status = 400;
     throw err;
   }
 
-  const amountCents = req.body?.amountCents;
-  const currency = req.body?.currency;
+  // Временно: DEV auth через req.devUserId (прокидывает router)
+  const userId = req.devUserId ?? null;
 
-  // 1) создаём pending order в БД
-  const order = await OrdersService.createPendingOrder(req, {
-    slug,
-    dealType: 'BUY',
-    amountCents,
-    currency,
-  });
-
-  // 2) создаём checkout session у провайдера
-  const createCheckoutSession = resolveCreateCheckoutSession(Payments);
-  const session = await createCheckoutSession(req, { order });
-
-  // 3) если репозиторий умеет — сохраним provider_session_id + url
-  // (не ломаемся, если в репо другое имя метода)
-  if (session && (session.id || session.url)) {
-    const sessionId = session.id || null;
-    const checkoutUrl = session.url || null;
-
-    if (typeof OrdersRepo.setProviderSession === 'function') {
-      await OrdersRepo.setProviderSession({ orderId: order.id, sessionId, checkoutUrl });
-    } else if (typeof OrdersRepo.updateProviderSession === 'function') {
-      await OrdersRepo.updateProviderSession({ orderId: order.id, sessionId, checkoutUrl });
-    } else if (typeof OrdersRepo.updateOrder === 'function') {
-      // fallback (если вдруг есть универсальный апдейтер)
-      await OrdersRepo.updateOrder({
-        id: order.id,
-        providerSessionId: sessionId,
-        providerCheckoutUrl: checkoutUrl,
-      });
-    }
+  if (!userId) {
+    const err = new Error('AUTH_REQUIRED');
+    err.status = 401;
+    throw err;
   }
 
-  // 4) ответ
+  const providerSessionId = makeDevSessionId();
+
+  const r = await pool.query(
+    `
+    INSERT INTO public.orders
+      (user_id, template_slug, deal_type, amount_cents, currency,
+       status, provider, provider_session_id, created_at, updated_at)
+    VALUES
+      ($1, $2, 'BUY', 0, 'EUR',
+       'pending', 'fake', $3, now(), now())
+    RETURNING *
+    `,
+    [userId, slug, providerSessionId]
+  );
+
+  const order = r.rows[0];
+  const checkoutUrl = `/checkout/success?order_id=${order.id}`;
+
   res.status(201).json({
-    ok: true,
-    orderId: order.id,
-    checkoutUrl: session?.url,
-    providerSessionId: session?.id,
+    orderId: String(order.id),
+    status: order.status,
+    checkoutUrl,
+    providerSessionId: order.provider_session_id,
   });
 }
 
-module.exports = {
-  buyTemplate,
-};
+module.exports = { buy };

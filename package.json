@@ -11,7 +11,8 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:buy": "bash scripts/dev-buy.sh"
   },
   "author": "",
   "license": "ISC",
