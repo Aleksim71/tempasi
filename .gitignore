@@ -57,3 +57,6 @@ nodemon
 sql/
 tempasi@*
 tempasi-b12-ready-files/
+# dev-buy artifacts
+*_*.zip
+seed-*.zip
