@@ -60,3 +60,6 @@ tempasi-b12-ready-files/
 # dev-buy artifacts
 *_*.zip
 seed-*.zip
+# public build artifacts
+public/icons/
+public/js/
