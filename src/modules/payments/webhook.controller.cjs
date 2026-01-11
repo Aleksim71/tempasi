@@ -9,7 +9,6 @@ const { PAYMENTS_PROVIDER, STRIPE_WEBHOOK_SECRET } = require('../../config/payme
 async function handleStripeWebhook(req) {
   let stripe;
   try {
-    // eslint-disable-next-line global-require
     stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
   } catch (_e) {
     const err = new Error('STRIPE_SDK_NOT_INSTALLED (run: npm i stripe)');

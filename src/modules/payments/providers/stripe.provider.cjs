@@ -13,7 +13,6 @@ const { APP_BASE_URL, STRIPE_SECRET_KEY } = require('../../../config/payments.cj
 async function createCheckoutSession(req, { order }) {
   let Stripe;
   try {
-    // eslint-disable-next-line global-require
     Stripe = require('stripe');
   } catch (_e) {
     const err = new Error('STRIPE_SDK_NOT_INSTALLED (run: npm i stripe)');
