@@ -1,231 +1,152 @@
-// src/app.js (ESM)
-// Express app for Tempasi (SSR + API routers)
-// Exports default app for src/server.js
+// src/app.js
+// ESM. src/server.js делает: `import app from './app.js'`
 
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
-
 import express from 'express';
-import handlebars from 'handlebars';
+import { fileURLToPath } from 'node:url';
+
 import { engine } from 'express-handlebars';
 
+import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
+
+import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// =========================
-// App
-// =========================
-const app = express();
-
-function isDev() {
-  return process.env.NODE_ENV !== 'production';
-}
-
-// =========================
-// Paths
-// =========================
-const PROJECT_ROOT = process.cwd();
-const VIEWS_ROOT = path.join(__dirname, 'web', 'views');
-const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const STORAGE_TEMPLATES_DIR = path.resolve(PROJECT_ROOT, 'storage', 'templates');
-
-// =========================
-// Helpers (HBS)
-// =========================
-function toStr(v) {
-  return v == null ? '' : String(v);
-}
-
-function normalizeLicense(v) {
-  const x = toStr(v).trim().toUpperCase();
-  return x || 'PU';
-}
-
-function normalizeType(v) {
-  const x = toStr(v).trim().toLowerCase();
-  return x || 'buy';
-}
-
-function licenseLabel(license) {
-  const v = normalizeLicense(license);
-  if (v === 'FREE') return 'FREE';
-  if (v === 'EL') return 'EL';
-  if (v === 'CU') return 'CU';
-  return 'PU';
-}
-
-function typeLabel(type) {
-  const v = normalizeType(type);
+// ----------------- helpers (HBS) -----------------
+function normalizeDealFromType(type) {
+  const v = String(type || '').toLowerCase();
   if (v === 'rent') return 'RENT';
   if (v === 'free') return 'FREE';
   return 'BUY';
 }
 
-function formatPriceValue(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 'Free';
-  return `${n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`;
-}
+const hbsHelpers = {
+  eq: (a, b) => a === b,
 
-// =========================
-// View engine (HBS)
-// =========================
-const hbs = engine({
-  extname: '.hbs',
-  layoutsDir: path.join(VIEWS_ROOT, 'layouts'),
-  partialsDir: path.join(VIEWS_ROOT, 'partials'),
-  defaultLayout: 'main',
-  handlebars,
-  helpers: {
-    eq(a, b) {
-      return a === b;
-    },
-    formatPrice(v) {
-      return formatPriceValue(v);
-    },
-    licenseLabel,
-    typeLabel,
-    isFree(price) {
-      return !price || Number(price) <= 0;
-    },
+  isFree: (price) => Number(price || 0) <= 0,
+
+  formatPrice: (price) => {
+    const p = Number(price || 0);
+    if (!Number.isFinite(p)) return '—';
+    if (p <= 0) return 'Free';
+    return `${p.toFixed(0)} €`;
   },
-});
 
-app.engine('.hbs', hbs);
-app.set('view engine', '.hbs');
-app.set('views', path.join(VIEWS_ROOT, 'pages'));
+  licenseLabel: (license) => {
+    const v = String(license || '').toUpperCase();
+    if (v === 'FREE') return 'Free';
+    if (v === 'PU') return 'Personal';
+    if (v === 'CU') return 'Commercial';
+    if (v === 'EL') return 'Extended';
+    return v || 'PU';
+  },
 
-// =========================
-// Middleware
-// =========================
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+  typeLabel: (type) => {
+    const v = String(type || '').toLowerCase();
+    if (v === 'buy') return 'Buy';
+    if (v === 'rent') return 'Rent';
+    if (v === 'free') return 'Free';
+    return v || 'buy';
+  },
+};
 
-// =========================
-// Static
-// =========================
-app.use(express.static(PUBLIC_DIR));
-app.use('/seeds', express.static(STORAGE_TEMPLATES_DIR));
-app.use('/t', express.static(STORAGE_TEMPLATES_DIR));
+// ----------------- route loader (CJS) -----------------
+function pickRouter(mod, preferredKeys = []) {
+  if (typeof mod === 'function') return mod;
 
-app.use((req, res, next) => {
-  res.locals.currentPath = req.path;
-  next();
-});
+  if (mod && typeof mod === 'object') {
+    for (const k of preferredKeys) {
+      if (typeof mod[k] === 'function') return mod[k];
+    }
+    if (typeof mod.router === 'function') return mod.router;
+    if (mod.default && typeof mod.default === 'function') return mod.default;
+  }
 
-// =========================
-// Optional SSR auth attach (best effort)
-// =========================
-try {
-  const authMw = require('./middlewares/auth.middleware.cjs');
-  if (typeof authMw === 'function') app.use(authMw);
-  else if (authMw && typeof authMw.attachUser === 'function') app.use(authMw.attachUser);
-} catch {
-  // ignore
+  const keys = mod && typeof mod === 'object' ? Object.keys(mod) : [];
+  throw new Error(`[app.js] Cannot resolve router from CJS module. keys=${JSON.stringify(keys)}`);
 }
 
-// =========================
-// API routers (CJS via createRequire)
-// =========================
-try {
-  // IMPORTANT: auth.routes exports { authRouter }
-  const { authRouter } = require('./modules/auth/auth.routes.cjs');
-  const orders = require('./modules/orders/orders.routes.cjs');
-  const payments = require('./modules/payments/payments.routes.cjs');
-  const downloads = require('./modules/downloads/downloads.routes.cjs');
+// CJS routers
+const authMod = require('./modules/auth/auth.routes.cjs');
+const ordersMod = require('./modules/orders/orders.routes.cjs');
+const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
 
-  app.use('/api/auth', authRouter); // ✅ dev-login + logout
-  app.use('/api/orders', orders);
-  app.use('/api/payments', payments);
-  app.use('/download', downloads);
+const profileMod = require('./modules/profile/profile.routes.cjs');
+const profileApiMod = require('./modules/profile/profile.api.routes.cjs');
 
-   
-  console.log('[B12] routes mounted: /api/auth, /api/orders, /api/payments, /download');
-} catch (e) {
-   
-  console.error('[B12] mount failed:', e?.message || e);
-}
+const authRouter = pickRouter(authMod, ['authRouter', 'authRoutes']);
+const ordersRouter = pickRouter(ordersMod, ['ordersRouter', 'ordersRoutes']);
+const downloadsRouter = pickRouter(downloadsMod, ['downloadsRouter', 'downloadsRoutes']);
 
-// =========================
-// SSR: templates repo
-// =========================
-let templatesRepo = null;
-try {
-  templatesRepo = require('./db/templatesRepo.js');
-} catch (e) {
-   
-  console.warn('[SSR] templatesRepo not available:', e?.message || e);
-}
+const profileRouterFactory = pickRouter(profileMod, ['profileRoutes', 'profileRouter']);
+const profileApiRouterFactory = pickRouter(profileApiMod, ['profileApiRoutes', 'profileApiRouter']);
 
-async function listTemplates() {
-  if (templatesRepo?.listTemplates) return templatesRepo.listTemplates();
-  if (templatesRepo?.list) return templatesRepo.list();
-  return [];
-}
+const profileRouter = profileRouterFactory();
+const profileApiRouter = profileApiRouterFactory();
 
-async function getTemplateBySlug(slug) {
-  const s = toStr(slug).trim();
-  if (!s) return null;
-  if (templatesRepo?.getTemplateBySlug) return templatesRepo.getTemplateBySlug(s);
-  if (templatesRepo?.getBySlug) return templatesRepo.getBySlug(s);
-  const all = await listTemplates();
-  return all.find((t) => toStr(t.slug).trim() === s) || null;
-}
+// ----------------- app -----------------
+const app = express();
 
-function mapTemplateForCatalog(t) {
-  const slug = toStr(t.slug).trim();
-  const hasZip = Boolean(t.hasZip);
+// view engine (express-handlebars)
+app.engine(
+  'hbs',
+  engine({
+    extname: '.hbs',
+    layoutsDir: path.join(__dirname, 'web', 'views', 'layouts'),
+    partialsDir: path.join(__dirname, 'web', 'views', 'partials'),
+    defaultLayout: 'main',
+    helpers: hbsHelpers,
+  }),
+);
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, 'web', 'views'));
 
-  const license = normalizeLicense(t.license);
-  const deal =
-    license === 'FREE' || normalizeType(t.type) === 'free'
-      ? 'FREE'
-      : normalizeType(t.type) === 'rent'
-        ? 'RENT'
-        : 'BUY';
+// middleware
+app.use(express.urlencoded({ extended: false })); // HTML forms
+app.use(express.json({ limit: '1mb' })); // API
 
-  const previewUrl = slug ? `/seeds/${encodeURIComponent(slug)}/preview/preview.png` : '';
+// static
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-  return {
-    ...t,
-    slug,
-    hasZip,
-    deal,
-    license,
-    type: normalizeType(t.type),
-    preview: t.preview || previewUrl,
-  };
-}
+// serve template previews/assets from storage/templates
+app.use('/t', express.static(path.resolve(process.cwd(), 'storage', 'templates')));
+app.use('/seeds', express.static(path.resolve(process.cwd(), 'storage', 'templates')));
 
-// =========================
-// Debug routes (Express 5 note: internal router structure changed)
-// We'll keep endpoints, but route listing may be empty.
-// =========================
-app.get('/__debug/routes2', (req, res) => res.json({ count: 0, routes: [] }));
-app.get('/__debug/routes', (req, res) => res.json({ count: 0, routes: [] }));
+// ---------- API ----------
+app.use('/api/auth', authRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/profile', profileApiRouter);
 
-app.get('/__whoami', (req, res) => {
-  const user = req.user || res.locals.user || null;
-  res.json({ user });
-});
+// ---------- Downloads ----------
+app.use('/download', downloadsRouter);
 
-// =========================
-// SSR Routes
-// =========================
-app.get('/', (req, res) => res.redirect('/templates'));
+// ---------- SSR: Profile ----------
+app.use('/profile', profileRouter);
+
+// ---------- SSR: Catalog ----------
+app.get('/', (_req, res) => res.redirect('/templates'));
 
 app.get('/templates', async (req, res, next) => {
   try {
-    const all = await listTemplates();
-    const templates = all.map(mapTemplateForCatalog);
+    const all = await getAllTemplates();
 
-    return res.render('templates', {
+    const templates = all.map((t) => ({
+      slug: t.slug,
+      title: t.title,
+      license: t.license,
+      deal: normalizeDealFromType(t.type),
+      zipReady: Boolean(t.hasZip),
+      previewUrl: t.preview || null,
+    }));
+
+    return res.status(200).render('pages/templates/index', {
       title: 'Templates',
       activePage: 'templates',
+      pageCss: '/css/templates.catalog.css', // ✅ ВОТ ОНО
       templates,
-      pageCss: '/css/templates.catalog.css',
     });
   } catch (e) {
     return next(e);
@@ -234,128 +155,56 @@ app.get('/templates', async (req, res, next) => {
 
 app.get('/templates/:slug', async (req, res, next) => {
   try {
-    const slug = toStr(req.params.slug).trim();
-    const tpl = await getTemplateBySlug(slug);
+    const slug = String(req.params.slug || '').trim();
+    const template = await getTemplateBySlug(slug);
 
-    if (!tpl) {
-      return res.status(404).render('template-not-found', {
+    if (!template) {
+      return res.status(404).render('pages/template-not-found', {
         title: 'Template not found',
-        activePage: 'templates',
         slug,
       });
     }
 
-    const template = mapTemplateForCatalog(tpl);
-
-    return res.render('template-details', {
-      title: template.title || 'Template',
-      activePage: 'templates',
+    return res.status(200).render('pages/template-details', {
+      title: template.title || slug,
       template,
+      activePage: 'templates',
     });
   } catch (e) {
     return next(e);
   }
 });
 
-app.get('/:slug', async (req, res, next) => {
-  try {
-    const slug = toStr(req.params.slug).trim();
-
-    const reserved = new Set([
-      '__debug',
-      '__whoami',
-      'templates',
-      'preview',
-      'profile',
-      'contact',
-      'checkout',
-      'success',
-      'download',
-      'api',
-      'icons',
-      'css',
-      'seeds',
-      't',
-    ]);
-    if (reserved.has(slug)) return next();
-
-    const tpl = await getTemplateBySlug(slug);
-    if (!tpl) return res.status(404).render('errors/404', { title: 'Page not found' });
-
-    const template = mapTemplateForCatalog(tpl);
-    return res.render('template-details', {
-      title: template.title || 'Template',
-      activePage: 'templates',
-      template,
-    });
-  } catch (e) {
-    return next(e);
-  }
-});
-
+// Preview route (B11 used /preview/:slug). MVP: просто показываем details.
 app.get('/preview/:slug', (req, res) => {
-  const slug = toStr(req.params.slug).trim();
-  if (!slug) return res.status(404).end();
-  return res.redirect(`/seeds/${encodeURIComponent(slug)}/preview/preview.png`);
+  const slug = String(req.params.slug || '').trim();
+  return res.redirect(`/templates/${encodeURIComponent(slug)}`);
 });
 
-app.get('/checkout/success', (req, res) => {
-  res.render('billing', { title: 'Checkout success' });
-});
-
-app.get('/success', (req, res) => {
-  res.render('billing', { title: 'Success' });
-});
-
-app.get('/contact', (req, res) => {
-  res.render('static/contact', { title: 'Contact', activePage: 'contact' });
-});
-
-app.get('/profile', (req, res) => {
-  res.render('profile', { title: 'Profile', activePage: 'profile' });
-});
-
-// =========================
-// Errors
-// =========================
+// ---------- 404 ----------
 app.use((req, res) => {
-  // 404
-  if (req.accepts('json')) {
-    return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } });
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not Found' } });
   }
-  if (req.accepts('text')) {
-    return res.status(404).type('text/plain').send('Not found');
-  }
-  return res.status(404).render('errors/404', { title: 'Page not found' });
+  return res.status(404).send('404 Not Found');
 });
 
+// ---------- Error handler ----------
  
-app.use((err, req, res, next) => {
-   
-  console.error('[server] error:', err);
+app.use((err, req, res, _next) => {
+  const status = err.status || 500;
 
-  const devText = isDev() ? String(err?.stack || err) : 'Server error';
-
-  if (req.accepts('json')) {
-    return res.status(500).json({
+  if (req.path.startsWith('/api/')) {
+    return res.status(status).json({
       error: {
-        code: 'INTERNAL',
-        message: isDev() ? String(err?.message || err) : 'Server error',
+        code: err.code || 'INTERNAL_ERROR',
+        message: err.message || 'Internal Error',
       },
     });
   }
 
-  if (req.accepts('text')) {
-    return res
-      .status(500)
-      .type('text/plain')
-      .send(`[DEV] ${req.method} ${req.originalUrl} failed\n\n${devText}`);
-  }
-
-  return res.status(500).render('errors/500', {
-    title: 'Server error',
-    devError: isDev() ? devText : null,
-  });
+  return res.status(status).send(err.message || 'Internal Error');
 });
+ 
 
 export default app;

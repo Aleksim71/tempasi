@@ -1,93 +1,100 @@
-<main class="page">
-  <div class="layout">
+<section class="container" style="max-width: 980px; margin: 24px auto; padding: 0 16px;">
+  <h1 style="margin: 0 0 12px;">My Downloads</h1>
+  <p style="margin: 0 0 20px; opacity: 0.8;">
+    Здесь показаны шаблоны, доступные для скачивания в твоём аккаунте.
+  </p>
 
-    <!-- ЛЕВАЯ КОЛОНКА — МЕНЮ ПРОФИЛЯ -->
-    <aside class="sidebar profile-sidebar">
-      <nav class="profile-nav">
-        <button type="button" class="profile-nav__item is-active">Профиль</button>
-        <button type="button" class="profile-nav__item">Мои избранные</button>
-        <button type="button" class="profile-nav__item">Мои аренды</button>
-        <button type="button" class="profile-nav__item">Billing</button>
-        <button type="button" class="profile-nav__item">Сделки</button>
-      </nav>
-    </aside>
+  {{#if hasAny}}
+    <div style="display: grid; gap: 12px;">
+      {{#each entitlements}}
+        <div style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 14px 14px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap: 12px;">
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">
+                {{this.template_slug}}
+              </div>
+              <div style="font-size: 13px; opacity: 0.75; margin-top: 6px;">
+                Granted: {{this.created_at}}
+                {{#if this.order_id}} • Order #{{this.order_id}}{{/if}}
+              </div>
+            </div>
 
-    <!-- ПРАВАЯ КОЛОНКА — САМИ ФОРМЫ -->
-    <section class="profile-main">
+            <div style="display:flex; gap: 10px; align-items:center;">
+              <a
+                href="/templates/{{this.template_slug}}"
+                style="text-decoration:none; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12);"
+              >Details</a>
 
-      <!-- ОСНОВНЫЕ ДАННЫЕ -->
-      <section class="card profile-card">
-        <header class="profile-card__header">
-          <h2 class="profile-card__title">Основные данные</h2>
-          <div class="profile-card__actions">
-            <button type="button" class="btn ghost">Отменить</button>
-            <button type="submit" class="btn primary">Сохранить</button>
+              <a
+                href="/download/{{this.template_slug}}"
+                style="text-decoration:none; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12);"
+              >Download</a>
+            </div>
           </div>
-        </header>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div style="border: 1px dashed rgba(0,0,0,0.25); border-radius: 12px; padding: 16px;">
+      <div style="font-weight: 600;">Пока нет покупок</div>
+      <div style="opacity: 0.8; margin-top: 6px;">
+        Перейди в каталог шаблонов и купи первый шаблон.
+      </div>
+      <div style="margin-top: 12px;">
+        <a href="/templates" style="text-decoration:none; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); display:inline-block;">
+          Open catalog
+        </a>
+      </div>
+    </div>
+  {{/if}}
+</section>
+<section class="container" style="max-width: 980px; margin: 24px auto; padding: 0 16px;">
+  <h1 style="margin: 0 0 12px;">My Downloads</h1>
+  <p style="margin: 0 0 20px; opacity: 0.8;">
+    Здесь показаны шаблоны, доступные для скачивания в твоём аккаунте.
+  </p>
 
-        <form class="profile-form">
-          <div class="form-row">
-            <label for="fullName">Полное имя</label>
-            <input id="fullName" type="text" placeholder="Ваше имя" />
+  {{#if hasAny}}
+    <div style="display: grid; gap: 12px;">
+      {{#each entitlements}}
+        <div style="border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 14px 14px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap: 12px;">
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">
+                {{this.template_slug}}
+              </div>
+              <div style="font-size: 13px; opacity: 0.75; margin-top: 6px;">
+                Granted: {{this.created_at}}
+                {{#if this.order_id}} • Order #{{this.order_id}}{{/if}}
+              </div>
+            </div>
+
+            <div style="display:flex; gap: 10px; align-items:center;">
+              <a
+                href="/templates/{{this.template_slug}}"
+                style="text-decoration:none; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12);"
+              >Details</a>
+
+              <a
+                href="/download/{{this.template_slug}}"
+                style="text-decoration:none; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12);"
+              >Download</a>
+            </div>
           </div>
-
-          <div class="form-row">
-            <label for="nickname">Никнейм</label>
-            <input id="nickname" type="text" placeholder="Ваш никнейм" />
-          </div>
-
-          <div class="form-row">
-            <label for="email">Email</label>
-            <input id="email" type="email" placeholder="you@example.com" />
-          </div>
-
-          <div class="form-row">
-            <label for="role">Роль</label>
-            <input id="role" type="text" placeholder="Дизайнер, студия, агентство..." />
-          </div>
-
-          <div class="form-row">
-            <label for="about">Кратко о себе</label>
-            <textarea
-              id="about"
-              placeholder="Пара предложений о том, чем вы занимаетесь."
-            ></textarea>
-          </div>
-        </form>
-      </section>
-
-      <!-- ПУБЛИЧНЫЙ ПРОФИЛЬ -->
-      <section class="card profile-card">
-        <h2 class="profile-card__title">Публичный профиль</h2>
-
-        <form class="profile-form">
-          <div class="form-row">
-            <label for="portfolio">Сайт или портфолио</label>
-            <input
-              id="portfolio"
-              type="text"
-              placeholder="https://dribbble.com/username"
-            />
-          </div>
-
-          <div class="form-row">
-            <label for="socials">Социальные сети</label>
-            <input
-              id="socials"
-              type="text"
-              placeholder="@behance, @instagram, @twitter"
-            />
-          </div>
-
-          <div class="form-row">
-            <label for="bio">Биография</label>
-            <textarea
-              id="bio"
-              placeholder="Расскажите немного о себе для страницы автора."
-            ></textarea>
-          </div>
-        </form>
-      </section>
-    </section>
-  </div>
-</main>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div style="border: 1px dashed rgba(0,0,0,0.25); border-radius: 12px; padding: 16px;">
+      <div style="font-weight: 600;">Пока нет покупок</div>
+      <div style="opacity: 0.8; margin-top: 6px;">
+        Перейди в каталог шаблонов и купи первый шаблон.
+      </div>
+      <div style="margin-top: 12px;">
+        <a href="/templates" style="text-decoration:none; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); display:inline-block;">
+          Open catalog
+        </a>
+      </div>
+    </div>
+  {{/if}}
+</section>
