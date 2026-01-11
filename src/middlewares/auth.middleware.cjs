@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-// B13.1: pool helper lives in scripts/db.pool.cjs in this repo.
+// B13.1: pool helper lives in scripts/db.pool.cjs.
 // auth.middleware is in src/middlewares/, so relative path is ../../scripts/db.pool.cjs
 let getPool;
 try {
@@ -13,84 +13,116 @@ try {
     ({ getPool } = require('../db.pool.cjs'));
   } catch (e2) {
     const err = new Error(
-      `DB_POOL_HELPER_NOT_FOUND: tried ../../scripts/db.pool.cjs and ../db.pool.cjs; last: ${
-        e2?.message || e2
-      }`
+      `DB_POOL_HELPER_NOT_FOUND: tried ../../scripts/db.pool.cjs and ../db.pool.cjs; last: ${e2?.message || e2}`
     );
     err.cause = e2;
     throw err;
   }
 }
 
-function parseCookieHeader(cookieHeader) {
-  const out = {};
-  if (!cookieHeader) return out;
-  const parts = cookieHeader.split(';');
-  for (const part of parts) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    const k = part.slice(0, idx).trim();
-    const v = part.slice(idx + 1).trim();
-    if (!k) continue;
-    out[k] = decodeURIComponent(v);
-  }
-  return out;
+const COOKIE_NAME = 'sid';
+
+function isProd() {
+  return process.env.NODE_ENV === 'production';
 }
 
-function isDev() {
-  return process.env.NODE_ENV !== 'production';
+function newSessionId() {
+  return crypto.randomBytes(32).toString('base64url');
 }
 
-function jsonAuthError(res, code, message) {
-  return res.status(401).json({
-    error: {
-      code,
-      message,
-    },
+function setSessionCookie(res, sid, opts = {}) {
+  const maxAgeSeconds = Number(opts.maxAgeSeconds || 60 * 60 * 24 * 30);
+
+  res.cookie(COOKIE_NAME, sid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd(),
+    path: '/',
+    maxAge: maxAgeSeconds * 1000,
   });
 }
 
-async function loadUserFromSession(req, _res, next) {
+function clearSessionCookie(res) {
+  res.cookie(COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd(),
+    path: '/',
+    maxAge: 0,
+  });
+}
+
+function getSidFromReq(req) {
+  const cookie = String(req.headers.cookie || '');
+  const m = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
+  if (!m) return '';
   try {
-    const cookies = parseCookieHeader(req.headers.cookie || '');
-    const sid = cookies.sid;
+    return decodeURIComponent(m[1]);
+  } catch {
+    return m[1];
+  }
+}
 
-    if (!sid) {
-      req.user = null;
-      return next();
-    }
+async function loadUserFromSession(req) {
+  // IMPORTANT: distinguish between "not initialized" and "initialized as null"
+  if (req.user !== undefined) return;
 
-    const pool = getPool();
-    const now = new Date();
+  // initialize
+  req.user = null;
 
-    const { rows } = await pool.query(
-      `
-      SELECT s.id, s.user_id, s.expires_at
-      FROM sessions s
-      WHERE s.id = $1
-      LIMIT 1
-      `,
-      [sid]
-    );
+  const sid = getSidFromReq(req);
+  if (!sid) return;
 
-    if (!rows.length) {
-      req.user = null;
-      return next();
-    }
+  const pool = getPool();
+  const q = `
+    SELECT user_id
+    FROM sessions
+    WHERE id = $1
+      AND (expires_at IS NULL OR expires_at > NOW())
+    LIMIT 1
+  `;
+  const r = await pool.query(q, [sid]);
+  const row = r.rows && r.rows[0];
+  if (!row) return;
 
-    const s = rows[0];
-    if (s.expires_at && new Date(s.expires_at) <= now) {
-      req.user = null;
-      return next();
-    }
+  const id = Number(row.user_id);
+  if (!Number.isFinite(id) || id <= 0) return;
 
-    req.user = { id: String(s.user_id) };
+  // minimal user object
+  req.user = { id };
+}
 
-    // Touch last_seen_at (best-effort)
-    try {
-      await pool.query(`UPDATE sessions SET last_seen_at = NOW() WHERE id = $1`, [sid]);
-    } catch (_) {
-      // ignore
+/**
+ * Global attach middleware (optional): app.use(initAuth)
+ * Ensures:
+ *  - req.user is either {id} or null (never undefined)
+ *  - res.locals.user mirrors req.user for SSR
+ */
+async function initAuth(req, res, next) {
+  try {
+    await loadUserFromSession(req);
+    res.locals.user = req.user;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * Gate middleware. MUST work even if app forgot to mount initAuth.
+ */
+async function requireAuth(req, res, next) {
+  try {
+    // self-heal: ensure req.user is initialized
+    await loadUserFromSession(req);
+
+    if (!req.user) {
+      return res.status(401).json({
+        error: {
+          code: 'AUTH_REQUIRED',
+          message: 'Authentication required',
+        },
+      });
     }
 
     return next();
@@ -99,53 +131,13 @@ async function loadUserFromSession(req, _res, next) {
   }
 }
 
-function requireAuth(req, res, next) {
-  if (req.user && req.user.id) return next();
-
-  // Helpful dev hint: if app forgot to mount loadUserFromSession.
-  if (isDev() && typeof req.user === 'undefined') {
-    return jsonAuthError(
-      res,
-      'AUTH_REQUIRED',
-      'Auth middleware not initialized (req.user is undefined)'
-    );
-  }
-
-  return jsonAuthError(res, 'AUTH_REQUIRED', 'Authentication required');
-}
-
-function setSessionCookie(res, sid, { maxAgeSeconds } = {}) {
-  const maxAge = Number.isFinite(maxAgeSeconds)
-    ? Math.max(0, Math.floor(maxAgeSeconds))
-    : 60 * 60 * 24 * 30;
-
-  const parts = [
-    `sid=${encodeURIComponent(sid)}`,
-    `Path=/`,
-    `HttpOnly`,
-    `SameSite=Lax`,
-    `Max-Age=${maxAge}`,
-  ];
-
-  if (process.env.NODE_ENV === 'production') parts.push('Secure');
-
-  res.setHeader('Set-Cookie', parts.join('; '));
-}
-
-function clearSessionCookie(res) {
-  const parts = [`sid=`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age=0`];
-  if (process.env.NODE_ENV === 'production') parts.push('Secure');
-  res.setHeader('Set-Cookie', parts.join('; '));
-}
-
-function newSessionId() {
-  return crypto.randomBytes(24).toString('base64url');
-}
-
 module.exports = {
-  loadUserFromSession,
-  requireAuth,
+  // cookie + sessions helpers used by auth.routes.cjs
+  newSessionId,
   setSessionCookie,
   clearSessionCookie,
-  newSessionId,
+
+  // middlewares
+  initAuth,
+  requireAuth,
 };

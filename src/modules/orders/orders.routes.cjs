@@ -1,21 +1,22 @@
 'use strict';
 
 const express = require('express');
+
+const { requireAuth } = require('../../middlewares/auth.middleware.cjs');
+const ordersController = require('./orders.controller.cjs');
+
 const router = express.Router();
 
-const OrdersController = require('./orders.controller.cjs');
-const { loadUserFromSession, requireAuth } = require('../../middlewares/auth.middleware.cjs');
-
-// Ensure session -> req.user for ALL /api/orders/* requests
-router.use(loadUserFromSession);
-
 // POST /api/orders/:slug/buy
-router.post('/:slug/buy', requireAuth, express.json(), async (req, res, next) => {
-  try {
-    await OrdersController.buy(req, res);
-  } catch (err) {
-    next(err);
-  }
-});
+// Supports BOTH:
+// - HTML form submit: application/x-www-form-urlencoded
+// - API clients: application/json
+router.post(
+  '/:slug/buy',
+  requireAuth,
+  express.urlencoded({ extended: false }),
+  express.json(),
+  ordersController.buy
+);
 
 module.exports = router;

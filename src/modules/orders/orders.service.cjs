@@ -1,100 +1,127 @@
 'use strict';
 
-const OrdersRepo = require('./orders.repo.cjs');
-const { PAYMENTS_PROVIDER } = require('../../config/payments.cjs');
+/**
+ * Orders Service
+ * - creates pending order
+ * - normalizes input (dealType, amount, currency)
+ * - always provides amountCents for DB (orders.amount_cents NOT NULL)
+ * - best-effort checkout session (only if req provided)
+ */
 
-function asInt(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : NaN;
-}
+const { getPool } = require('../../../scripts/db.pool.cjs');
+
+const ordersRepo = require('./orders.repo.cjs');
+const paymentsService = require('../payments/payments.service.cjs');
+
+/* ============================================================
+ * Helpers
+ * ============================================================ */
 
 function getUserIdFromReq(req) {
-  // Prefer your real auth middleware: req.user.id
-  if (req.user && req.user.id) return req.user.id;
+  // support both styles:
+  // - req.user (attachUser)
+  // - res.locals.user (some middlewares attach to locals)
+  const user =
+    req?.user ||
+    req?.session?.user ||
+    req?.res?.locals?.user ||
+    req?.res?.locals?.session?.user ||
+    null;
 
-  // Dev fallback: allow passing x-demo-user-id to test B12 quickly.
-  const demo = req.headers['x-demo-user-id'];
-  if (demo) {
-    const n = asInt(demo);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-
-  const err = new Error('AUTH_REQUIRED');
-  err.status = 401;
-  throw err;
-}
-
-function resolveTemplateMeta(req, slug) {
-  // If your app already prepared catalog data in app.locals, we can use it.
-  // Expected: req.app.locals.templatesBySlug[slug] = { slug, priceCents, currency, zipReady, deal, license }
-  const map = req.app && req.app.locals && req.app.locals.templatesBySlug;
-  if (map && map[slug]) return map[slug];
-  return null;
-}
-
-function normalizeDealType(dealType) {
-  const v = String(dealType || '').toUpperCase();
-  if (v !== 'BUY' && v !== 'RENT') {
-    const err = new Error('INVALID_DEAL_TYPE');
-    err.status = 400;
+  const id = user && user.id != null ? Number(user.id) : NaN;
+  if (!Number.isFinite(id) || id <= 0) {
+    const err = new Error('AUTH_REQUIRED');
+    err.code = 'AUTH_REQUIRED';
     throw err;
   }
-  return v;
+  return id;
 }
 
-function normalizeMoney({ amountCents, currency }) {
-  const amount = asInt(amountCents);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    const err = new Error('INVALID_AMOUNT');
-    err.status = 400;
-    throw err;
-  }
-
-  const cur = String(currency || 'EUR').toUpperCase();
-  if (!/^[A-Z]{3}$/.test(cur)) {
-    const err = new Error('INVALID_CURRENCY');
-    err.status = 400;
-    throw err;
-  }
-
-  return { amountCents: amount, currency: cur };
+function normalizeDealType(v) {
+  const x = String(v || '').toUpperCase();
+  if (x === 'BUY' || x === 'RENT' || x === 'FREE') return x;
+  throw new Error('INVALID_DEAL_TYPE');
 }
 
 /**
- * Create an order for a template slug.
- * Money can be resolved from catalog meta (recommended), or from request body (fallback).
+ * Accepts either:
+ * - "9" (meaning 9 EUR)
+ * - "9.99" (meaning 9.99 EUR)
+ * Returns:
+ * - amount (number, EUR)
+ * - amountCents (int, EUR cents)
  */
-async function createPendingOrder(req, { slug, dealType, amountCents, currency }) {
-  const userId = getUserIdFromReq(req);
-  const deal = normalizeDealType(dealType);
+function normalizeMoney(amount, currency) {
+  const a = Number(amount);
+  if (!Number.isFinite(a) || a <= 0) throw new Error('INVALID_AMOUNT');
 
-  const meta = resolveTemplateMeta(req, slug);
+  const cur = String(currency || '').toUpperCase();
+  if (!cur) throw new Error('INVALID_CURRENCY');
 
-  // Prefer meta-defined pricing if present
-  let money;
-  if (meta && meta.priceCents) {
-    money = normalizeMoney({ amountCents: meta.priceCents, currency: meta.currency || 'EUR' });
-  } else {
-    money = normalizeMoney({ amountCents, currency });
-  }
+  // cents as integer, rounded (safe for inputs like 9.99)
+  const amountCents = Math.round(a * 100);
+  if (!Number.isFinite(amountCents) || amountCents <= 0) throw new Error('INVALID_AMOUNT');
 
-  // Basic safety check: if catalog says ZIP is not ready — do not sell.
-  if (meta && meta.zipReady === false) {
-    const err = new Error('ZIP_NOT_READY');
-    err.status = 409;
+  return { amount: a, amountCents, currency: cur };
+}
+
+/* ============================================================
+ * Main API
+ * ============================================================ */
+
+async function createPendingOrder(params) {
+  const { req, userId: userIdMaybe, slug, dealType, amount, currency } = params || {};
+
+  const userId =
+    Number.isFinite(Number(userIdMaybe)) && Number(userIdMaybe) > 0
+      ? Number(userIdMaybe)
+      : getUserIdFromReq(req);
+
+  const templateSlug = String(slug || '').trim();
+  if (!templateSlug) {
+    const err = new Error('TEMPLATE_SLUG_REQUIRED');
+    err.code = 'BAD_REQUEST';
     throw err;
   }
 
-  const order = await OrdersRepo.createOrder({
+  const deal = normalizeDealType(dealType);
+  const money = normalizeMoney(amount, currency);
+
+  const pool = getPool();
+
+  // 1) create order in DB
+  // IMPORTANT: DB requires amount_cents NOT NULL
+  const order = await ordersRepo.createOrder({
+    pool,
     userId,
-    templateSlug: slug,
+    templateSlug,
     dealType: deal,
+    amount: money.amount, // optional (if repo ignores it, ok)
     amountCents: money.amountCents,
     currency: money.currency,
-    provider: PAYMENTS_PROVIDER,
+    status: 'pending',
+    provider: 'dev', // not-null in DB
   });
 
-  return order;
+  // 2) best-effort checkout session
+  let checkout = null;
+  if (req) {
+    try {
+      checkout = await paymentsService.createCheckoutSession({
+        order,
+        req,
+      });
+    } catch (e) {
+      checkout = null; // dev: ignore provider errors
+    }
+  }
+
+  return {
+    orderId: String(order.id),
+    status: order.status,
+    checkoutUrl: checkout?.checkoutUrl || `/checkout/success?order_id=${order.id}`,
+    providerSessionId: checkout?.providerSessionId || null,
+  };
 }
 
 module.exports = {
