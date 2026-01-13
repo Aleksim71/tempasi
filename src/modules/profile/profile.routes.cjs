@@ -1,13 +1,15 @@
 'use strict';
 
 const express = require('express');
-const { getProfilePage } = require('./profile.controller.cjs');
 
 function profileRoutes() {
   const router = express.Router();
 
-  // GET /profile (SSR)
-  router.get('/', getProfilePage);
+  // SSR страница профиля (минимальная заглушка)
+  router.get('/', (req, res) => {
+    // если у тебя есть реальный шаблон — подключишь позже
+    return res.status(200).send('Profile page');
+  });
 
   return router;
 }

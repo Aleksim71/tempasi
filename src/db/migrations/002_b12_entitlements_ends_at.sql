@@ -1,24 +1,40 @@
 -- src/db/migrations/002_b12_entitlements_ends_at.sql
--- B12: entitlements table + ends_at (для download gate)
--- Idempotent.
-
+-- B12: normalize entitlements schema (idempotent, safe)
 BEGIN;
 
+-- если таблицы нет (на чистой БД) — создадим сразу правильную
 CREATE TABLE IF NOT EXISTS public.entitlements (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
   template_slug TEXT NOT NULL,
   deal_type TEXT NOT NULL DEFAULT 'BUY',
+  order_id BIGINT NULL,
   starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   ends_at TIMESTAMPTZ NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- если таблица уже была, но без ends_at — добавим
+-- если таблица была создана раньше в 001 с урезанными полями — дольём недостающее
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS deal_type TEXT NOT NULL DEFAULT 'BUY';
+
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS order_id BIGINT NULL;
+
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
 ALTER TABLE public.entitlements
   ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ NULL;
 
--- уникальность "право на шаблон"
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- уникальность "право на шаблон" для ON CONFLICT (user_id, template_slug, deal_type)
 DO $$
 BEGIN
   IF NOT EXISTS (

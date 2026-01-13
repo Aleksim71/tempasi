@@ -2,50 +2,33 @@
 
 const { listUserEntitlements } = require('../entitlements/entitlements.repo.cjs');
 
-function requireAuth(req) {
-  // В твоём проекте auth только cookie.
-  // Важно: middleware должен выставлять req.user.
-  if (!req.user || !req.user.id) {
-    const err = new Error('Unauthorized');
-    err.status = 401;
+function mustGetDb(req) {
+  const db = req.app && req.app.locals && req.app.locals.db;
+  if (!db || typeof db.query !== 'function') {
+    const err = new Error('[profile] DB is not attached to app.locals.db');
+    err.status = 500;
+    err.code = 'DB_NOT_READY';
     throw err;
   }
+  return db;
 }
 
-async function getMyDownloadsJson(req, res, next) {
-  try {
-    requireAuth(req);
+async function getMyDownloadsJson(req, res) {
+  // сюда мы попадаем уже после requireAuth (в routes)
+  const userId = req.user.id;
 
-    const db = req.app.locals.db;
-    const userId = req.user.id;
+  const db = mustGetDb(req);
+  const rows = await listUserEntitlements({ db, userId, dealType: 'BUY' });
 
-    const items = await listUserEntitlements({ db, userId });
-    return res.status(200).json({ items });
-  } catch (e) {
-    return next(e);
-  }
-}
-
-async function getProfilePage(req, res, next) {
-  try {
-    requireAuth(req);
-
-    const db = req.app.locals.db;
-    const userId = req.user.id;
-
-    const entitlements = await listUserEntitlements({ db, userId });
-
-    return res.status(200).render('pages/profile', {
-      title: 'My Downloads',
-      entitlements,
-      hasAny: entitlements.length > 0,
-    });
-  } catch (e) {
-    return next(e);
-  }
+  res.json({
+    items: rows.map((r) => ({
+      template_slug: r.template_slug,
+      deal_type: r.deal_type,
+      created_at: r.created_at,
+    })),
+  });
 }
 
 module.exports = {
   getMyDownloadsJson,
-  getProfilePage,
 };
