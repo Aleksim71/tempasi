@@ -1,13 +1,39 @@
 /* ======================================================
-   Tempasi Templates Catalog
-   B10 (preview UX) + B11 (badges, filters)
+   Tempasi — Templates Catalog (page-scoped)
+   File: public/css/templates.catalog.css
+   Loaded ONLY on /templates via: pageCss: '/css/templates.catalog.css'
+   Goal: keep grid stable even if core.css/custom.css set global img rules.
    ====================================================== */
+/* 🔒 Catalog safety override */
+.templates-page img,
+.templates-grid img,
+[data-templates-grid] img,
+[data-template-card] img {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+:root {
+  --tpl-max: 1200px;
+  --tpl-gap: 24px;
+  --tpl-card-radius: 18px;
+  --tpl-border: rgba(255, 255, 255, 0.12);
+  --tpl-bg: rgba(255, 255, 255, 0.06);
+}
 
 /* ===== Page ===== */
 .templates-page {
-  max-width: 1280px;
+  max-width: var(--tpl-max);
   margin: 0 auto;
   padding: 32px 20px 80px;
+}
+
+/* If some global CSS changes layout unexpectedly, force sane defaults inside this page */
+.templates-page *,
+.templates-page *::before,
+.templates-page *::after {
+  box-sizing: border-box;
 }
 
 .templates-header {
@@ -17,10 +43,11 @@
 .page-title {
   font-size: 40px;
   font-weight: 800;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
 }
 
 .page-subtitle {
+  margin: 0;
   opacity: 0.85;
 }
 
@@ -38,7 +65,7 @@
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  color: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -51,22 +78,25 @@
 
 .chip--ghost {
   background: transparent;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
-/* ===== GRID ===== */
+/* ===== ✅ GRID FIX ===== */
 .templates-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+  gap: var(--tpl-gap) !important;
+  align-items: start !important;
+  width: 100%;
 }
 
-/* ===== CARD ===== */
+/* ===== Card ===== */
 .tpl-card {
   position: relative;
-  border-radius: 18px;
+  border-radius: var(--tpl-card-radius);
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--tpl-border);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   transition:
     transform 0.25s ease,
@@ -84,23 +114,36 @@
   filter: grayscale(0.2);
 }
 
-/* FREE highlight */
-.tpl-card.is-free {
-  outline: 2px solid rgba(255, 255, 255, 0.25);
-  outline-offset: -2px;
-}
-
-/* ===== Preview ===== */
+/* ===== Preview wrapper (prevents huge images) ===== */
 .tpl-card__preview {
   display: block;
+  position: relative;
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 }
 
+/* Some older browsers: fallback */
+.tpl-card__preview::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%;
+}
+
+/* ✅ The IMPORTANT part: neutralize ANY global img width/height rules inside catalog */
+.tpl-card__preview img,
+.templates-page img {
+  max-width: 100% !important;
+}
+
+/* Actual preview image fill */
 .tpl-card__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block;
 }
 
 /* ===== Badges ===== */
@@ -127,16 +170,14 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* ZIP */
 .badge--zip.badge--NOT_READY {
   border-color: rgba(255, 90, 90, 0.7);
 }
-
 .badge--zip.badge--READY {
   border-color: rgba(90, 255, 160, 0.7);
 }
 
-/* FREE */
+/* FREE highlight */
 .badge--FREE {
   background: rgba(255, 255, 255, 0.9);
   color: #000;
@@ -150,15 +191,21 @@
 .tpl-card__title {
   font-size: 16px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin: 0 0 12px 0;
 }
 
 .tpl-card__actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.btn {
+.tpl-card__actions form {
+  margin: 0;
+}
+
+/* Buttons (only inside catalog; do NOT redefine global .btn outside this page) */
+.templates-page .btn {
   height: 36px;
   padding: 0 14px;
   border-radius: 10px;
@@ -167,32 +214,42 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
 }
 
-.btn-primary {
+.templates-page .btn-primary {
   background: linear-gradient(135deg, #8f6bff, #5e9cff);
+  border-color: transparent;
   color: #fff;
 }
 
-.btn-secondary {
+.templates-page .btn-secondary {
   background: rgba(255, 255, 255, 0.12);
-  color: #fff;
 }
 
-.btn.is-disabled {
+.templates-page .btn.is-disabled,
+.templates-page .btn[disabled] {
   opacity: 0.45;
   pointer-events: none;
 }
 
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
-  .templates-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .templates-page {
+    padding: 28px 16px 64px;
   }
 }
 
 @media (max-width: 640px) {
+  .templates-page {
+    padding: 22px 12px 52px;
+  }
   .templates-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
 }

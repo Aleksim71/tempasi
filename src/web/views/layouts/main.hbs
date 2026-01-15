@@ -6,10 +6,11 @@
 
     <title>{{#if title}}{{title}}{{else}}Tempasi{{/if}}</title>
 
+    <!-- Base styles (site-wide) -->
     <link rel="stylesheet" href="/css/core.css" />
     <link rel="stylesheet" href="/css/custom.css" />
 
-    {{!-- Page-specific CSS (optional) --}}
+    {{!-- Page-scoped CSS (optional). Use to load page-specific "bricks" without polluting the whole site. --}}
     {{#if pageCss}}
       <link rel="stylesheet" href="{{pageCss}}" />
     {{/if}}
@@ -38,7 +39,7 @@
 
     {{> footer}}
 
-    {{!-- Page-specific JS (optional) --}}
+    {{!-- Page-scoped JS (optional) --}}
     {{#if pageJs}}
       <script src="{{pageJs}}" defer></script>
     {{/if}}

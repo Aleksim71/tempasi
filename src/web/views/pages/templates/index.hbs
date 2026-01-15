@@ -1,93 +1,104 @@
-{{!-- ========================= --}}
-{{!-- Templates Catalog (B11) --}}
-{{!-- ========================= --}}
-
 <section class="templates-page">
-
-  <header class="templates-header">
-    <h1 class="page-title">Templates</h1>
-    <p class="page-subtitle">
+  <header class="templates-hero">
+    <h1 class="templates-title">Templates</h1>
+    <p class="templates-subtitle">
       Ready-to-use website templates. Preview online, download ZIP when ready.
     </p>
   </header>
 
-  {{!-- Chip-bar filters (B11.3) --}}
-  <section class="chipbar" data-chipbar>
-    <button class="chip" type="button" data-filter="zipReady">ZIP ready</button>
-    <button class="chip" type="button" data-filter="free">Free</button>
+  <div class="templates-filters" data-templates-filters>
+    <div class="templates-filters__row">
+      <input
+        id="tplSearch"
+        name="q"
+        class="templates-search"
+        type="search"
+        placeholder="Search (title / slug)..."
+        autocomplete="off"
+        inputmode="search"
+        data-filter="q"
+      />
 
-    <div class="chip-group" role="group" aria-label="License">
-      <button class="chip" type="button" data-filter="license" data-value="PU">PU</button>
-      <button class="chip" type="button" data-filter="license" data-value="CU">CU</button>
-      <button class="chip" type="button" data-filter="license" data-value="EL">EL</button>
+      <div class="templates-chips" role="group" aria-label="ZIP status">
+        <button type="button" class="chip" data-filter-chip="zip" data-value="ready">ZIP ready</button>
+        <button type="button" class="chip" data-filter-chip="zip" data-value="not_ready">Not ready</button>
+        <button type="button" class="chip chip--active" data-filter-chip="zip" data-value="any">All</button>
+      </div>
+
+      <div class="templates-chips" role="group" aria-label="License">
+        <button type="button" class="chip chip--active" data-filter-chip="license" data-value="any">All</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="free">Free</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="pu">PU</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="cu">CU</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="el">EL</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="ml">ML</button>
+        <button type="button" class="chip" data-filter-chip="license" data-value="ex">EX</button>
+        <button type="button" class="chip chip--ghost" data-filter-reset>Reset</button>
+      </div>
     </div>
 
-    <button class="chip chip--ghost" type="button" data-action="reset">Reset</button>
-  </section>
+    <div class="templates-filters__meta">
+      <span class="templates-count" data-templates-count>0/0</span>
+    </div>
+  </div>
 
-  <section class="templates-grid">
+  <div class="templates-grid" data-templates-grid>
     {{#each templates}}
-
       <article
-        class="tpl-card {{#unless zipReady}}is-zip-not-ready{{/unless}} {{#if (eq license "FREE")}}is-free{{/if}}"
-        data-tpl-card
+        class="template-card"
+        data-template-card
         data-slug="{{slug}}"
-        data-license="{{license}}"
-        data-deal="{{deal}}"
-        data-zip-ready="{{#if zipReady}}1{{else}}0{{/if}}"
+        data-title="{{title}}"
+        data-zip="{{#if zip_ready}}ready{{else}}not_ready{{/if}}"
+        data-license="{{#if license}}{{license}}{{else}}any{{/if}}"
       >
+        <div class="template-card__top">
+          <span class="badge {{#if zip_ready}}badge--ok{{else}}badge--muted{{/if}}">
+            {{#if zip_ready}}ZIP READY{{else}}ZIP NOT READY{{/if}}
+          </span>
 
-        <div class="tpl-card__badges">
-          <span class="badge badge--license badge--{{license}}">{{license}}</span>
-
-          {{#if (eq deal "RENT")}}
-            <span class="badge badge--deal badge--RENT">RENT</span>
-          {{else if (eq deal "BUY")}}
-            <span class="badge badge--deal badge--BUY">BUY</span>
-          {{else}}
-            <span class="badge badge--deal badge--FREE">FREE</span>
-          {{/if}}
-
-          {{#if zipReady}}
-            <span class="badge badge--zip badge--READY">ZIP READY</span>
-          {{else}}
-            <span class="badge badge--zip badge--NOT_READY">ZIP NOT READY</span>
+          {{#if license}}
+            <span class="badge badge--pill">{{license}}</span>
           {{/if}}
         </div>
 
-        {{!-- Preview image: fallback to /t/:slug/preview/preview.png --}}
-        <a class="tpl-card__preview" href="/preview/{{slug}}" aria-label="Open preview {{title}}">
-          <img
-            src="{{#if previewUrl}}{{previewUrl}}{{else}}/t/{{slug}}/preview/preview.png{{/if}}"
-            alt="Preview {{title}}"
-            loading="lazy"
-            decoding="async"
-          />
+        <a class="template-card__preview" href="/preview/{{slug}}" aria-label="Preview {{title}}">
+          {{#if has_preview}}
+            <img
+              class="template-card__img"
+              src="/t/{{slug}}/preview/preview.png"
+              alt="{{title}} preview"
+              loading="lazy"
+              decoding="async"
+            />
+          {{else}}
+            <div class="template-card__no-preview">No preview</div>
+          {{/if}}
         </a>
 
-        <div class="tpl-card__footer">
-          <h3 class="tpl-card__title">{{title}}</h3>
+        <div class="template-card__body">
+          <h3 class="template-card__title">{{title}}</h3>
+          <div class="template-card__slug">{{slug}}</div>
 
-          <div class="tpl-card__actions">
-            <a class="btn btn-secondary" href="/preview/{{slug}}">Preview</a>
+          <div class="template-card__actions">
+            <a class="btn btn--ghost" href="/preview/{{slug}}">Preview</a>
 
-            {{#if zipReady}}
-              <a class="btn btn-primary" href="/download/{{slug}}">Download ZIP</a>
+            {{#if zip_ready}}
+              <a class="btn" href="/download/{{slug}}?from=templates">Download</a>
             {{else}}
-              <button class="btn btn-primary is-disabled" type="button" disabled>ZIP soon</button>
+              <button class="btn btn--disabled" type="button" disabled>ZIP soon</button>
             {{/if}}
+
+            <form class="buy-form" method="post" action="/{{slug}}/buy" style="display:inline">
+              <input type="hidden" name="from" value="templates" />
+              <input type="hidden" name="slug" value="{{slug}}" />
+              <button class="btn btn--secondary" type="submit">Buy</button>
+            </form>
           </div>
         </div>
-
       </article>
-
     {{/each}}
+  </div>
 
-    {{#unless templates.length}}
-      <div class="templates-empty">No templates found.</div>
-    {{/unless}}
-  </section>
-
+  <script defer src="/js/templates.filters.js"></script>
 </section>
-
-<script src="/js/templates.filters.js" defer></script>
