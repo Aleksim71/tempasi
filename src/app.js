@@ -1,210 +1,105 @@
 // src/app.js
-// ESM. src/server.js делает: `import app from './app.js'`
-
-import path from 'node:path';
 import express from 'express';
-import { fileURLToPath } from 'node:url';
+import { createWebApp } from './app.web.js';
 
-import { engine } from 'express-handlebars';
-
-import { getAllTemplates, getTemplateBySlug } from './db/templatesRepo.js';
-
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ----------------- helpers (HBS) -----------------
-function normalizeDealFromType(type) {
-  const v = String(type || '').toLowerCase();
-  if (v === 'rent') return 'RENT';
-  if (v === 'free') return 'FREE';
-  return 'BUY';
+function isMiddleware(x) {
+  return typeof x === 'function' || (x && typeof x.handle === 'function');
 }
 
-const hbsHelpers = {
-  eq: (a, b) => a === b,
-
-  isFree: (price) => Number(price || 0) <= 0,
-
-  formatPrice: (price) => {
-    const p = Number(price || 0);
-    if (!Number.isFinite(p)) return '—';
-    if (p <= 0) return 'Free';
-    return `${p.toFixed(0)} €`;
-  },
-
-  licenseLabel: (license) => {
-    const v = String(license || '').toUpperCase();
-    if (v === 'FREE') return 'Free';
-    if (v === 'PU') return 'Personal';
-    if (v === 'CU') return 'Commercial';
-    if (v === 'EL') return 'Extended';
-    return v || 'PU';
-  },
-
-  typeLabel: (type) => {
-    const v = String(type || '').toLowerCase();
-    if (v === 'buy') return 'Buy';
-    if (v === 'rent') return 'Rent';
-    if (v === 'free') return 'Free';
-    return v || 'buy';
-  },
-};
-
-// ----------------- route loader (CJS) -----------------
-function pickRouter(mod, preferredKeys = []) {
-  if (typeof mod === 'function') return mod;
-
-  if (mod && typeof mod === 'object') {
-    for (const k of preferredKeys) {
-      if (typeof mod[k] === 'function') return mod[k];
-    }
-    if (typeof mod.router === 'function') return mod.router;
-    if (mod.default && typeof mod.default === 'function') return mod.default;
+function safeUse(app, base, handler, label) {
+  if (!isMiddleware(handler)) {
+    console.warn(`[app] skip mount ${label}: not a middleware`);
+    return;
   }
-
-  const keys = mod && typeof mod === 'object' ? Object.keys(mod) : [];
-  throw new Error(`[app.js] Cannot resolve router from CJS module. keys=${JSON.stringify(keys)}`);
+  if (base) app.use(base, handler);
+  else app.use(handler);
+  console.log(`[app] mounted ${label}${base ? ` at ${base}` : ''}`);
 }
 
-// CJS routers
-const authMod = require('./modules/auth/auth.routes.cjs');
-const ordersMod = require('./modules/orders/orders.routes.cjs');
-const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
-
-const profileMod = require('./modules/profile/profile.routes.cjs');
-const profileApiMod = require('./modules/profile/profile.api.routes.cjs');
-
-const authRouter = pickRouter(authMod, ['authRouter', 'authRoutes']);
-const ordersRouter = pickRouter(ordersMod, ['ordersRouter', 'ordersRoutes']);
-const downloadsRouter = pickRouter(downloadsMod, ['downloadsRouter', 'downloadsRoutes']);
-
-const profileRouterFactory = pickRouter(profileMod, ['profileRoutes', 'profileRouter']);
-const profileApiRouterFactory = pickRouter(profileApiMod, ['profileApiRoutes', 'profileApiRouter']);
-
-const profileRouter = profileRouterFactory();
-const profileApiRouter = profileApiRouterFactory();
-
-// ----------------- app -----------------
-const app = express();
-
-// view engine (express-handlebars)
-app.engine(
-  'hbs',
-  engine({
-    extname: '.hbs',
-    layoutsDir: path.join(__dirname, 'web', 'views', 'layouts'),
-    partialsDir: path.join(__dirname, 'web', 'views', 'partials'),
-    defaultLayout: 'main',
-    helpers: hbsHelpers,
-  }),
-);
-app.set('view engine', 'hbs');
-app.set('views', path.join(__dirname, 'web', 'views'));
-
-// middleware
-app.use(express.urlencoded({ extended: false })); // HTML forms
-app.use(express.json({ limit: '1mb' })); // API
-
-// static
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// serve template previews/assets from storage/templates
-app.use('/t', express.static(path.resolve(process.cwd(), 'storage', 'templates')));
-app.use('/seeds', express.static(path.resolve(process.cwd(), 'storage', 'templates')));
-
-// ---------- API ----------
-app.use('/api/auth', authRouter);
-app.use('/api/orders', ordersRouter);
-app.use('/api/profile', profileApiRouter);
-
-// ---------- Downloads ----------
-app.use('/download', downloadsRouter);
-
-// ---------- SSR: Profile ----------
-app.use('/profile', profileRouter);
-
-// ---------- SSR: Catalog ----------
-app.get('/', (_req, res) => res.redirect('/templates'));
-
-app.get('/templates', async (req, res, next) => {
+async function tryImportCjs(relPathFromRoot) {
   try {
-    const all = await getAllTemplates();
+    // ESM-import CJS через абсолютный путь:
+    const { pathToFileURL } = await import('node:url');
+    const { default: path } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
 
-    const templates = all.map((t) => ({
-      slug: t.slug,
-      title: t.title,
-      license: t.license,
-      deal: normalizeDealFromType(t.type),
-      zipReady: Boolean(t.hasZip),
-      previewUrl: t.preview || null,
-    }));
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const ROOT_DIR = path.resolve(__dirname, '..');
 
-    return res.status(200).render('pages/templates/index', {
-      title: 'Templates',
-      activePage: 'templates',
-      pageCss: '/css/templates.catalog.css', // ✅ ВОТ ОНО
-      templates,
-    });
+    const abs = path.join(ROOT_DIR, relPathFromRoot);
+    const mod = await import(pathToFileURL(abs).href);
+    return mod;
   } catch (e) {
-    return next(e);
+    return null;
   }
-});
+}
 
-app.get('/templates/:slug', async (req, res, next) => {
-  try {
-    const slug = String(req.params.slug || '').trim();
-    const template = await getTemplateBySlug(slug);
+export async function createApp() {
+  const app = express();
 
-    if (!template) {
-      return res.status(404).render('pages/template-not-found', {
-        title: 'Template not found',
-        slug,
-      });
+  app.disable('x-powered-by');
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: true }));
+
+  // WEB
+  await createWebApp(app);
+
+  // API (монтируем только если реально есть middleware)
+  const candidates = [
+    { label: 'orders.routes', base: '/api/orders', rel: 'src/modules/orders/orders.routes.cjs' },
+    {
+      label: 'payments.routes',
+      base: '/api/payments',
+      rel: 'src/modules/payments/payments.routes.cjs',
+    },
+    {
+      label: 'profile.routes',
+      base: '/api/profile',
+      rel: 'src/modules/profile/profile.routes.cjs',
+    },
+  ];
+
+  for (const c of candidates) {
+    const mod = await tryImportCjs(c.rel);
+    if (!mod) continue;
+
+    // поддержим варианты экспортов:
+    // - module.exports = router
+    // - exports.profileRoutes = () => router
+    // - exports.routes = router
+    let handler = mod?.default ?? mod?.routes ?? null;
+
+    if (!handler && typeof mod?.profileRoutes === 'function') handler = mod.profileRoutes();
+    if (!handler && typeof mod?.ordersRoutes === 'function') handler = mod.ordersRoutes();
+    if (!handler && typeof mod?.paymentsRoutes === 'function') handler = mod.paymentsRoutes();
+
+    safeUse(app, c.base, handler, c.label);
+  }
+
+  // 404
+  app.use((req, res) => res.status(404).type('text').send('Not found'));
+
+  // !!! ВАЖНО: error handler, чтобы сервер НЕ ПАДАЛ от ошибок в роутах
+  // Express 5 умеет ловить async-ошибки, но этот хендлер обязателен всё равно.
+  app.use((err, req, res, next) => {
+    console.error('[app] error:', err);
+
+    if (res.headersSent) return next(err);
+
+    const accept = String(req.headers.accept || '');
+    if (accept.includes('text/html')) {
+      return res.status(500).type('html').send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>500</title></head>
+<body style="font-family:system-ui,Arial,sans-serif;padding:24px">
+  <h1>500</h1>
+  <pre style="white-space:pre-wrap">${String(err?.stack || err)}</pre>
+  <p><a href="/templates">Back to templates</a></p>
+</body></html>`);
     }
 
-    return res.status(200).render('pages/template-details', {
-      title: template.title || slug,
-      template,
-      activePage: 'templates',
-    });
-  } catch (e) {
-    return next(e);
-  }
-});
+    return res.status(500).json({ error: 'internal_error' });
+  });
 
-// Preview route (B11 used /preview/:slug). MVP: просто показываем details.
-app.get('/preview/:slug', (req, res) => {
-  const slug = String(req.params.slug || '').trim();
-  return res.redirect(`/templates/${encodeURIComponent(slug)}`);
-});
-
-// ---------- 404 ----------
-app.use((req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not Found' } });
-  }
-  return res.status(404).send('404 Not Found');
-});
-
-// ---------- Error handler ----------
- 
-app.use((err, req, res, _next) => {
-  const status = err.status || 500;
-
-  if (req.path.startsWith('/api/')) {
-    return res.status(status).json({
-      error: {
-        code: err.code || 'INTERNAL_ERROR',
-        message: err.message || 'Internal Error',
-      },
-    });
-  }
-
-  return res.status(status).send(err.message || 'Internal Error');
-});
- 
-
-export default app;
+  return app;
+}
