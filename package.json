@@ -33,6 +33,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-handlebars": "^8.0.4",
+    "hbs": "^4.2.0",
     "pg": "^8.16.3"
   }
 }
