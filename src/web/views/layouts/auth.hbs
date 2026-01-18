@@ -1,15 +1,24 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>{{title}}</title>
 
     <link rel="stylesheet" href="/css/core.css" />
-    <link rel="stylesheet" href="/css/custom.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components/button.css" />
+    <link rel="stylesheet" href="/css/components/card.css" />
+
+    {{#if styles}}
+      {{#each styles}}
+        <link rel="stylesheet" href="{{this}}" />
+      {{/each}}
+    {{/if}}
   </head>
-  <body class="auth-body">
+
+  <body>
     {{{body}}}
   </body>
 </html>
-
