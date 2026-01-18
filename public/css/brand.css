@@ -1,0 +1,56 @@
+/* public/css/brand.css
+   Brand palettes preview — overrides ONLY variables (no revolution).
+*/
+
+:root {
+  /* defaults (fallback) */
+  --brand-primary: #d59f28; /* extracted gold */
+  --brand-on-primary: #111111; /* ✅ black text on gold */
+  --brand-dark: #333333;
+  --brand-surface: #e0e0e0;
+}
+
+/* Palette A: Extracted from your sketch (gold + graphite) */
+:root[data-brand='gold'] {
+  --brand-primary: #d59f28;
+  --brand-on-primary: #111111; /* ✅ black text on gold */
+  --brand-dark: #373e42;
+  --brand-surface: #e0e0e0;
+}
+
+/* Palette B: Your earlier “brand list” values */
+:root[data-brand='red'] {
+  --brand-primary: #c60c32;
+  --brand-on-primary: #ffffff; /* red usually needs white for contrast */
+  --brand-dark: #333333;
+  --brand-surface: #e0e0e0;
+}
+
+/* Palette C: Slightly calmer premium gold */
+:root[data-brand='amber'] {
+  --brand-primary: #caa032;
+  --brand-on-primary: #111111; /* ✅ black text on gold */
+  --brand-dark: #333333;
+  --brand-surface: #e0e0e0;
+}
+
+/* === Hook these vars into existing components gently === */
+
+/* Primary button */
+.c-btn--primary {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-on-primary); /* ✅ black text on gold */
+}
+
+/* Active chip accent */
+.chip--active {
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-primary) 35%, transparent) inset;
+}
+
+/* Badge "ok" accent */
+.badge--ok {
+  border-color: color-mix(in srgb, var(--brand-primary) 60%, transparent);
+  color: color-mix(in srgb, var(--brand-primary) 80%, white);
+}

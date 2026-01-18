@@ -1,0 +1,42 @@
+/* public/css/layout.css */
+/* Layout primitives: page shell / container / stack / grid */
+
+.l-page {
+  min-height: 100vh;
+}
+
+/* main wrapper */
+.l-main {
+  padding-block: var(--space-10, 32px);
+}
+
+/* centered container */
+.l-container {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+/* vertical rhythm */
+.l-stack {
+  --stack-gap: var(--space-8, 24px);
+}
+.l-stack > * + * {
+  margin-top: var(--stack-gap);
+}
+
+/* simple grid helper (optional) */
+.l-grid {
+  display: grid;
+  gap: var(--space-6, 16px);
+}
+
+@media (max-width: 640px) {
+  .l-main {
+    padding-block: var(--space-8, 24px);
+  }
+
+  .l-container {
+    padding-inline: 12px;
+  }
+}

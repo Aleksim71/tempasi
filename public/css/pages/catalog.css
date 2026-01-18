@@ -1,0 +1,225 @@
+/* public/css/pages/catalog.css */
+
+/* Page wrapper */
+.templates-page {
+  padding: 28px 0 48px;
+}
+
+/* Hero */
+.templates-hero {
+  margin: 0 0 14px;
+}
+
+.templates-title {
+  margin: 0 0 6px;
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.templates-subtitle {
+  margin: 0;
+  opacity: 0.85;
+  max-width: 72ch;
+}
+
+/* Filters */
+.templates-filters {
+  margin: 16px 0 18px;
+}
+
+.templates-filters__row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.templates-search {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  outline: none;
+}
+
+.templates-search::placeholder {
+  opacity: 0.7;
+}
+
+.templates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.templates-filters__meta {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.templates-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+/* Responsive filters layout */
+@media (min-width: 860px) {
+  .templates-filters__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1080px) {
+  .templates-filters__row {
+    grid-template-columns: 420px 1fr auto;
+    align-items: center;
+  }
+
+  .templates-search {
+    grid-column: 1;
+  }
+
+  .templates-chips[aria-label='ZIP status'] {
+    grid-column: 2;
+  }
+
+  .templates-chips[aria-label='License'] {
+    grid-column: 2;
+  }
+
+  .templates-filters__meta {
+    grid-column: 3;
+    justify-content: flex-end;
+  }
+}
+
+/* Grid */
+.templates-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+@media (min-width: 720px) {
+  .templates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1060px) {
+  .templates-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1400px) {
+  .templates-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Card */
+.template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  padding: 12px;
+  border-radius: 16px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+
+  overflow: hidden;
+
+  /* 🔧 Compact fix */
+  min-height: 240px;
+}
+
+.template-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.template-card__top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Preview */
+.template-card__preview {
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.template-card__img {
+  display: block;
+  width: 100%;
+  height: auto;
+
+  /* 🔧 Compact + consistent cards */
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* Body */
+.template-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.template-card__title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.template-card__meta {
+  opacity: 0.75;
+  font-size: 12px;
+}
+
+/* Actions (buttons row) */
+.template-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* Ensure buttons look consistent even if component css changes */
+.template-card__actions .c-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Empty state */
+.templates-grid:empty {
+  display: block;
+  padding: 18px 0;
+  opacity: 0.75;
+}
+
+.templates-grid:empty::before {
+  content: 'No templates yet.';
+}

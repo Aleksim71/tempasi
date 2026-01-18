@@ -1,0 +1,217 @@
+/* public/css/components/header.css */
+
+/* =========================
+   Header shell
+   ========================= */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  border-bottom: 1px solid rgba(231, 238, 252, 0.1);
+  background: rgba(11, 15, 20, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 12px 0;
+}
+
+/* =========================
+   Brand
+   ========================= */
+
+.site-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 180px;
+}
+
+.site-header__mark {
+  width: 24px;
+  height: 24px;
+}
+
+.site-header__word {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.95;
+}
+
+/* =========================
+   Navigation
+   ========================= */
+
+.site-header__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  flex: 1;
+  min-width: 200px;
+}
+
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  height: 32px;
+  padding: 0 10px;
+
+  border-radius: 10px;
+  font-size: 13px;
+
+  opacity: 0.85;
+  transition:
+    opacity var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+
+.nav-link:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Active state — underline */
+.nav-link.is-active {
+  opacity: 1;
+  background: transparent;
+}
+
+.nav-link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 4px;
+
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand-primary, #d59f28);
+}
+
+/* =========================
+   Actions (icons)
+   ========================= */
+
+.site-header__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+
+  min-width: 110px;
+}
+
+.site-header__icon-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+  border: 1px solid rgba(231, 238, 252, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+
+  /* default icon/text color on dark header */
+  color: rgba(231, 238, 252, 0.92);
+  font-size: 16px;
+  line-height: 1;
+
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+
+.site-header__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(231, 238, 252, 0.2);
+  color: rgba(255, 255, 255, 1);
+}
+
+.site-header__icon-btn:active {
+  transform: translateY(1px);
+}
+
+.site-header__icon-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-primary, #d59f28) 70%, white);
+  outline-offset: 2px;
+}
+
+/* ✅ in case icon is wrapped inside span (as in your markup) */
+.site-header__icon-btn > span {
+  display: inline-block;
+  transform: translateY(-0.5px);
+}
+
+/* Ensure the SVG itself has a stable box in header buttons */
+.site-header__icon-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/*
+  Fallback: if any header icons are plain SVG shapes with hardcoded black fills/strokes,
+  this forces them to follow the button text color. It won't "fix" pattern/mask icons,
+  but it prevents black-on-dark for simple SVGs.
+*/
+.site-header__icon-btn svg * {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 860px) {
+  .site-header__nav {
+    display: none;
+  }
+}
+
+/* ===============================
+   Tempasi – Brand A header lock
+   =============================== */
+
+[data-brand='gold'] .site-header {
+  background: linear-gradient(180deg, rgba(10, 14, 18, 0.95), rgba(10, 14, 18, 0.85));
+}
+
+[data-brand='gold'] .site-header__word {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+[data-brand='gold'] .site-header__nav .nav-link {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+[data-brand='gold'] .site-header__nav .nav-link.is-active,
+[data-brand='gold'] .site-header__nav .nav-link:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+[data-brand='gold'] .site-header__icon-btn {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+[data-brand='gold'] .site-header__icon-btn:hover {
+  color: rgba(255, 255, 255, 1);
+}
