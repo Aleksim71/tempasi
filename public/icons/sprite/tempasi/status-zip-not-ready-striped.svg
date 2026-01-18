@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" role="img" aria-label="ZIP Not Ready">
+  <defs>
+    <pattern id="tp-stripes" patternUnits="userSpaceOnUse" width="1" height="6">
+      <rect x="0" y="0" width="1" height="2" fill="currentColor"/>
+    </pattern>
+
+    <mask id="tp-cutout">
+      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
+      <!-- Archive box -->
+      <path d="M18 18h28v18H18V18z" fill="currentColor"/>
+      <!-- Zipper dots (kept visible by drawing white inside mask) -->
+      <rect x="30.5" y="18" width="3" height="3" rx="1" fill="#fff"/>
+      <rect x="30.5" y="23" width="3" height="3" rx="1" fill="#fff"/>
+      <rect x="30.5" y="28" width="3" height="3" rx="1" fill="#fff"/>
+      <rect x="30.5" y="33" width="3" height="3" rx="1" fill="#fff"/>
+      <!-- X mark -->
+      <path d="M26 26l12 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      <path d="M38 26L26 38" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      <!-- Top label area hint -->
+      <rect x="18" y="14" width="28" height="4" rx="2" fill="currentColor"/>
+    </mask>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-stripes)" mask="url(#tp-cutout)"/>
+</svg>

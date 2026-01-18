@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" role="img" aria-label="License EX">
+  <defs>
+    <pattern id="tp-stripes" patternUnits="userSpaceOnUse" width="1" height="6">
+      <rect x="0" y="0" width="1" height="2" fill="currentColor"/>
+    </pattern>
+    <mask id="tp-cutout">
+      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
+      <g fill="currentColor">
+        <rect x="16" y="14" width="4" height="20"/>
+        <rect x="16" y="14" width="14" height="4"/>
+        <rect x="16" y="22" width="12" height="4"/>
+        <rect x="16" y="30" width="14" height="4"/>
+        <polygon points="36,14 40,14 50,34 46,34"/>
+        <polygon points="46,14 50,14 40,34 36,34"/>
+      </g>
+    </mask>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-stripes)" mask="url(#tp-cutout)"/>
+</svg>

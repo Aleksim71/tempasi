@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" role="img" aria-label="Buy">
+  <defs>
+    <pattern id="tp-stripes" patternUnits="userSpaceOnUse" width="1" height="6">
+      <rect x="0" y="0" width="1" height="2" fill="currentColor"/>
+    </pattern>
+    <mask id="tp-cutout">
+      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
+      <g fill="currentColor">
+        <rect x="14" y="16" width="36" height="24" rx="4"/>
+        <rect x="14" y="22" width="36" height="4"/>
+        <rect x="18" y="30" width="10" height="4"/>
+      </g>
+    </mask>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="44" rx="12" fill="url(#tp-stripes)" mask="url(#tp-cutout)"/>
+</svg>
