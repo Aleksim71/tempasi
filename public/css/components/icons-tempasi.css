@@ -1,19 +1,22 @@
 /* public/css/components/icons-tempasi.css */
 
-.tp-icon {
-  /* ключ: переменная для pattern/mask */
-  --tp-icon-color: currentColor;
+/* ======================================
+   Tempasi — Icons (single source of truth)
+   ====================================== */
 
+.tp-icon {
   display: inline-block;
   width: 1em;
   height: 1em;
 
-  /* на всякий случай */
-  color: rgba(255, 255, 255, 0.9);
+  vertical-align: middle;
+
+  /* Make <use> icons inherit from link color */
   fill: currentColor;
   stroke: currentColor;
 
-  vertical-align: middle;
+  /* cleaner look */
+  shape-rendering: geometricPrecision;
 }
 
 /* sizes */
@@ -29,28 +32,31 @@
   width: 24px;
   height: 24px;
 }
-.tp-icon--lg {
-  width: 32px;
-  height: 24px;
+.tp-icon--header {
+  width: 20px;
+  height: 20px;
 }
 
-/* hover helper */
+/* Hover helper */
 .tp-icon.is-hoverable {
   transition: color 0.15s ease;
 }
 
-/* Brand A (gold): icons are light by default */
-[data-brand='gold'] .tp-icon {
-  color: rgba(255, 255, 255, 0.9);
+/* ===============================
+   Header color system
+   =============================== */
+
+/* default icon color inside header: soft gold */
+.site-header__icon-link {
+  color: rgba(255, 210, 77, 0.92);
 }
-[data-brand='gold'] .site-header__icon-btn:hover .tp-icon {
-  color: #fff;
+
+/* hover: brighter gold */
+.site-header__icon-link:hover {
+  color: rgba(255, 231, 150, 1);
 }
-/* Tempasi sprite icons: hard size + safe rendering */
-.tp-icon {
-  display: inline-block;
-  width: 24px;
-  height: 18px;
-  fill: currentColor;
-  vertical-align: middle;
+
+/* focus: keep bright */
+.site-header__icon-link:focus-visible {
+  color: rgba(255, 231, 150, 1);
 }

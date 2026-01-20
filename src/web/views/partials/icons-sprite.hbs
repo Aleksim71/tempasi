@@ -1,234 +1,44 @@
 {{!-- src/web/views/partials/icons-sprite.hbs --}}
-<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
-
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
   <defs>
-    <!-- =========================
-         ACTION: BUY
-         ========================= -->
-    <pattern id="tp-action-buy--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-action-buy--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="14" y="16" width="36" height="24" rx="4"/>
-        <rect x="14" y="22" width="36" height="4"/>
-        <rect x="18" y="14" width="28" height="4" rx="2" fill="#000"/>
-      </g>
-    </mask>
+    <!-- Tempasi INLINE sprite — striped brand style -->
 
-    <!-- =========================
-         ACTION: DOWNLOAD
-         ========================= -->
-    <pattern id="tp-action-download--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-action-download--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="28" y="14" width="8" height="16" rx="2"/>
-        <path d="M32 34l-10-10h7V14h6v10h7L32 34z"/>
-        <rect x="18" y="36" width="28" height="4" rx="2"/>
-      </g>
-    </mask>
+    <!-- SEARCH -->
+    <symbol id="tp-header-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M16.2 16.2L21 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M6.8 9.2h8.4M6.3 11h9.4M6.8 12.8h8.4"
+            fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/>
+    </symbol>
 
-    <!-- =========================
-         ACTION: PREVIEW
-         ========================= -->
-    <pattern id="tp-action-preview--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-action-preview--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <path d="M32 16c-9 0-16 8-16 8s7 8 16 8 16-8 16-8-7-8-16-8z"/>
-        <circle cx="32" cy="24" r="4"/>
-      </g>
-    </mask>
+    <!-- SUPPORT (envelope) -->
+    <symbol id="tp-header-support" viewBox="0 0 24 24">
+      <path d="M4 7h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M22 9l-10 7L2 9"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5.5 13h13M5.5 15.2h13M5.5 17.4h13"
+            fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/>
+    </symbol>
 
-    <!-- =========================
-         BADGE: CU
-         ========================= -->
-    <pattern id="tp-badge-cu--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-badge-cu--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <path d="M24 18c-4 0-8 3-8 6v2c0 3 4 6 8 6h4v-4h-4c-2 0-4-1-4-2v-2c0-1 2-2 4-2h4v-4h-4z"/>
-        <path d="M38 18c4 0 8 3 8 6v8c0 3-4 6-8 6h-4v-4h4c2 0 4-1 4-2v-8c0-1-2-2-4-2h-4v-4h4z"/>
-      </g>
-    </mask>
+    <!-- PROFILE -->
+    <symbol id="tp-header-profile" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M4 20c0-4 4-6 8-6s8 2 8 6"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M6.5 16h11M6 18.2h12"
+            fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/>
+    </symbol>
 
-    <!-- =========================
-         BADGE: EL
-         ========================= -->
-    <pattern id="tp-badge-el--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-badge-el--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="18" y="18" width="8" height="20" rx="2"/>
-        <rect x="18" y="18" width="22" height="4" rx="2"/>
-        <rect x="18" y="26" width="18" height="4" rx="2"/>
-        <rect x="18" y="34" width="22" height="4" rx="2"/>
-        <rect x="38" y="18" width="8" height="20" rx="2"/>
-      </g>
-    </mask>
+    <!-- CART -->
+    <symbol id="tp-header-cart" viewBox="0 0 24 24">
+      <path d="M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="10" cy="20" r="1.5" fill="currentColor"/>
+      <circle cx="18" cy="20" r="1.5" fill="currentColor"/>
+      <path d="M7.2 10.6h12.8M7.6 12.8h12M8.2 15h10.6"
+            fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity="0.35"/>
+    </symbol>
 
-    <!-- =========================
-         BADGE: EX
-         ========================= -->
-    <pattern id="tp-badge-ex--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-badge-ex--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="18" y="18" width="8" height="20" rx="2"/>
-        <rect x="18" y="18" width="24" height="4" rx="2"/>
-        <rect x="18" y="26" width="18" height="4" rx="2"/>
-        <rect x="18" y="34" width="24" height="4" rx="2"/>
-        <path d="M38 18h8l-8 10 8 10h-8l-8-10 8-10z"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         BADGE: ML
-         ========================= -->
-    <pattern id="tp-badge-ml--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-badge-ml--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <path d="M18 38V18h6l6 10 6-10h6v20h-6V28l-6 10-6-10v10h-6z"/>
-        <rect x="42" y="18" width="4" height="20" rx="2"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         BADGE: PU
-         ========================= -->
-    <pattern id="tp-badge-pu--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-badge-pu--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <path d="M18 18h12c6 0 10 4 10 10s-4 10-10 10H24v-6h6c2.5 0 4-1.5 4-4s-1.5-4-4-4h-6v14h-6V18z"/>
-        <path d="M42 18h4v14c0 2 1 4 4 4s4-2 4-4V18h4v14c0 6-4 10-8 10s-8-4-8-10V18z"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         HEADER: CART
-         ========================= -->
-    <pattern id="tp-header-cart--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.5" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-header-cart--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <path d="M20 16h4l2 18h20l2-14H26" />
-        <circle cx="28" cy="38" r="2"/>
-        <circle cx="44" cy="38" r="2"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         HEADER: PROFILE
-         ========================= -->
-    <pattern id="tp-header-profile--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.5" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-header-profile--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <circle cx="32" cy="20" r="7"/>
-        <path d="M18 40c2-8 10-12 14-12s12 4 14 12H18z"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         STATUS: ZIP NOT READY
-         ========================= -->
-    <pattern id="tp-status-zip-not-ready--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-status-zip-not-ready--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="18" y="14" width="28" height="28" rx="6"/>
-        <path d="M24 24l16 16M40 24L24 40" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-      </g>
-    </mask>
-
-    <!-- =========================
-         STATUS: ZIP READY
-         ========================= -->
-    <pattern id="tp-status-zip-ready--tp-stripes" patternUnits="objectBoundingBox" width="1" height="1">
-      <rect x="0" y="0" width="1" height="0.35" fill="var(--tp-icon-color)"/>
-    </pattern>
-    <mask id="tp-status-zip-ready--tp-cutout">
-      <rect x="0" y="0" width="64" height="48" fill="#fff"/>
-      <g fill="#000">
-        <rect x="18" y="14" width="28" height="28" rx="6"/>
-        <path d="M24 30l6 6 14-14" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-    </mask>
   </defs>
-
-  <!-- =========================
-       SYMBOLS (no local defs)
-       ========================= -->
-  <symbol id="tp-action-buy" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-action-buy--tp-stripes)" mask="url(#tp-action-buy--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-action-download" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-action-download--tp-stripes)" mask="url(#tp-action-download--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-action-preview" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-action-preview--tp-stripes)" mask="url(#tp-action-preview--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-badge-cu" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-badge-cu--tp-stripes)" mask="url(#tp-badge-cu--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-badge-el" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-badge-el--tp-stripes)" mask="url(#tp-badge-el--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-badge-ex" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-badge-ex--tp-stripes)" mask="url(#tp-badge-ex--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-badge-ml" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-badge-ml--tp-stripes)" mask="url(#tp-badge-ml--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-badge-pu" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="10" fill="url(#tp-badge-pu--tp-stripes)" mask="url(#tp-badge-pu--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-header-cart" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-header-cart--tp-stripes)" mask="url(#tp-header-cart--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-header-profile" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-header-profile--tp-stripes)" mask="url(#tp-header-profile--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-status-zip-not-ready" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-status-zip-not-ready--tp-stripes)" mask="url(#tp-status-zip-not-ready--tp-cutout)"/>
-  </symbol>
-
-  <symbol id="tp-status-zip-ready" viewBox="0 0 64 48">
-    <rect x="2" y="2" width="60" height="44" rx="6" fill="url(#tp-status-zip-ready--tp-stripes)" mask="url(#tp-status-zip-ready--tp-cutout)"/>
-  </symbol>
-
 </svg>

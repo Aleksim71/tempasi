@@ -1,217 +1,272 @@
-/* public/css/components/header.css */
-
-/* =========================
-   Header shell
-   ========================= */
+/* TEMPASI_HEADER_CSS_V31_PREMIUM_LAYOUT_NAV_600 */
+/* ======================================
+   Tempasi — Header (premium layout)
+   - brand left, actions right (edge-aligned)
+   - nav true-centered (stable)
+   - uses --side-w (set by header-balance.js)
+   - UPDATE: nav links weight -> 600
+   ====================================== */
 
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
 
-  border-bottom: 1px solid rgba(231, 238, 252, 0.1);
-  background: rgba(11, 15, 20, 0.72);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(to bottom, rgba(8, 10, 12, 0.96), rgba(8, 10, 12, 0.86));
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* ===== INNER (3 columns) =====
+   Left and right columns get the same min-width (side-w),
+   so the center column stays truly centered visually. */
 .site-header__inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(var(--side-w, 280px), 1fr) auto minmax(var(--side-w, 280px), 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
 
-  padding: 12px 0;
+  min-height: 56px;
+  padding: 10px 18px;
+
+  column-gap: 30px; /* breathing room from nav to sides */
+
+  /* optically tune nav (small) */
+  --nav-optical-x: 0px;
 }
 
-/* =========================
-   Brand
-   ========================= */
-
+/* ===== BRAND (LEFT) ===== */
 .site-header__brand {
+  grid-column: 1;
+  justify-self: start;
+
   display: inline-flex;
   align-items: center;
   gap: 10px;
 
-  min-width: 180px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1;
+
+  padding-left: 2px;
+}
+
+.site-header__brand:hover {
+  color: rgba(255, 255, 255, 1);
 }
 
 .site-header__mark {
   width: 24px;
   height: 24px;
+  display: inline-block;
+  flex: 0 0 auto;
 }
 
 .site-header__word {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  opacity: 0.95;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(0.5px);
 }
 
-/* =========================
-   Navigation
-   ========================= */
-
+/* ===== NAV (CENTER) ===== */
 .site-header__nav {
+  grid-column: 2;
+  justify-self: center;
+
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  gap: 16px;
 
-  flex: 1;
-  min-width: 200px;
+  line-height: 1;
+
+  transform: translateX(var(--nav-optical-x));
 }
 
-.nav-link {
+.site-header__link {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
 
-  height: 32px;
-  padding: 0 10px;
+  color: rgba(255, 210, 77, 0.92);
+  text-decoration: none;
 
-  border-radius: 10px;
-  font-size: 13px;
+  font-weight: 600; /* <<< UPDATE: was 500 */
 
-  opacity: 0.85;
   transition:
-    opacity var(--dur-1) var(--ease),
-    background var(--dur-1) var(--ease);
+    color 120ms ease,
+    background-color 120ms ease;
 }
 
-.nav-link:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.04);
+.site-header__link:hover {
+  color: rgba(255, 231, 150, 1);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Active state — underline */
-.nav-link.is-active {
-  opacity: 1;
-  background: transparent;
-}
-
-.nav-link.is-active::after {
+/* underline */
+.site-header__link::after {
   content: '';
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 4px;
+  left: 12px;
+  right: 12px;
+  bottom: 5px;
 
-  height: 2px;
+  height: 3px;
   border-radius: 999px;
-  background: var(--brand-primary, #d59f28);
+
+  transform: scaleX(0);
+  opacity: 0;
+
+  background: rgba(255, 215, 120, 1);
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
-/* =========================
-   Actions (icons)
-   ========================= */
+.site-header__link:hover::after {
+  transform: scaleX(0.6);
+  opacity: 0.65;
+}
 
+/* active state: supports aria-current or .is-active */
+.site-header__link[aria-current='page']::after,
+.site-header__link.is-active::after {
+  transform: scaleX(1);
+  opacity: 1;
+
+  background: linear-gradient(to right, #fff1b8, #ffd24d, #ffb800, #ffd24d, #fff1b8);
+
+  box-shadow:
+    0 0 14px rgba(255, 200, 40, 0.85),
+    0 0 4px rgba(255, 230, 140, 0.9);
+}
+
+.site-header__link[aria-current='page'],
+.site-header__link.is-active {
+  color: rgba(255, 231, 150, 1);
+}
+
+/* ===== ACTIONS (RIGHT) ===== */
 .site-header__actions {
-  display: inline-flex;
+  grid-column: 3;
+  justify-self: end;
+
+  display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
 
-  min-width: 110px;
+  line-height: 1;
+
+  padding-right: 2px;
 }
 
-.site-header__icon-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
+/* CTA */
+.site-header__cta {
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  border: 1px solid rgba(231, 200, 106, 0.85);
+
+  background: linear-gradient(to bottom, rgba(218, 165, 32, 0.1), rgba(218, 165, 32, 0.03));
+
+  color: #f7e8b5;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 120ms ease;
+}
+
+.site-header__cta:hover {
+  border-color: rgba(231, 200, 106, 1);
+  background: rgba(231, 200, 106, 0.14);
+  box-shadow: 0 0 0 1px rgba(231, 200, 106, 0.35);
+}
+
+.site-header__cta:active {
+  transform: translateY(1px);
+}
+
+/* icon links */
+.site-header__icon-link {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  border-radius: 12px;
-  border: 1px solid rgba(231, 238, 252, 0.14);
-  background: rgba(255, 255, 255, 0.03);
-
-  /* default icon/text color on dark header */
-  color: rgba(231, 238, 252, 0.92);
-  font-size: 16px;
-  line-height: 1;
+  color: rgba(255, 210, 77, 0.95);
+  text-decoration: none;
 
   transition:
-    background var(--dur-1) var(--ease),
-    border-color var(--dur-1) var(--ease),
-    transform var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
 }
 
-.site-header__icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(231, 238, 252, 0.2);
-  color: rgba(255, 255, 255, 1);
+.site-header__icon-link:hover {
+  color: rgba(255, 231, 150, 1);
+  background: rgba(255, 255, 255, 0.07);
 }
 
-.site-header__icon-btn:active {
+.site-header__icon-link:active {
   transform: translateY(1px);
 }
 
-.site-header__icon-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand-primary, #d59f28) 70%, white);
-  outline-offset: 2px;
+.site-header__icon-link:focus-visible {
+  outline: none;
+  color: rgba(255, 231, 150, 1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* ✅ in case icon is wrapped inside span (as in your markup) */
-.site-header__icon-btn > span {
-  display: inline-block;
-  transform: translateY(-0.5px);
-}
-
-/* Ensure the SVG itself has a stable box in header buttons */
-.site-header__icon-btn svg {
-  width: 18px;
-  height: 18px;
+.site-header__icon-link .tp-icon {
   display: block;
+  width: 20px;
+  height: 20px;
+  transform: translateY(0.25px);
 }
 
-/*
-  Fallback: if any header icons are plain SVG shapes with hardcoded black fills/strokes,
-  this forces them to follow the button text color. It won't "fix" pattern/mask icons,
-  but it prevents black-on-dark for simple SVGs.
-*/
-.site-header__icon-btn svg * {
-  fill: currentColor;
-  stroke: currentColor;
-}
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .site-header__inner {
+    column-gap: 18px;
+    padding: 10px 14px;
+  }
 
-/* =========================
-   Responsive
-   ========================= */
-
-@media (max-width: 860px) {
   .site-header__nav {
-    display: none;
+    gap: 12px;
   }
 }
 
-/* ===============================
-   Tempasi – Brand A header lock
-   =============================== */
+@media (max-width: 720px) {
+  /* mobile v1: hide center nav */
+  .site-header__inner {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+  }
 
-[data-brand='gold'] .site-header {
-  background: linear-gradient(180deg, rgba(10, 14, 18, 0.95), rgba(10, 14, 18, 0.85));
-}
+  .site-header__nav {
+    display: none;
+  }
 
-[data-brand='gold'] .site-header__word {
-  color: rgba(255, 255, 255, 0.95);
-}
+  .site-header__brand {
+    grid-column: 1;
+    justify-self: start;
+  }
 
-[data-brand='gold'] .site-header__nav .nav-link {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-[data-brand='gold'] .site-header__nav .nav-link.is-active,
-[data-brand='gold'] .site-header__nav .nav-link:hover {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-[data-brand='gold'] .site-header__icon-btn {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-[data-brand='gold'] .site-header__icon-btn:hover {
-  color: rgba(255, 255, 255, 1);
+  .site-header__actions {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
