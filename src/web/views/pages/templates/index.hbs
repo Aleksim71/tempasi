@@ -1,164 +1,102 @@
+
 {{!-- src/web/views/pages/templates/index.hbs --}}
-<!doctype html>
-<html lang="en" data-brand="gold">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>{{title}}</title>
+<section class="templates-page">
+  <div class="container">
 
-    <!-- Core: reset + tokens -->
-    <link rel="stylesheet" href="/css/core.css" />
-    <!-- Layout primitives -->
-    <link rel="stylesheet" href="/css/layout.css" />
-    <!-- Components -->
-    <link rel="stylesheet" href="/css/components/button.css" />
-    <link rel="stylesheet" href="/css/components/card.css" />
-    <link rel="stylesheet" href="/css/components/header.css" />
-    <link rel="stylesheet" href="/css/components/chip.css" />
-    <link rel="stylesheet" href="/css/components/badge.css" />
-    <link rel="stylesheet" href="/css/components/icons-tempasi.css" />
+    <header class="templates-hero">
+      <h1 class="templates-title">Templates</h1>
+      <p class="templates-subtitle">
+        Ready-to-use website templates. Preview online, download ZIP when ready.
+      </p>
+    </header>
 
-    <!-- Brand preview overrides (must be AFTER components) -->
-    <link rel="stylesheet" href="/css/brand.css" />
+    <section class="templates-filters" aria-label="Filters">
+      <div class="templates-filters__row">
+        <input
+          class="templates-search"
+          type="search"
+          placeholder="Search (title / slug)..."
+          aria-label="Search templates"
+          data-js="templates-search"
+        />
 
-    <!-- Page -->
-    <link rel="stylesheet" href="/css/pages/catalog.css" />
+        <div class="templates-chips" aria-label="ZIP status" data-js="chips-zip">
+          <button type="button" class="c-chip is-active" data-chip="all">All</button>
+          <button type="button" class="c-chip" data-chip="zip-ready">ZIP ready</button>
+          <button type="button" class="c-chip" data-chip="zip-not-ready">Not ready</button>
+        </div>
 
-    <!-- Page scripts -->
-    <script defer src="/js/templates.filters.js"></script>
-    <script defer src="/js/brand-preview.js"></script>
-    <script defer src="/js/core.js"></script>
-  </head>
+        <div class="templates-chips" aria-label="License" data-js="chips-license">
+          <button type="button" class="c-chip is-active" data-chip="all">All</button>
+          <button type="button" class="c-chip" data-chip="free">Free</button>
+          <button type="button" class="c-chip" data-chip="pu">PU</button>
+          <button type="button" class="c-chip" data-chip="cu">CU</button>
+          <button type="button" class="c-chip" data-chip="el">EL</button>
+          <button type="button" class="c-chip" data-chip="ml">ML</button>
+          <button type="button" class="c-chip" data-chip="ex">EX</button>
+          <button type="button" class="c-chip" data-chip="reset">Reset</button>
+        </div>
 
-  <body class="{{pageClass}}">
-    {{!-- IMPORTANT: sprite must be in DOM before any <use href="#..."> --}}
-    {{> icons-sprite}}
+        <div class="templates-chips" aria-label="Brand" data-js="chips-brand">
+          <button type="button" class="c-chip" data-chip="brand-gold">Brand: Gold</button>
+          <button type="button" class="c-chip" data-chip="brand-red">Brand: Red</button>
+          <button type="button" class="c-chip" data-chip="brand-amber">Brand: Amber</button>
+        </div>
 
-    {{> site-header activePage="templates"}}
-
-    <main class="l-page">
-      <div class="l-main">
-        <div class="l-container l-stack">
-
-          <section class="templates-page">
-            <header class="templates-hero">
-              <h1 class="templates-title">Templates</h1>
-              <p class="templates-subtitle">
-                Ready-to-use website templates. Preview online, download ZIP when ready.
-              </p>
-            </header>
-
-            <div class="templates-filters" data-templates-filters>
-              <div class="templates-filters__row">
-                <input
-                  id="tplSearch"
-                  name="q"
-                  class="templates-search"
-                  type="search"
-                  placeholder="Search (title / slug)..."
-                  autocomplete="off"
-                  inputmode="search"
-                  data-filter="q"
-                />
-
-                <div class="templates-chips" role="group" aria-label="ZIP status">
-                  <button type="button" class="chip" data-filter-chip="zip" data-value="ready">ZIP ready</button>
-                  <button type="button" class="chip" data-filter-chip="zip" data-value="not_ready">Not ready</button>
-                  <button type="button" class="chip chip--active" data-filter-chip="zip" data-value="any">All</button>
-                </div>
-
-                <div class="templates-chips" role="group" aria-label="License">
-                  <button type="button" class="chip chip--active" data-filter-chip="license" data-value="any">All</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="free">Free</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="pu">PU</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="cu">CU</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="el">EL</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="ml">ML</button>
-                  <button type="button" class="chip" data-filter-chip="license" data-value="ex">EX</button>
-                  <button type="button" class="chip chip--ghost" data-filter-reset>Reset</button>
-                </div>
-
-                <!-- Brand palette preview -->
-                <div class="templates-chips" role="group" aria-label="Brand palette" data-brand-group>
-                  <button type="button" class="chip chip--active" data-brand-pick="gold">Brand: Gold</button>
-                  <button type="button" class="chip" data-brand-pick="red">Brand: Red</button>
-                  <button type="button" class="chip" data-brand-pick="amber">Brand: Amber</button>
-                </div>
-
-                <div class="templates-filters__meta">
-                  <div class="templates-count" data-templates-count>0/0</div>
-                </div>
-              </div>
-            </div>
-
-            {{#if templates.length}}
-              <div class="templates-grid" data-templates-grid>
-                {{#each templates}}
-                  <article
-                    class="template-card"
-                    data-template
-                    data-zip="{{#if zip_ready}}ready{{else}}not_ready{{/if}}"
-                    data-license="{{license}}"
-                    data-title="{{title}}"
-                    data-slug="{{slug}}"
-                  >
-                    <div class="template-card__top">
-                      {{#if zip_ready}}
-                        <span class="badge badge--ok">ZIP ready</span>
-                      {{else}}
-                        <span class="badge badge--muted">ZIP not ready</span>
-                      {{/if}}
-
-                      <span class="badge badge--pill">{{license}}</span>
-                    </div>
-
-                    <a class="template-card__preview" href="/preview/{{slug}}">
-                      <img
-                        class="template-card__img"
-                        src="/t/{{slug}}/preview/preview.png"
-                        alt="{{title}}"
-                        loading="lazy"
-                      />
-                    </a>
-
-                    <div class="template-card__body">
-                      <h3 class="template-card__title">{{title}}</h3>
-                      <div class="template-card__meta">
-                        <span>{{slug}}</span>
-                      </div>
-
-                      <div class="template-card__actions">
-                        <a class="c-btn c-btn--primary c-btn--sm" href="/preview/{{slug}}">Preview</a>
-
-                        {{#if (eq is_free true)}}
-                          <a class="c-btn c-btn--sm" href="/download/{{slug}}">Download</a>
-                        {{else}}
-                          <a class="c-btn c-btn--sm" href="/templates/{{slug}}">Buy</a>
-                          {{#if zip_ready}}
-                            <a class="c-btn c-btn--sm" href="/download/{{slug}}">Download</a>
-                          {{/if}}
-                        {{/if}}
-                      </div>
-                    </div>
-                  </article>
-                {{/each}}
-              </div>
-            {{else}}
-              <div class="templates-empty" data-templates-empty>
-                <h2 class="templates-empty__title">No templates yet</h2>
-                <p class="templates-empty__text">
-                  The catalog is empty right now. Add the first template (or seed a few) and the grid will appear here.
-                </p>
-              </div>
-            {{/if}}
-
-          </section>
-
+        <div class="templates-filters__meta">
+          <div class="templates-count" data-js="templates-count">0/0</div>
         </div>
       </div>
-    </main>
+    </section>
 
-    {{> site-footer}}
-  </body>
-</html>
+    <section class="templates-grid" data-js="templates-grid" aria-label="Templates">
+      {{#each templates}}
+        <article class="template-card" data-template-card data-slug="{{slug}}">
+
+          <div class="template-card__top">
+            {{#if zipReady}}
+              <span class="c-chip c-chip--success">ZIP READY</span>
+            {{else}}
+              <span class="c-chip">ZIP NOT READY</span>
+            {{/if}}
+
+            {{#if license}}
+              <span class="c-chip">{{license}}</span>
+            {{/if}}
+          </div>
+
+          {{!-- IMPORTANT: /t is the only real preview source in current setup --}}
+          <a class="template-card__preview" href="/preview/{{slug}}">
+            <img
+              class="template-card__img"
+              src="/t/{{slug}}/preview/preview.png"
+              alt="{{title}} preview"
+              loading="lazy"
+              onload="this.closest('.template-card__preview')?.classList.remove('is-error');"
+              onerror="this.onerror=null; this.closest('.template-card__preview')?.classList.add('is-error');"
+            />
+            <div class="template-card__placeholder">Preview not available</div>
+          </a>
+
+          <div class="template-card__body">
+            <h3 class="template-card__title">{{title}}</h3>
+            <div class="template-card__meta">{{slug}}</div>
+          </div>
+
+          <div class="template-card__actions">
+            <a class="c-btn c-btn--ghost" href="/preview/{{slug}}">Preview</a>
+
+            {{#if zipReady}}
+              <a class="c-btn c-btn--primary" href="/download/{{slug}}">Download</a>
+            {{else}}
+              <a class="c-btn c-btn--primary" href="/{{slug}}/buy">Buy</a>
+            {{/if}}
+          </div>
+
+        </article>
+      {{/each}}
+    </section>
+
+  </div>
+</section>

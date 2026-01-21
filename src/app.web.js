@@ -23,6 +23,9 @@ const PARTIALS_DIR = path.join(VIEWS_DIR, 'partials');
 // public
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 
+// storage/templates
+const TEMPLATES_DIR = path.join(process.cwd(), 'storage', 'templates');
+
 function licenseLabel(v) {
   return String(v || '').toUpperCase();
 }
@@ -81,6 +84,15 @@ export function createWebApp(app) {
 
   // static (css/js/img)
   app.use(express.static(PUBLIC_DIR, { etag: true, maxAge: '1h' }));
+
+  // Static templates demo under /t (same-origin previews, no SSR)
+  app.use(
+    '/t',
+    express.static(TEMPLATES_DIR, {
+      index: ['index.html'],
+      fallthrough: true,
+    }),
+  );
 
   // mount web routes
   app.use(createWebRouter());

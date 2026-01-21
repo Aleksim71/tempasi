@@ -1,31 +1,28 @@
 {{!-- src/web/views/partials/head.hbs --}}
+<head>
 
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<title>{{#if title}}{{title}}{{else}}Tempasi{{/if}}</title>
+  <title>{{#if title}}{{title}}{{else}}Tempasi{{/if}}</title>
 
-<!-- Core: reset + tokens -->
-<link rel="stylesheet" href="/css/core.css" />
-<link rel="stylesheet" href="/css/typography.css" />
+  <!-- Core: reset + tokens -->
+  <link rel="stylesheet" href="/css/core.css" />
+  <link rel="stylesheet" href="/css/typography.css" />
 
-<!-- Layout primitives -->
-<link rel="stylesheet" href="/css/layout.css" />
+  <!-- Layout primitives -->
+  <link rel="stylesheet" href="/css/layout.css" />
 
-<!-- Components -->
-<link rel="stylesheet" href="/css/components/header.css" />
-<link rel="stylesheet" href="/css/components/button.css" />
-<link rel="stylesheet" href="/css/components/card.css" />
+  <!-- Components -->
+  <link rel="stylesheet" href="/css/components/header.css" />
+  <link rel="stylesheet" href="/css/components/button.css" />
+  <link rel="stylesheet" href="/css/components/card.css" />
 
-{{!-- ✅ Global safe JS (small, page-aware) --}}
-<script defer src="/js/core.js"></script>
+  {{!-- Page-scoped CSS (optional) --}}
+  {{#if pageCss}}
+    <link rel="stylesheet" href="{{pageCss}}" />
+  {{/if}}
 
-{{!-- Page-scoped CSS (optional) --}}
-{{#if pageCss}}
-  <link rel="stylesheet" href="{{pageCss}}" />
-{{/if}}
+  <script defer src="/js/core.js"></script>
 
-{{!-- Page-scoped JS (optional) --}}
-{{#if pageJs}}
-  <script defer src="{{pageJs}}"></script>
-{{/if}}
+</head>
