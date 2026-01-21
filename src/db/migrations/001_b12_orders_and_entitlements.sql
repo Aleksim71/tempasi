@@ -1,88 +1,91 @@
 -- src/db/migrations/001_b12_orders_and_entitlements.sql
--- B12: orders + entitlements (минимально, чтобы /api/orders/:slug/buy заработал)
--- Idempotent: можно запускать повторно.
+-- B12: orders + entitlements
+-- IMPORTANT: idempotent & test-safe
 
 BEGIN;
 
--- 1) ORDERS
+-- =============================
+-- orders
+-- =============================
 CREATE TABLE IF NOT EXISTS public.orders (
   id BIGSERIAL PRIMARY KEY,
-
   user_id BIGINT NOT NULL,
   template_slug TEXT NOT NULL,
 
-  -- "deal_type" можно использовать под: "buy" | "rent" | "subscription" и т.п.
-  deal_type TEXT NOT NULL DEFAULT 'buy',
+  -- license tier: PU | CU | EL | ML | EX ...
+  license TEXT NOT NULL,
 
-  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
-  currency TEXT NOT NULL DEFAULT 'EUR',
+  -- deal type: BUY | RENT | SUBSCRIPTION ...
+  deal_type TEXT NOT NULL DEFAULT 'BUY',
 
-  -- payment provider: 'fake' | 'stripe' | ...
-  provider TEXT NOT NULL DEFAULT 'fake',
+  -- status: created | paid | canceled | refunded ...
+  status TEXT NOT NULL DEFAULT 'created',
 
-  -- status: 'pending' | 'paid' | 'failed' | 'refunded' ...
-  status TEXT NOT NULL DEFAULT 'pending',
-
-  -- связывание с провайдером
-  provider_session_id TEXT,
-  provider_checkout_url TEXT,
+  -- payment provider info (optional)
+  provider TEXT NULL,
+  provider_session_id TEXT NULL,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- удобные индексы
-CREATE INDEX IF NOT EXISTS orders_user_id_idx ON public.orders (user_id);
-CREATE INDEX IF NOT EXISTS orders_template_slug_idx ON public.orders (template_slug);
-CREATE INDEX IF NOT EXISTS orders_status_idx ON public.orders (status);
-CREATE UNIQUE INDEX IF NOT EXISTS orders_provider_session_id_uq
-  ON public.orders (provider_session_id)
-  WHERE provider_session_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_user_id_idx
+  ON public.orders(user_id);
 
--- auto updated_at (простым триггером)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at_orders') THEN
-    CREATE OR REPLACE FUNCTION public.set_updated_at_orders()
-    RETURNS trigger AS $fn$
-    BEGIN
-      NEW.updated_at = now();
-      RETURN NEW;
-    END;
-    $fn$ LANGUAGE plpgsql;
-  END IF;
+CREATE INDEX IF NOT EXISTS orders_template_slug_idx
+  ON public.orders(template_slug);
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_trigger
-    WHERE tgname = 'trg_orders_updated_at'
-  ) THEN
-    CREATE TRIGGER trg_orders_updated_at
-    BEFORE UPDATE ON public.orders
-    FOR EACH ROW
-    EXECUTE FUNCTION public.set_updated_at_orders();
-  END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS orders_status_idx
+  ON public.orders(status);
 
--- 2) ENTITLEMENTS (право на скачивание/доступ)
+-- =============================
+-- entitlements (download gate)
+-- =============================
 CREATE TABLE IF NOT EXISTS public.entitlements (
   id BIGSERIAL PRIMARY KEY,
-
   user_id BIGINT NOT NULL,
   template_slug TEXT NOT NULL,
 
-  order_id BIGINT,
-  granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- MUST exist before UNIQUE(user_id, template_slug, deal_type)
+  deal_type TEXT NOT NULL DEFAULT 'BUY',
 
-  CONSTRAINT entitlements_order_fk
-    FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL
+  starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ends_at TIMESTAMPTZ NULL,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- один entitlement на (user, template)
-CREATE UNIQUE INDEX IF NOT EXISTS entitlements_user_template_uq
-  ON public.entitlements (user_id, template_slug);
+-- --- safety for already-existing tables (old schema) ---
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS deal_type TEXT NOT NULL DEFAULT 'BUY';
 
-CREATE INDEX IF NOT EXISTS entitlements_user_id_idx ON public.entitlements (user_id);
-CREATE INDEX IF NOT EXISTS entitlements_template_slug_idx ON public.entitlements (template_slug);
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ NULL;
+
+ALTER TABLE public.entitlements
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- unique entitlement per (user, template, deal_type)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'entitlements_user_template_deal_uniq'
+  ) THEN
+    ALTER TABLE public.entitlements
+      ADD CONSTRAINT entitlements_user_template_deal_uniq
+      UNIQUE (user_id, template_slug, deal_type);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS entitlements_user_id_idx
+  ON public.entitlements(user_id);
+
+CREATE INDEX IF NOT EXISTS entitlements_template_slug_idx
+  ON public.entitlements(template_slug);
 
 COMMIT;

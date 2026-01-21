@@ -60,7 +60,9 @@ tempasi-b12-ready-files/
 # dev-buy artifacts
 *_*.zip
 seed-*.zip
-
 # vendor icon packs (local copies)
 /public/icons/material-design-iconic-font/
 /public/icons/themify-icons/
+# public build artifacts
+public/icons/
+public/js/
