@@ -1,29 +1,49 @@
 // src/server.js
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import 'dotenv/config';
+import http from 'http';
+import { createApp } from './app.js';
 
-import dotenv from 'dotenv';
+const HOST = process.env.HOST ?? '127.0.0.1';
+const PORT = Number(process.env.PORT ?? 3000);
 
-// Load .env from project root BEFORE importing the app (critical for ESM)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
-const envPath = path.join(projectRoot, '.env');
-
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
+function log(...args) {
+   
+  console.log('[tempasi]', ...args);
 }
 
-// Import app AFTER env is loaded (so db config sees env vars)
-const { createApp } = await import('./app.js');
+async function main() {
+  const app = createApp();
 
-const app = createApp();
+  const server = http.createServer(app);
 
-const host = process.env.HOST || '127.0.0.1';
-const port = Number(process.env.PORT || 3000);
+  server.listen(PORT, HOST, () => {
+    log(`listening on http://${HOST}:${PORT}`);
+  });
 
-app.listen(port, host, () => {
+  const shutdown = (signal) => {
+    log(`${signal} received, shutting down...`);
+    server.close(() => {
+      log('server closed');
+      process.exit(0);
+    });
+
+    setTimeout(() => process.exit(1), 5000).unref();
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+  process.on('unhandledRejection', (err) => {
+    log('unhandledRejection', err);
+  });
+
+  process.on('uncaughtException', (err) => {
+    log('uncaughtException', err);
+  });
+}
+
+main().catch((err) => {
    
-  console.log(`[tempasi] listening on http://${host}:${port}`);
+  console.error('[tempasi] fatal', err);
+  process.exit(1);
 });

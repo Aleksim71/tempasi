@@ -2,23 +2,27 @@
 import express from 'express';
 import { createWebApp } from './app.web.js';
 
+/**
+ * Единственный контракт:
+ * - createWebApp(opts) -> express app (mini-app)
+ * - главный app монтирует web через app.use(webApp)
+ *
+ * Никаких createWebApp(app) "мутаторов".
+ */
 export function createApp() {
   const app = express();
 
-  // базовые middleware
+  // базовые middleware (до web)
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // тут можно монтировать API, но даже если оно сломано — web должен жить
-  // (оставляю как безопасный “хук”)
-  // app.use('/api/orders', ordersRouter);
-  // app.use('/api/payments', paymentsRouter);
+  // WEB (SSR) — должен жить независимо
+  const webApp = createWebApp({ services: {} });
+  app.use(webApp);
 
-  createWebApp(app);
-
-  // 404
+  // 404 (в самом конце)
   app.use((req, res) => {
-    res.status(404).send('Not found');
+    res.status(404).type('text').send('Not found');
   });
 
   return app;

@@ -1,89 +1,55 @@
 // src/app.web.js
+import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import fs from 'node:fs';
-
-import express from 'express';
-import hbs from 'hbs';
+import handlebars from 'express-handlebars';
 
 import { createWebRouter } from './web/routes/web.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// src/web
-const WEB_DIR = path.join(__dirname, 'web');
+// public/ рядом с src/
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+// views лежат в src/web/views
+const VIEWS_DIR = path.join(__dirname, 'web', 'views');
 
-// src/web/views
-const VIEWS_DIR = path.join(WEB_DIR, 'views');
+// Минимальный набор helpers для шаблонов
+const hbsHelpers = {
+  eq: (a, b) => a === b,
+  ne: (a, b) => a !== b,
+  not: (v) => !v,
+  and: (...args) => args.slice(0, -1).every(Boolean), // последний аргумент — options
+  or: (...args) => args.slice(0, -1).some(Boolean),
+};
 
-// src/web/views/partials
-const PARTIALS_DIR = path.join(VIEWS_DIR, 'partials');
+export function createWebApp(opts = {}) {
+  const { services = {} } = opts;
 
-// public
-const PUBLIC_DIR = path.join(process.cwd(), 'public');
+  const app = express();
 
-function licenseLabel(v) {
-  return String(v || '').toUpperCase();
-}
-function typeLabel(v) {
-  return String(v || '').toUpperCase();
-}
-function formatPriceEUR(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n);
-}
-function isFreePrice(v) {
-  const n = Number(v);
-  return Number.isFinite(n) && n <= 0;
-}
-
-let _initialized = false;
-
-function safeReadPartial(filename) {
-  const p = path.join(PARTIALS_DIR, filename);
-  if (!fs.existsSync(p)) return null;
-  return fs.readFileSync(p, 'utf8');
-}
-
-function initHbsOnce(app) {
-  if (_initialized) return;
-  _initialized = true;
-
-  app.set('views', VIEWS_DIR);
+  // view engine (hbs)
+  app.engine(
+    'hbs',
+    handlebars.engine({
+      extname: '.hbs',
+      layoutsDir: path.join(VIEWS_DIR, 'layouts'),
+      partialsDir: path.join(VIEWS_DIR, 'partials'),
+      defaultLayout: 'main',
+      helpers: hbsHelpers,
+    }),
+  );
   app.set('view engine', 'hbs');
+  app.set('views', VIEWS_DIR);
 
-  // Register all partials from folder
-  hbs.registerPartials(PARTIALS_DIR);
+  // 1) SSR routes
+  app.use(createWebRouter({ services }));
 
-  // 🔒 Hard-register critical partials by name (prevents "could not be found")
-  const siteHeader = safeReadPartial('site-header.hbs');
-  if (siteHeader) hbs.registerPartial('site-header', siteHeader);
+  // 2) /t (превью и ассеты шаблонов)
+  app.use('/t', express.static(path.join(PUBLIC_DIR, 't'), { etag: true, maxAge: '1h' }));
 
-  const siteFooter = safeReadPartial('site-footer.hbs');
-  if (siteFooter) hbs.registerPartial('site-footer', siteFooter);
-
-  // ✅ Hard-register icons sprite (required for inline <use href="#...">)
-  const iconsSprite = safeReadPartial('icons-sprite.hbs');
-  if (iconsSprite) hbs.registerPartial('icons-sprite', iconsSprite);
-
-  // helpers
-  hbs.registerHelper('eq', (a, b) => String(a) === String(b));
-  hbs.registerHelper('licenseLabel', (v) => licenseLabel(v));
-  hbs.registerHelper('typeLabel', (v) => typeLabel(v));
-  hbs.registerHelper('formatPrice', (v) => formatPriceEUR(v));
-  hbs.registerHelper('isFree', (v) => isFreePrice(v));
-}
-
-export function createWebApp(app) {
-  initHbsOnce(app);
-
-  // static (css/js/img)
+  // 3) общая статика
   app.use(express.static(PUBLIC_DIR, { etag: true, maxAge: '1h' }));
-
-  // mount web routes
-  app.use(createWebRouter());
 
   return app;
 }

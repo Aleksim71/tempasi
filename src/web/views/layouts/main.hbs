@@ -1,34 +1,21 @@
+{{!-- src/web/views/layouts/main.hbs --}}
 <!doctype html>
 <html lang="en">
   <head>
     {{> head}}
-
-    {{!-- page-specific styles --}}
-    {{#if styles}}
-      {{#each styles}}
-        <link rel="stylesheet" href="{{this}}" />
-      {{/each}}
-    {{/if}}
   </head>
 
-  <body class="{{bodyClass}}">
-    {{!-- ✅ SVG sprite must be inside BODY (not between head and body) --}}
+  <body>
     {{> icons-sprite}}
 
-    {{!-- GLOBAL HEADER (can be disabled per page) --}}
-    {{#unless hideHeader}}
+    <div class="app">
       {{> site-header}}
-    {{/unless}}
 
-    <main class="l-page">
-      <div class="l-main">
-        <div class="l-container l-stack">
-          {{> (lookup . "bodyPartial")}}
-        </div>
-      </div>
-    </main>
+      <main class="app-main">
+        {{{body}}}
+      </main>
 
-    {{!-- core JS (safe, page-aware) --}}
-    <script defer src="/js/core.js"></script>
+      {{> site-footer}}
+    </div>
   </body>
 </html>
