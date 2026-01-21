@@ -16,6 +16,11 @@ export function createApp() {
 
   createWebApp(app);
 
+  // ✅ healthcheck — ОБЯЗАТЕЛЬНО ДО 404
+  app.get('/__health', (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
   // 404
   app.use((req, res) => {
     res.status(404).send('Not found');
