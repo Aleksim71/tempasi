@@ -1,0 +1,19 @@
+<section class="page" style="max-width: 860px; margin: 0 auto; padding: 32px 16px;">
+  <h1 style="margin: 0 0 8px;">Checkout success ✅</h1>
+  <p style="opacity: .85; margin: 0 0 20px;">
+    Payment confirmed (fake). Template: <strong>{{slug}}</strong>
+  </p>
+
+  {{#if zip_ready}}
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <a class="btn" href="/download/{{slug}}?from=checkout_success">Download ZIP</a>
+      <a class="btn btn--ghost" href="/templates">Back to templates</a>
+      <a class="btn btn--ghost" href="/preview/{{slug}}">Preview again</a>
+    </div>
+  {{else}}
+    <p style="margin: 18px 0; opacity: .85;">
+      ZIP is not ready yet. Please come back later.
+    </p>
+    <a class="btn btn--ghost" href="/templates">Back to templates</a>
+  {{/if}}
+</section>

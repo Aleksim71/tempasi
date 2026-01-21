@@ -22,6 +22,14 @@ function makeConfig() {
       ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
     };
   }
+  console.log('[db] using DATABASE_URL?', Boolean(DATABASE_URL));
+  console.log(
+    '[db] PGHOST/PGPORT/PGDATABASE:',
+    process.env.PGHOST,
+    process.env.PGPORT,
+    process.env.PGDATABASE,
+  );
+  console.log('[db] DATABASE_URL:', DATABASE_URL);
 
   return {
     host: process.env.PGHOST || '127.0.0.1',

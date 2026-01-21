@@ -1,21 +1,31 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>Ошибка сервера — Tempasi</title>
-  <link rel="stylesheet" href="/css/core.css" />
-  <link rel="stylesheet" href="/css/custom.css" />
-</head>
-<body>
-  <main class="page">
-    <h1>Ошибка сервера</h1>
-    <p>Что-то пошло не так. Мы уже работаем над этим.</p>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Server error</title>
 
-    {{#if error}}
-      <pre style="white-space: pre-wrap; font-size: 12px; opacity: .7;">
-{{error}}
-      </pre>
-    {{/if}}
-  </main>
-</body>
+    <link rel="stylesheet" href="/css/core.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components/button.css" />
+    <link rel="stylesheet" href="/css/components/card.css" />
+  </head>
+
+  <body>
+    <main class="l-page">
+      <div class="l-main">
+        <div class="l-container">
+          <section class="c-card">
+            <div class="c-card__body l-stack">
+              <h1 class="c-card__title">Something went wrong</h1>
+              <p class="c-card__muted">Please try again later.</p>
+              <div class="l-cluster">
+                <a class="c-btn c-btn--primary" href="/">Go home</a>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
 </html>

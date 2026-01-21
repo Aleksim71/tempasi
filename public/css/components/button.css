@@ -1,0 +1,53 @@
+/* public/css/components/button.css */
+
+.c-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  height: 38px;
+  padding: 0 12px;
+
+  border-radius: 10px;
+  border: 1px solid var(--c-border);
+
+  background: transparent;
+  color: var(--c-text);
+
+  font-weight: 600;
+  font-size: var(--fs-14);
+  line-height: 1;
+
+  transition:
+    background var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    color var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
+}
+
+.c-btn--sm {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: var(--fs-12);
+}
+
+.c-btn--primary {
+  background: var(--brand-primary, var(--c-primary));
+  border-color: var(--brand-primary, var(--c-primary));
+  color: var(--brand-on-primary, #111111); /* ✅ gold/amber -> black text */
+}
+
+/* ✅ Hover/focus: if background turns blue => text must be white */
+.c-btn--primary:hover,
+.c-btn--primary:focus-visible {
+  background: var(--c-primary-2);
+  border-color: var(--c-primary-2);
+  color: #ffffff;
+}
+
+/* Small press feedback */
+.c-btn:active {
+  transform: translateY(1px);
+}

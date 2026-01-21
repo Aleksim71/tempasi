@@ -1,46 +1,34 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    {{> head}}
 
-    <title>{{#if title}}{{title}}{{else}}Tempasi{{/if}}</title>
-
-    <link rel="stylesheet" href="/css/core.css" />
-    <link rel="stylesheet" href="/css/custom.css" />
-
-    {{!-- Page-specific CSS (optional) --}}
-    {{#if pageCss}}
-      <link rel="stylesheet" href="{{pageCss}}" />
+    {{!-- page-specific styles --}}
+    {{#if styles}}
+      {{#each styles}}
+        <link rel="stylesheet" href="{{this}}" />
+      {{/each}}
     {{/if}}
-
-    <!-- Icons (local + CDN fallback) -->
-    <link
-      rel="stylesheet"
-      href="/icons/material-design-iconic-font/css/material-design-iconic-font.min.css"
-    />
-    <link rel="stylesheet" href="/icons/themify-icons/themify-icons.css" />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/material-design-iconic-font@2.2.0/dist/css/material-design-iconic-font.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/themify-icons@1.0.1/css/themify-icons.css"
-    />
   </head>
 
-  <body>
-    {{> header}}
+  <body class="{{bodyClass}}">
+    {{!-- ✅ SVG sprite must be inside BODY (not between head and body) --}}
+    {{> icons-sprite}}
 
-    {{{body}}}
+    {{!-- GLOBAL HEADER (can be disabled per page) --}}
+    {{#unless hideHeader}}
+      {{> site-header}}
+    {{/unless}}
 
-    {{> footer}}
+    <main class="l-page">
+      <div class="l-main">
+        <div class="l-container l-stack">
+          {{> (lookup . "bodyPartial")}}
+        </div>
+      </div>
+    </main>
 
-    {{!-- Page-specific JS (optional) --}}
-    {{#if pageJs}}
-      <script src="{{pageJs}}" defer></script>
-    {{/if}}
+    {{!-- core JS (safe, page-aware) --}}
+    <script defer src="/js/core.js"></script>
   </body>
 </html>

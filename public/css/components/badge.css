@@ -1,0 +1,31 @@
+/* public/css/components/badge.css */
+/* Badge component */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(231, 238, 252, 0.86);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+
+.badge--ok {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.22);
+  color: rgba(185, 255, 214, 0.95);
+}
+
+.badge--muted {
+  opacity: 0.75;
+}
+
+.badge--pill {
+  background: rgba(255, 255, 255, 0.06);
+}

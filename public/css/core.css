@@ -1,50 +1,167 @@
-:root {
-  --bg: #0f1320;
-  --bg-2: #10162a;
-  --card: #141a2e;
-  --card-2: #19203a;
-  --text: #e7e9ee;
-  --muted: #97a0b5;
-  --line: #263056;
-  --accent: #7c3aed;
-  --accent-2: #9f67ff;
-  --badge: #222b4b;
-  --chip: #1b2340;
-  --radius: 16px;
-}
-* {
+/* public/css/core.css */
+
+/* =========================
+   Fonts (Variant A: Inter)
+   ========================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* =========================
+   Reset (low-specificity)
+   ========================= */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
+html {
+  line-height: 1.15;
+  -webkit-text-size-adjust: 100%;
 }
 body {
-  color: var(--text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    'Noto Sans',
-    'Liberation Sans',
-    sans-serif;
-  background:
-    radial-gradient(1200px 700px at 15% -15%, #1b2150 0%, transparent 60%),
-    radial-gradient(900px 600px at 110% 0%, #2a1861 0%, transparent 60%),
-    radial-gradient(800px 500px at 50% 120%, #0e173d 0%, transparent 60%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  margin: 0;
+  min-height: 100vh;
+}
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
 }
 a {
-  color: var(--accent);
+  color: inherit;
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+}
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Accessibility */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =========================
+   Tokens (design system)
+   ========================= */
+:root {
+  /* Colors */
+  --c-bg: #0b0f14;
+  --c-surface: #101826;
+  --c-surface-2: #0f1520;
+  --c-text: #e7eefc;
+  --c-muted: #a8b3c7;
+  --c-border: rgba(231, 238, 252, 0.12);
+
+  --c-primary: #6aa7ff;
+  --c-primary-2: #3b82f6;
+  --c-success: #2dd4bf;
+  --c-danger: #fb7185;
+  --c-warning: #fbbf24;
+
+  /* Typography (Variant A: Inter) */
+  --ff-ui:
+    'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Noto Sans',
+    'Liberation Sans', sans-serif;
+  --ff-heading: var(--ff-ui);
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-24: 24px;
+  --lh: 1.45;
+
+  /* Spacing */
+  --s-2: 2px;
+  --s-4: 4px;
+  --s-6: 6px;
+  --s-8: 8px;
+  --s-10: 10px;
+  --s-12: 12px;
+  --s-16: 16px;
+  --s-20: 20px;
+  --s-24: 24px;
+  --s-32: 32px;
+  --s-40: 40px;
+
+  /* Radius */
+  --r-8: 8px;
+  --r-12: 12px;
+  --r-16: 16px;
+  --r-24: 24px;
+
+  /* Shadow */
+  --sh-1: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+  /* Layout */
+  --container: 1120px;
+  --gutter: 16px;
+
+  /* Motion */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* =========================
+   Base
+   ========================= */
+body {
+  font-family: var(--ff-ui);
+  font-size: var(--fs-16);
+  line-height: var(--lh);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-weight: var(--fw-regular);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--ff-heading);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
 }

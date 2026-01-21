@@ -1,7 +1,24 @@
 // src/server.js
 // ESM entrypoint
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import dotenv from 'dotenv';
 import http from 'http';
+
+// Load .env from project root BEFORE importing the app (critical for ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+const envPath = path.join(projectRoot, '.env');
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
+
+// Import app AFTER env is loaded (so db config sees env vars)
 import app from './app.js';
 
 const PORT = Number(process.env.PORT || 3000);

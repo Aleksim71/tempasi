@@ -186,7 +186,6 @@ export function createApp({ db } = {}) {
   });
 
   // ---------- Error handler ----------
-   
   app.use((err, req, res, _next) => {
     const status = err.status || 500;
 
@@ -208,3 +207,4 @@ export function createApp({ db } = {}) {
 // server.js expects default export
 const app = createApp();
 export default app;
+

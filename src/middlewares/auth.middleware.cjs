@@ -2,13 +2,10 @@
 
 const crypto = require('crypto');
 
-// B13.1: pool helper lives in scripts/db.pool.cjs.
-// auth.middleware is in src/middlewares/, so relative path is ../../scripts/db.pool.cjs
 let getPool;
 try {
   ({ getPool } = require('../../scripts/db.pool.cjs'));
 } catch (e1) {
-  // fallback (older layout)
   try {
     ({ getPool } = require('../db.pool.cjs'));
   } catch (e2) {
@@ -24,6 +21,22 @@ const COOKIE_NAME = 'sid';
 
 function isProd() {
   return process.env.NODE_ENV === 'production';
+}
+
+function devAuthEnabled() {
+  return !isProd() && (process.env.DEV_AUTH === '1' || process.env.ALLOW_DEV_USER === '1');
+}
+
+function getDevUserIdFromReq(req) {
+  const raw =
+    (typeof req.get === 'function' ? req.get('x-dev-user-id') : req.headers['x-dev-user-id']) || '';
+  const v = String(raw).trim();
+  if (!v) return null;
+
+  const id = Number(v);
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  return id;
 }
 
 function newSessionId() {
@@ -64,10 +77,8 @@ function getSidFromReq(req) {
 }
 
 async function loadUserFromSession(req) {
-  // IMPORTANT: distinguish between "not initialized" and "initialized as null"
   if (req.user !== undefined) return;
 
-  // initialize
   req.user = null;
 
   const sid = getSidFromReq(req);
@@ -88,16 +99,9 @@ async function loadUserFromSession(req) {
   const id = Number(row.user_id);
   if (!Number.isFinite(id) || id <= 0) return;
 
-  // minimal user object
   req.user = { id };
 }
 
-/**
- * Global attach middleware (optional): app.use(initAuth)
- * Ensures:
- *  - req.user is either {id} or null (never undefined)
- *  - res.locals.user mirrors req.user for SSR
- */
 async function initAuth(req, res, next) {
   try {
     await loadUserFromSession(req);
@@ -109,11 +113,21 @@ async function initAuth(req, res, next) {
 }
 
 /**
- * Gate middleware. MUST work even if app forgot to mount initAuth.
+ * Gate middleware.
+ * DEV override is handled HERE to guarantee it always works.
  */
 async function requireAuth(req, res, next) {
   try {
-    // self-heal: ensure req.user is initialized
+    // ✅ DEV AUTH OVERRIDE — FIRST
+    if (devAuthEnabled()) {
+      const devId = getDevUserIdFromReq(req);
+      if (devId) {
+        req.user = { id: devId };
+        return next();
+      }
+    }
+
+    // normal flow
     await loadUserFromSession(req);
 
     if (!req.user) {
@@ -132,12 +146,9 @@ async function requireAuth(req, res, next) {
 }
 
 module.exports = {
-  // cookie + sessions helpers used by auth.routes.cjs
   newSessionId,
   setSessionCookie,
   clearSessionCookie,
-
-  // middlewares
   initAuth,
   requireAuth,
 };

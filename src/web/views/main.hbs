@@ -1,0 +1,21 @@
+{{!-- src/web/views/main.hbs --}}
+<!doctype html>
+<html lang="en">
+  <head>
+    {{> head}}
+  </head>
+
+  <body>
+    {{> site-header}}
+
+    {{{body}}}
+
+    {{> footer}}
+
+    <script defer src="/js/core.js"></script>
+    <!-- ICONS_SPRITE_MOUNT -->
+{{> icons-sprite}}
+<!-- /ICONS_SPRITE_MOUNT -->
+
+  </body>
+</html>
