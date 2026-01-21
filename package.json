@@ -7,6 +7,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "start:templates-demo": "node src/templates-demo.server.js",
+    "dev:templates-demo": "nodemon src/templates-demo.server.js",
+    "ingest-template": "node ingest-template.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
@@ -26,6 +29,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.9",
     "nodemon": "^3.1.11",
+    "playwright": "^1.57.0",
     "prettier": "^3.6.2",
     "puppeteer": "^24.34.0"
   },
