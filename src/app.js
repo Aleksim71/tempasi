@@ -1,18 +1,31 @@
 // src/app.js
 // ESM (src/server.js: import app from './app.js')
+//
+// FIX: Use the real ESM SSR web app bootstrap (createWebApp) so Handlebars is configured,
+// instead of mounting the router without a view engine.
+// Keeps debug toggles:
+//   TEMPASI_SKIP_AUTH=1  -> skip initAuth middleware
+//   TEMPASI_SKIP_SSR=1   -> enable SSR stub (templates ok text)
 
-import path from 'path';
-import fs from 'fs';
 import express from 'express';
-import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
+import { requestWatchdog } from './web/middleware/request-watchdog.js';
+import { createWebApp } from './app.web.js';
+
 const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // ---- AUTH middleware (CJS) ----
 const { initAuth } = require('./middlewares/auth.middleware.cjs');
+
+// ---- ROUTERS (CJS) ----
+const authMod = require('./modules/auth/auth.routes.cjs');
+const ordersMod = require('./modules/orders/orders.routes.cjs');
+const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
+
+// ВАЖНО: эти два файла разные!
+const profilePagesMod = require('./modules/profile/profile.routes.cjs'); // pages (/profile/..)
+const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // api (/api/profile/..)
 
 // ---- helpers ----
 function pickRouter(mod, keys, label = 'router') {
@@ -29,47 +42,6 @@ function pickRouter(mod, keys, label = 'router') {
   const got = mod && typeof mod === 'object' ? Object.keys(mod) : [];
   throw new Error(`[app.js] Cannot resolve ${label} export. keys=${JSON.stringify(got)}`);
 }
-
-function tryRequireFirst(candidates) {
-  const tried = [];
-  for (const rel of candidates) {
-    tried.push(rel);
-    try {
-      return { mod: require(rel), picked: rel };
-    } catch (e) {
-      if (
-        e &&
-        (e.code === 'MODULE_NOT_FOUND' || String(e.message || '').includes('Cannot find module'))
-      ) {
-        continue;
-      }
-      throw e;
-    }
-  }
-
-  const webDir = path.join(__dirname, 'web');
-  let webFiles = [];
-  try {
-    webFiles = fs.readdirSync(webDir);
-  } catch (_) {}
-
-  const msg =
-    `[app.js] Cannot find SSR web router module. Tried: ${tried.join(', ')}. ` +
-    (webFiles.length
-      ? `Files in src/web: ${webFiles.join(', ')}`
-      : `src/web not readable or empty`);
-
-  throw new Error(msg);
-}
-
-// ---- ROUTERS (CJS) ----
-const authMod = require('./modules/auth/auth.routes.cjs');
-const ordersMod = require('./modules/orders/orders.routes.cjs');
-const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
-
-// ВАЖНО: эти два файла разные!
-const profilePagesMod = require('./modules/profile/profile.routes.cjs'); // pages (/profile/..)
-const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // api (/api/profile/..)
 
 // ---- resolved routers ----
 const authRouter = pickRouter(
@@ -100,63 +72,57 @@ const profileApiRouter = pickRouter(
   'profile api router',
 );
 
-// SSR web router is optional in tests
-function resolveWebRouterOrFallback() {
-  const isTest = process.env.NODE_ENV === 'test' || process.env.TEMPASI_SKIP_SSR === '1';
-  if (isTest) {
-    const r = express.Router();
-    // Минимальный SSR stub: чтобы /templates отвечал (и не зависал на DB/SSR)
-    r.get('/templates', (_req, res) =>
-      res.status(200).type('text').send('Templates OK (SSR stub)'),
-    );
-    r.get('/templates/:slug', (_req, res) =>
-      res.status(200).type('text').send('Template OK (SSR stub)'),
-    );
-    r.get('/preview/:slug', (_req, res) =>
-      res.status(200).type('text').send('Preview OK (SSR stub)'),
-    );
-    return r;
-  }
-
-  const { mod: webMod } = tryRequireFirst([
-    './web/web.routes.cjs',
-    './web/web.routes.js',
-    './web/routes.cjs',
-    './web/routes.js',
-    './web/router.cjs',
-    './web/router.js',
-    './web/index.cjs',
-    './web/index.js',
-    './web/app.cjs',
-    './web/app.js',
-  ]);
-
-  return pickRouter(webMod, ['webRouter', 'webRoutes', 'router', 'routes'], 'web (SSR) router');
+function makeSsrStubRouter() {
+  const r = express.Router();
+  r.get('/templates', (_req, res) => res.status(200).type('text').send('Templates OK (SSR stub)'));
+  r.get('/templates/:slug', (_req, res) =>
+    res.status(200).type('text').send('Template OK (SSR stub)'),
+  );
+  r.get('/preview/:slug', (_req, res) =>
+    res.status(200).type('text').send('Preview OK (SSR stub)'),
+  );
+  r.get('/__debug/routes2', (_req, res) =>
+    res.status(200).json({ ok: true, note: 'SSR stub enabled (TEMPASI_SKIP_SSR=1)' }),
+  );
+  return r;
 }
-
-const webRouter = resolveWebRouterOrFallback();
 
 export function createApp({ db } = {}) {
   const app = express();
 
   if (db) app.locals.db = db;
 
-  // views (не мешает тестам, но и не обязательны)
-  app.set('views', path.join(__dirname, 'web', 'views'));
-  app.set('view engine', 'hbs');
+  // 🔎 Watchdog FIRST: catch hangs anywhere
+  app.use(requestWatchdog({ timeoutMs: 3000, hardFail: false }));
+
+  // Boundary log (helps see if we even enter the chain)
+  app.use((req, _res, next) => {
+     
+    console.log(`[APP] enter: ${req.method} ${req.originalUrl || req.url}`);
+    next();
+  });
 
   // middleware
   app.use(express.urlencoded({ extended: false })); // HTML forms
   app.use(express.json({ limit: '1mb' })); // API JSON
 
   // cookie-session auth -> req.user + res.locals.user
-  app.use(initAuth);
+  if (process.env.TEMPASI_SKIP_AUTH === '1') {
+     
+    console.warn('[app.js] TEMPASI_SKIP_AUTH=1 -> auth middleware skipped');
+  } else {
+    app.use((req, res, next) => {
+       
+      console.log(`[APP] auth: before initAuth ${req.method} ${req.originalUrl || req.url}`);
+      return initAuth(req, res, next);
+    });
+  }
 
-  // static
-  app.use(express.static(path.join(__dirname, '..', 'public')));
-
-  // health (для тестов/ожидания старта сервера)
+  // health
   app.get('/__health', (_req, res) => res.status(200).json({ ok: true }));
+
+  // root convenience
+  app.get('/', (_req, res) => res.redirect('/templates'));
 
   // ---------- API ----------
   app.use('/api/auth', authRouter);
@@ -169,11 +135,17 @@ export function createApp({ db } = {}) {
   // ---------- SSR ----------
   app.use('/profile', profileRouter);
 
-  // root convenience
-  app.get('/', (_req, res) => res.redirect('/templates'));
-
-  // main SSR website (optional in tests)
-  app.use('/', webRouter);
+  const skipSSR = process.env.TEMPASI_SKIP_SSR === '1' || process.env.NODE_ENV === 'test';
+  if (skipSSR) {
+     
+    console.warn('[app.js] SSR stub enabled (TEMPASI_SKIP_SSR=1 or NODE_ENV=test)');
+    app.use('/', makeSsrStubRouter());
+  } else {
+    // ✅ IMPORTANT: configure Handlebars + partials + static + mount web routes
+     
+    console.log('[app.js] SSR: createWebApp() bootstrap');
+    createWebApp(app);
+  }
 
   // ---------- 404 ----------
   app.use((req, res) => {
@@ -182,12 +154,16 @@ export function createApp({ db } = {}) {
         error: { code: 'NOT_FOUND', message: 'Not Found' },
       });
     }
-    return res.status(404).send('404 Not Found');
+    return res.status(404).type('text').send('404 Not Found');
   });
 
   // ---------- Error handler ----------
+   
   app.use((err, req, res, _next) => {
     const status = err.status || 500;
+
+     
+    console.error('[app.js] error handler:', err);
 
     if (req.path.startsWith('/api/')) {
       return res.status(status).json({
@@ -198,7 +174,10 @@ export function createApp({ db } = {}) {
       });
     }
 
-    return res.status(status).send(err.message || 'Internal Error');
+    return res
+      .status(status)
+      .type('text')
+      .send(err.message || 'Internal Error');
   });
 
   return app;
@@ -207,4 +186,3 @@ export function createApp({ db } = {}) {
 // server.js expects default export
 const app = createApp();
 export default app;
-

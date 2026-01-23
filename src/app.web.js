@@ -7,6 +7,7 @@ import express from 'express';
 import hbs from 'hbs';
 
 import { createWebRouter } from './web/routes/web.routes.js';
+import { requestWatchdog } from './web/middleware/request-watchdog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +83,16 @@ function initHbsOnce(app) {
 export function createWebApp(app) {
   initHbsOnce(app);
 
+  // 🔎 Watchdog FIRST (debug hangs). Set hardFail=true temporarily if needed.
+  app.use(requestWatchdog({ timeoutMs: 3000, hardFail: false }));
+
+  // (Optional) quick boundary log to see if we reach routes at all
+  app.use((req, _res, next) => {
+     
+    console.log(`[WEB] enter middleware chain: ${req.method} ${req.originalUrl || req.url}`);
+    next();
+  });
+
   // static (css/js/img)
   app.use(express.static(PUBLIC_DIR, { etag: true, maxAge: '1h' }));
 
@@ -96,6 +107,14 @@ export function createWebApp(app) {
 
   // mount web routes
   app.use(createWebRouter());
+
+  // If nothing matched, return 404 fast (avoid silent hangs on fallthrough)
+  app.use((req, res) => {
+    res
+      .status(404)
+      .type('text')
+      .send(`Not Found: ${req.method} ${req.originalUrl || req.url}\n`);
+  });
 
   return app;
 }
