@@ -49,10 +49,10 @@ function makeConfig() {
   // 3) fallback
   return {
     host: '127.0.0.1',
-    port: 5432,
-    user: 'aleks',
-    password: 'aleks_password_strong',
-    database: 'tempasi',
+    port: 5433,
+    user: 'tempasi',
+    password: 'tempasi',
+    database: 'tempasi_tempasi',
     ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
   };
 }
