@@ -14,26 +14,33 @@ const { Pool } = pg;
  *   /var/run/postgresql/.s.PGSQL.5432 → ENOENT
  *
  * Правило приоритета:
- * 1) Если есть явные PG* переменные (PGHOST/PGUSER/PGDATABASE) — используем TCP-конфиг (Docker port 5432).
+ * 1) Если есть явные PG* переменные (PGHOST/PGUSER/PGDATABASE/PGPORT/PGPASSWORD) — используем TCP-конфиг.
  * 2) Иначе, если есть DATABASE_URL — используем connectionString.
- * 3) Иначе fallback на 127.0.0.1:5432 + дефолты.
+ * 3) Иначе fallback на 127.0.0.1 + дефолты.
  */
 
 function hasPgEnv() {
-  return Boolean(process.env.PGHOST || process.env.PGUSER || process.env.PGDATABASE);
+  return Boolean(
+    process.env.PGHOST ||
+      process.env.PGPORT ||
+      process.env.PGUSER ||
+      process.env.PGDATABASE ||
+      process.env.PGPASSWORD
+  );
 }
 
 function makeConfig() {
   const databaseUrl = process.env.DATABASE_URL || '';
 
-  // 1) PG* env → всегда TCP
+  // 1) PG* env → TCP
   if (hasPgEnv()) {
     return {
+      __mode: 'PG*',
       host: process.env.PGHOST || '127.0.0.1',
       port: Number(process.env.PGPORT || 5432),
-      user: process.env.PGUSER || 'aleks',
-      password: process.env.PGPASSWORD || 'aleks_password_strong',
-      database: process.env.PGDATABASE || 'tempasi',
+      user: process.env.PGUSER || 'tempasi',
+      password: process.env.PGPASSWORD || 'tempasi',
+      database: process.env.PGDATABASE || 'tempasi_dev',
       ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
     };
   }
@@ -41,6 +48,7 @@ function makeConfig() {
   // 2) DATABASE_URL → только если PG* не задан
   if (databaseUrl) {
     return {
+      __mode: 'DATABASE_URL',
       connectionString: databaseUrl,
       ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
     };
@@ -48,11 +56,12 @@ function makeConfig() {
 
   // 3) fallback
   return {
+    __mode: 'fallback',
     host: '127.0.0.1',
     port: 5433,
     user: 'tempasi',
     password: 'tempasi',
-    database: 'tempasi_tempasi',
+    database: 'tempasi_dev',
     ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : undefined,
   };
 }
@@ -61,7 +70,7 @@ const cfg = makeConfig();
 
 console.log('[DB:CJS] using', {
   file: 'src/config/db.cjs',
-  mode: cfg.connectionString ? 'DATABASE_URL' : 'PG*',
+  mode: cfg.__mode || (cfg.connectionString ? 'DATABASE_URL' : 'PG*'),
   hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
   host: cfg.host,
   port: cfg.port,
@@ -70,6 +79,7 @@ console.log('[DB:CJS] using', {
   ssl: Boolean(cfg.ssl),
 });
 
-const pool = new Pool(cfg);
+const { __mode, ...poolCfg } = cfg;
+const pool = new Pool(poolCfg);
 
 module.exports = { pool };
