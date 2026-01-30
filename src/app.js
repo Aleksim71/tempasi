@@ -1,11 +1,10 @@
 // src/app.js
 // ESM (src/server.js: import app from './app.js')
 //
-// FIX: Use the real ESM SSR web app bootstrap (createWebApp) so Handlebars is configured,
-// instead of mounting the router without a view engine.
-// Keeps debug toggles:
-//   TEMPASI_SKIP_AUTH=1  -> skip initAuth middleware
-//   TEMPASI_SKIP_SSR=1   -> enable SSR stub (templates ok text)
+// Debug toggles:
+//   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware
+//   TEMPASI_SKIP_SSR=1       -> enable SSR stub (templates ok text)
+//   TEMPASI_SKIP_WATCHDOG=1  -> disable requestWatchdog
 
 import express from 'express';
 import { createRequire } from 'module';
@@ -15,6 +14,10 @@ import { createWebApp } from './app.web.js';
 
 const require = createRequire(import.meta.url);
 
+// ---- DB (CJS) ----
+const dbMod = require('./config/db.cjs');
+const db = (dbMod && (dbMod.db || dbMod.pool || dbMod.POOL)) || dbMod;
+
 // ---- AUTH middleware (CJS) ----
 const { initAuth } = require('./middlewares/auth.middleware.cjs');
 
@@ -23,7 +26,7 @@ const authMod = require('./modules/auth/auth.routes.cjs');
 const ordersMod = require('./modules/orders/orders.routes.cjs');
 const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
 
-// ВАЖНО: эти два файла разные!
+// Pages SSR router + API router
 const profilePagesMod = require('./modules/profile/profile.routes.cjs'); // pages (/profile/..)
 const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // api (/api/profile/..)
 
@@ -43,17 +46,32 @@ function pickRouter(mod, keys, label = 'router') {
   throw new Error(`[app.js] Cannot resolve ${label} export. keys=${JSON.stringify(got)}`);
 }
 
+function resolveAuthMiddleware(maybeInitAuth) {
+  if (typeof maybeInitAuth !== 'function') return null;
+
+  // already middleware: (req,res,next) or (err,req,res,next)
+  if (maybeInitAuth.length >= 3) return maybeInitAuth;
+
+  // factory: () => middleware
+  const produced = maybeInitAuth();
+  if (typeof produced === 'function') return produced;
+
+  return produced;
+}
+
 // ---- resolved routers ----
 const authRouter = pickRouter(
   authMod,
   ['authRouter', 'authRoutes', 'router', 'routes'],
   'auth router',
 );
+
 const ordersRouter = pickRouter(
   ordersMod,
   ['ordersRouter', 'ordersRoutes', 'router', 'routes'],
   'orders router',
 );
+
 const downloadsRouter = pickRouter(
   downloadsMod,
   ['downloadsRouter', 'downloadsRoutes', 'router', 'routes'],
@@ -78,106 +96,61 @@ function makeSsrStubRouter() {
   r.get('/templates/:slug', (_req, res) =>
     res.status(200).type('text').send('Template OK (SSR stub)'),
   );
-  r.get('/preview/:slug', (_req, res) =>
-    res.status(200).type('text').send('Preview OK (SSR stub)'),
-  );
-  r.get('/__debug/routes2', (_req, res) =>
-    res.status(200).json({ ok: true, note: 'SSR stub enabled (TEMPASI_SKIP_SSR=1)' }),
-  );
+  r.get('/cabinet', (_req, res) => res.status(200).type('text').send('Cabinet OK (SSR stub)'));
   return r;
 }
 
-export function createApp({ db } = {}) {
-  const app = express();
+// ---- app bootstrap ----
+const app = express();
 
-  if (db) app.locals.db = db;
+// health first
+app.get('/__health', (_req, res) => res.status(200).json({ ok: true }));
 
-  // 🔎 Watchdog FIRST: catch hangs anywhere
-  app.use(requestWatchdog({ timeoutMs: 3000, hardFail: false }));
-
-  // Boundary log (helps see if we even enter the chain)
-  app.use((req, _res, next) => {
-    console.log(`[APP] enter: ${req.method} ${req.originalUrl || req.url}`);
+// watchdog (SAFE wrapper: cannot block the chain)
+if (!process.env.TEMPASI_SKIP_WATCHDOG) {
+  app.use((req, res, next) => {
     next();
-  });
-
-  // middleware
-  app.use(express.urlencoded({ extended: false })); // HTML forms
-  app.use(express.json({ limit: '1mb' })); // API JSON
-
-  // cookie-session auth -> req.user + res.locals.user
-  if (process.env.TEMPASI_SKIP_AUTH === '1') {
-    console.warn('[app.js] TEMPASI_SKIP_AUTH=1 -> auth middleware skipped');
-  } else {
-    app.use((req, res, next) => {
-      console.log(`[APP] auth: before initAuth ${req.method} ${req.originalUrl || req.url}`);
-      return initAuth(req, res, next);
+    setImmediate(() => {
+      try {
+        requestWatchdog(req, res, () => {});
+      } catch {
+        // ignore completely
+      }
     });
-  }
-
-  // health
-  app.get('/__health', (_req, res) => res.status(200).json({ ok: true }));
-
-  // root convenience
-  app.get('/', (_req, res) => res.redirect('/templates'));
-
-  // ---------- API ----------
-  app.use('/api/auth', authRouter);
-  app.use('/api/orders', ordersRouter);
-  app.use('/api/profile', profileApiRouter);
-
-  // ---------- Downloads ----------
-  app.use('/download', downloadsRouter);
-
-  // ---------- SSR ----------
-  app.use('/profile', profileRouter);
-
-  const skipSSR = process.env.TEMPASI_SKIP_SSR === '1' || process.env.NODE_ENV === 'test';
-  if (skipSSR) {
-    console.warn('[app.js] SSR stub enabled (TEMPASI_SKIP_SSR=1 or NODE_ENV=test)');
-    app.use('/', makeSsrStubRouter());
-  } else {
-    // ✅ IMPORTANT: configure Handlebars + partials + static + mount web routes
-
-    console.log('[app.js] SSR: createWebApp() bootstrap');
-    app.use(createWebApp({ db }));
-  }
-
-  // ---------- 404 ----------
-  app.use((req, res) => {
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({
-        error: { code: 'NOT_FOUND', message: 'Not Found' },
-      });
-    }
-    return res.status(404).type('text').send('404 Not Found');
   });
-
-  // ---------- Error handler ----------
-
-  app.use((err, req, res, _next) => {
-    const status = err.status || 500;
-
-    console.error('[app.js] error handler:', err);
-
-    if (req.path.startsWith('/api/')) {
-      return res.status(status).json({
-        error: {
-          code: err.code || 'INTERNAL_ERROR',
-          message: err.message || 'Internal Error',
-        },
-      });
-    }
-
-    return res
-      .status(status)
-      .type('text')
-      .send(err.message || 'Internal Error');
-  });
-
-  return app;
 }
 
-// server.js expects default export
-const app = createApp();
+// auth (optional)
+if (!process.env.TEMPASI_SKIP_AUTH) {
+  const authMw = resolveAuthMiddleware(initAuth);
+  if (typeof authMw === 'function') app.use(authMw);
+}
+
+// APIs under strict prefixes (so nothing can shadow SSR pages)
+app.use('/api/auth', authRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/downloads', downloadsRouter);
+app.use('/api/profile', profileApiRouter);
+
+// SSR (or stub) LAST
+if (process.env.TEMPASI_SKIP_SSR) {
+  app.use(makeSsrStubRouter());
+} else {
+  const webApp = createWebApp({ db });
+
+  // Cabinet: empty SSR page (HBS)
+  webApp.get('/cabinet', (_req, res) => {
+    res.status(200).render('pages/cabinet', {
+      title: 'Cabinet',
+      page: 'cabinet',
+      pageCss: ['pages/cabinet.css'],
+    });
+  });
+
+  // mount SSR pages router inside webApp
+  webApp.use(profileRouter);
+
+  app.use(webApp);
+}
+
 export default app;

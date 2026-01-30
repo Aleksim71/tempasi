@@ -1,0 +1,45 @@
+/* public/css/pages/cabinet.css */
+
+.cabinet-page {
+  padding: 28px 0 48px;
+}
+
+.cabinet-hero {
+  margin: 0 0 14px;
+}
+
+.cabinet-title {
+  margin: 0 0 6px;
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.cabinet-subtitle {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.cabinet-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tp-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--tp-line, rgba(255, 255, 255, 0.08));
+}
+
+.cabinet-empty {
+  padding: 24px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+}
+
+.cabinet-empty__title {
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.cabinet-empty__hint {
+  opacity: 0.75;
+}
