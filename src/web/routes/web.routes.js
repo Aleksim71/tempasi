@@ -1,22 +1,17 @@
 // src/web/routes/web.routes.js
-import express from 'express';
+import { Router } from 'express';
+
 import { createTemplatesRouter } from './templates.routes.js';
+import { createPreviewProxyRouter } from './preview-proxy.routes.js';
 
-/**
- * Factory: create the main SSR web router.
- * app.web.js imports { createWebRouter } from './web/routes/web.routes.js'
- */
 export function createWebRouter() {
-  const router = express.Router();
+  const router = Router();
 
-  // Dedicated templates routes (GET /templates etc.)
-  router.use(createTemplatesRouter());
+  // ✅ ВАЖНО: прокси должен быть РАНЬШЕ страниц, чтобы картинки не ловили 404 от Express
+  router.use(createPreviewProxyRouter());
 
-  // ---- Other pages (keep or extend as needed) ----
-  // If you already have routes for '/', '/contact', '/profile', etc.,
-  // add them here (or paste them back in).
-  //
-  // router.get('/', (req, res) => res.render('pages/home', { layout: 'main' }));
+  // /templates
+  router.use('/templates', createTemplatesRouter());
 
   return router;
 }

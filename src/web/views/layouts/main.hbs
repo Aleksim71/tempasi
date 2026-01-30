@@ -1,3 +1,4 @@
+{{!-- src/web/views/layouts/main.hbs --}}
 <!doctype html>
 <html lang="en">
   <head>
@@ -12,8 +13,8 @@
   </head>
 
   <body class="{{bodyClass}}">
-    {{!-- ✅ SVG sprite must be inside BODY (not between head and body) --}}
-    {{> icons-sprite}}
+    {{!-- SVG sprite: MUST be inside BODY --}}
+    {{> icons_sprite}}
 
     {{!-- GLOBAL HEADER (can be disabled per page) --}}
     {{#unless hideHeader}}
@@ -23,7 +24,7 @@
     <main class="l-page">
       <div class="l-main">
         <div class="l-container l-stack">
-          {{> (lookup . "bodyPartial")}}
+          {{{body}}}
         </div>
       </div>
     </main>

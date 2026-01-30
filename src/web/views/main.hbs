@@ -1,21 +1,35 @@
-{{!-- src/web/views/main.hbs --}}
+{{!-- src/web/views/layouts/main.hbs --}}
 <!doctype html>
 <html lang="en">
   <head>
     {{> head}}
+
+    {{!-- page-specific styles --}}
+    {{#if styles}}
+      {{#each styles}}
+        <link rel="stylesheet" href="{{this}}" />
+      {{/each}}
+    {{/if}}
   </head>
 
-  <body>
-    {{> site-header}}
+  <body class="{{bodyClass}}">
+    {{!-- SVG sprite: MUST be inside BODY --}}
+    {{> icons_sprite}}
 
-    {{{body}}}
+    {{!-- GLOBAL HEADER (can be disabled per page) --}}
+    {{#unless hideHeader}}
+      {{> site-header}}
+    {{/unless}}
 
-    {{> footer}}
+    <main class="l-page">
+      <div class="l-main">
+        <div class="l-container l-stack">
+          {{{body}}}
+        </div>
+      </div>
+    </main>
 
+    {{!-- core JS (safe, page-aware) --}}
     <script defer src="/js/core.js"></script>
-    <!-- ICONS_SPRITE_MOUNT -->
-{{> icons-sprite}}
-<!-- /ICONS_SPRITE_MOUNT -->
-
   </body>
 </html>

@@ -1,61 +1,51 @@
 {{!-- src/web/views/partials/site-header.hbs --}}
-<header class="site-header" role="banner">
+<header class="site-header" role="banner" data-brand="{{brand}}">
   <div class="site-header__inner l-container">
-
-    <a class="site-header__brand" href="/" aria-label="Tempasi home">
+    {{!-- Logo --}}
+    <a class="site-header__brand" href="/templates" aria-label="Tempasi home">
       <img
-        class="site-header__mark"
-        src="/img/brand/tempasi-mark-white-32.png"
-        srcset="
-          /img/brand/tempasi-mark-white-32.png 1x,
-          /img/brand/tempasi-mark-white-64.png 2x
-        "
-        width="32"
-        height="32"
+        class="site-header__logo"
+        src="/img/brand/logo_tempasi_licht.png"
         alt="Tempasi"
+        width="28"
+        height="28"
         loading="eager"
         decoding="async"
       />
-      <span class="site-header__word" aria-hidden="true">TEMPASI</span>
+      <span class="site-header__wordmark" aria-hidden="true">TEMPASI</span>
     </a>
 
-    <nav class="site-header__nav" aria-label="Primary">
-      <a href="/templates" class="nav-link {{#if (eq activePage 'templates')}}is-active{{/if}}">
-        Шаблоны
+    {{!-- Modes --}}
+    <nav class="site-header__modes" aria-label="Modes">
+      <a href="/templates" class="site-header__mode {{#if (eq activePage 'templates')}}is-active{{/if}}">
+        Templates
       </a>
-      <a href="/about" class="nav-link {{#if (eq activePage 'about')}}is-active{{/if}}">
-        About
-      </a>
-      <a href="/contact" class="nav-link {{#if (eq activePage 'contact')}}is-active{{/if}}">
-        Contact
-      </a>
-      <a href="/community" class="nav-link {{#if (eq activePage 'community')}}is-active{{/if}}">
-        Community
-      </a>
-      <a href="/discounts" class="nav-link {{#if (eq activePage 'discounts')}}is-active{{/if}}">
-        Скидки
-      </a>
-      <a href="/profile" class="nav-link {{#if (eq activePage 'profile')}}is-active{{/if}}">
-        Профиль
+      <a href="/profile" class="site-header__mode {{#if (eq activePage 'profile')}}is-active{{/if}}">
+        Cabinet
       </a>
     </nav>
 
-    <div class="site-header__actions">
-      <a class="c-btn c-btn--sm site-header__icon-btn" href="/profile" aria-label="Profile">
-        <svg class="tp-icon tp-icon--lg" aria-hidden="true">
-          <use href="/icons/tempasi-sprite.svg#tp-header-profile"></use>
+    {{!-- Actions --}}
+    <div class="site-header__actions" aria-label="Actions">
+      <a class="site-header__action" href="/templates#search" aria-label="Search" title="Search">
+        <svg class="tp-ico" width="18" height="18" aria-hidden="true">
+          <use href="#tp-action-search"></use>
         </svg>
       </a>
 
-      <a class="c-btn c-btn--sm site-header__icon-btn" href="/cart" aria-label="Cart">
-        <svg class="tp-icon tp-icon--lg" aria-hidden="true">
-          <use href="/icons/tempasi-sprite.svg#tp-header-cart"></use>
+      <a class="site-header__action" href="/cart" aria-label="Cart" title="Cart">
+        <svg class="tp-ico" width="18" height="18" aria-hidden="true">
+          <use href="#tp-action-cart"></use>
         </svg>
       </a>
+
+      <form class="site-header__logout" action="/api/auth/logout" method="post">
+        <button class="site-header__action" type="submit" aria-label="Logout" title="Logout">
+          <svg class="tp-ico" width="18" height="18" aria-hidden="true">
+            <use href="#tp-action-logout"></use>
+          </svg>
+        </button>
+      </form>
     </div>
-
   </div>
-</header>
-
-
 </header>

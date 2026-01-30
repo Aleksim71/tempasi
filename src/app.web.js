@@ -1,120 +1,71 @@
 // src/app.web.js
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import fs from 'node:fs';
-
 import express from 'express';
+import path from 'node:path';
 import hbs from 'hbs';
-
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createWebRouter } from './web/routes/web.routes.js';
-import { requestWatchdog } from './web/middleware/request-watchdog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// src/web
-const WEB_DIR = path.join(__dirname, 'web');
-
-// src/web/views
-const VIEWS_DIR = path.join(WEB_DIR, 'views');
-
-// src/web/views/partials
-const PARTIALS_DIR = path.join(VIEWS_DIR, 'partials');
-
-// public
-const PUBLIC_DIR = path.join(process.cwd(), 'public');
-
-// storage/templates
-const TEMPLATES_DIR = path.join(process.cwd(), 'storage', 'templates');
-
-function licenseLabel(v) {
-  return String(v || '').toUpperCase();
-}
-function typeLabel(v) {
-  return String(v || '').toUpperCase();
-}
-function formatPriceEUR(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n);
-}
-function isFreePrice(v) {
-  const n = Number(v);
-  return Number.isFinite(n) && n <= 0;
+function safeRead(filePath) {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
-let _initialized = false;
+export function createWebApp({ db }) {
+  const app = express();
 
-function safeReadPartial(filename) {
-  const p = path.join(PARTIALS_DIR, filename);
-  if (!fs.existsSync(p)) return null;
-  return fs.readFileSync(p, 'utf8');
-}
+  // Expose db to routes
+  app.locals.db = db;
 
-function initHbsOnce(app) {
-  if (_initialized) return;
-  _initialized = true;
+  const viewsRoot = path.join(__dirname, 'web', 'views');
+  const partialsRoot = path.join(viewsRoot, 'partials');
 
-  app.set('views', VIEWS_DIR);
+  // Views
   app.set('view engine', 'hbs');
+  app.set('views', viewsRoot);
+  app.set('view options', { layout: 'main' });
 
-  // Register all partials from folder
-  hbs.registerPartials(PARTIALS_DIR);
+  console.log('[web] createWebApp() boot', { views: viewsRoot, partials: partialsRoot });
 
-  // 🔒 Hard-register critical partials by name (prevents "could not be found")
-  const siteHeader = safeReadPartial('site-header.hbs');
-  if (siteHeader) hbs.registerPartial('site-header', siteHeader);
+  // Partials (only true partials; pages are rendered via res.render(view))
+  hbs.registerPartials(partialsRoot);
 
-  const siteFooter = safeReadPartial('site-footer.hbs');
-  if (siteFooter) hbs.registerPartial('site-footer', siteFooter);
+  // Explicit partial registration (bulletproof for the critical ones)
+  const pIconsDash = path.join(partialsRoot, 'icons-sprite.hbs');
+  const pIconsUnd = path.join(partialsRoot, 'icons_sprite.hbs');
+  const pHeader = path.join(partialsRoot, 'site-header.hbs');
+  const pFooter = path.join(partialsRoot, 'site-footer.hbs');
 
-  // ✅ Hard-register icons sprite (required for inline <use href="#...">)
-  const iconsSprite = safeReadPartial('icons-sprite.hbs');
-  if (iconsSprite) hbs.registerPartial('icons-sprite', iconsSprite);
+  const iconsDash = safeRead(pIconsDash);
+  const iconsUnd = safeRead(pIconsUnd);
+  const header = safeRead(pHeader);
+  const footer = safeRead(pFooter);
 
-  // helpers
-  hbs.registerHelper('eq', (a, b) => String(a) === String(b));
-  hbs.registerHelper('licenseLabel', (v) => licenseLabel(v));
-  hbs.registerHelper('typeLabel', (v) => typeLabel(v));
-  hbs.registerHelper('formatPrice', (v) => formatPriceEUR(v));
-  hbs.registerHelper('isFree', (v) => isFreePrice(v));
-}
+  if (iconsDash) hbs.registerPartial('icons-sprite', iconsDash);
+  if (iconsUnd) hbs.registerPartial('icons_sprite', iconsUnd);
+  if (!iconsDash && iconsUnd) hbs.registerPartial('icons-sprite', iconsUnd);
 
-export function createWebApp(app) {
-  initHbsOnce(app);
+  if (header) hbs.registerPartial('site-header', header);
+  if (footer) hbs.registerPartial('site-footer', footer);
 
-  // 🔎 Watchdog FIRST (debug hangs). Set hardFail=true temporarily if needed.
-  app.use(requestWatchdog({ timeoutMs: 3000, hardFail: false }));
+  // Helpers
+  hbs.registerHelper('eq', (a, b) => a === b);
 
-  // (Optional) quick boundary log to see if we reach routes at all
-  app.use((req, _res, next) => {
-     
-    console.log(`[WEB] enter middleware chain: ${req.method} ${req.originalUrl || req.url}`);
-    next();
-  });
+  // Static
+  app.use(express.static(path.join(__dirname, '..', 'public')));
 
-  // static (css/js/img)
-  app.use(express.static(PUBLIC_DIR, { etag: true, maxAge: '1h' }));
+  // Health + root UX
+  app.get('/__health', (req, res) => res.json({ ok: true }));
+  app.get('/', (req, res) => res.redirect(302, '/templates'));
 
-  // Static templates demo under /t (same-origin previews, no SSR)
-  app.use(
-    '/t',
-    express.static(TEMPLATES_DIR, {
-      index: ['index.html'],
-      fallthrough: true,
-    }),
-  );
-
-  // mount web routes
+  // Web routes
   app.use(createWebRouter());
-
-  // If nothing matched, return 404 fast (avoid silent hangs on fallthrough)
-  app.use((req, res) => {
-    res
-      .status(404)
-      .type('text')
-      .send(`Not Found: ${req.method} ${req.originalUrl || req.url}\n`);
-  });
 
   return app;
 }

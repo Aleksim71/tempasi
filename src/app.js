@@ -97,7 +97,6 @@ export function createApp({ db } = {}) {
 
   // Boundary log (helps see if we even enter the chain)
   app.use((req, _res, next) => {
-     
     console.log(`[APP] enter: ${req.method} ${req.originalUrl || req.url}`);
     next();
   });
@@ -108,11 +107,9 @@ export function createApp({ db } = {}) {
 
   // cookie-session auth -> req.user + res.locals.user
   if (process.env.TEMPASI_SKIP_AUTH === '1') {
-     
     console.warn('[app.js] TEMPASI_SKIP_AUTH=1 -> auth middleware skipped');
   } else {
     app.use((req, res, next) => {
-       
       console.log(`[APP] auth: before initAuth ${req.method} ${req.originalUrl || req.url}`);
       return initAuth(req, res, next);
     });
@@ -137,14 +134,13 @@ export function createApp({ db } = {}) {
 
   const skipSSR = process.env.TEMPASI_SKIP_SSR === '1' || process.env.NODE_ENV === 'test';
   if (skipSSR) {
-     
     console.warn('[app.js] SSR stub enabled (TEMPASI_SKIP_SSR=1 or NODE_ENV=test)');
     app.use('/', makeSsrStubRouter());
   } else {
     // ✅ IMPORTANT: configure Handlebars + partials + static + mount web routes
-     
+
     console.log('[app.js] SSR: createWebApp() bootstrap');
-    createWebApp(app);
+    app.use(createWebApp({ db }));
   }
 
   // ---------- 404 ----------
@@ -158,11 +154,10 @@ export function createApp({ db } = {}) {
   });
 
   // ---------- Error handler ----------
-   
+
   app.use((err, req, res, _next) => {
     const status = err.status || 500;
 
-     
     console.error('[app.js] error handler:', err);
 
     if (req.path.startsWith('/api/')) {
