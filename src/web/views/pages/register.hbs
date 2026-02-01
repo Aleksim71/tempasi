@@ -1,97 +1,127 @@
-{{!-- src/views/register.hbs --}}
-<section class="auth-page">
+{{!-- src/web/views/pages/register.hbs --}}
+{{#*inline "_head"}}
+<link rel="stylesheet" href="/css/pages/auth.css" />
+{{/inline}}
+
+
+<main class="auth-page">
   <div class="auth-wrap">
-    <div class="auth">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-head">
+        <h1 class="auth-title" id="auth-title">Create account</h1>
+      </header>
 
-      <form id="registerForm" class="body" action="/register" method="POST" novalidate>
-        <div class="row">
-          <div class="label">Полное имя</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-user" /></svg>
+      {{#if error}}
+        <div class="auth-alert" role="alert">{{error}}</div>
+      {{/if}}
+
+      <form class="auth-form" method="post" action="/register" novalidate>
+        <div class="auth-field">
+          <label class="auth-label" for="name">Full name</label>
+
+          <div class="auth-control">
             <input
+              class="auth-input"
+              id="name"
+              name="name"
               type="text"
-              name="fullName"
-              id="fullName"
-              placeholder="Ваше имя"
-              required
+              autocomplete="name"
+              placeholder="Your name"
+              value="{{form.name}}"
+              aria-invalid="{{#if fieldErrors.name}}true{{else}}false{{/if}}"
             />
           </div>
+
+          {{#if fieldErrors.name}}
+            <div class="auth-hint auth-hint--error">{{fieldErrors.name}}</div>
+          {{else}}
+            <div class="auth-hint">Optional.</div>
+          {{/if}}
         </div>
 
-        <div class="row">
-          <div class="label">Email</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-mail" /></svg>
+        <div class="auth-field">
+          <label class="auth-label" for="email">Email</label>
+
+          <div class="auth-control">
             <input
-              type="email"
-              name="email"
+              class="auth-input"
               id="email"
-              placeholder="you@example.com"
+              name="email"
+              type="email"
+              inputmode="email"
               autocomplete="email"
+              placeholder="you@example.com"
+              value="{{form.email}}"
+              aria-invalid="{{#if fieldErrors.email}}true{{else}}false{{/if}}"
               required
             />
           </div>
-          <div class="error" id="emailErr">Введите корректный email</div>
+
+          {{#if fieldErrors.email}}
+            <div class="auth-hint auth-hint--error">{{fieldErrors.email}}</div>
+          {{else}}
+            <div class="auth-hint">Enter your email.</div>
+          {{/if}}
         </div>
 
-        <div class="row">
-          <div class="label">Пароль</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-lock" /></svg>
+        <div class="auth-field">
+          <label class="auth-label" for="password">Password</label>
+
+          <div class="auth-control">
             <input
-              type="password"
-              name="password"
+              class="auth-input auth-password"
               id="password"
-              placeholder="••••••••"
-              minlength="6"
+              name="password"
+              type="password"
               autocomplete="new-password"
+              placeholder="••••••••"
+              aria-invalid="{{#if fieldErrors.password}}true{{else}}false{{/if}}"
+              minlength="6"
               required
             />
-            <button
-              type="button"
-              class="toggle-pass"
-              id="togglePass"
-              aria-label="Показать/скрыть пароль"
-            >
-              <svg class="icon" id="eye"><use href="/icons/icons.svg#i-eye" /></svg>
+
+            <button class="auth-toggle" type="button" aria-label="Show password" data-auth-toggle="password">
+              👁
             </button>
           </div>
-          <div class="hint">Минимум 6 символов</div>
-          <div class="error" id="passErr">Пароль слишком короткий</div>
+
+          {{#if fieldErrors.password}}
+            <div class="auth-hint auth-hint--error">{{fieldErrors.password}}</div>
+          {{else}}
+            <div class="auth-hint">At least 6 characters.</div>
+          {{/if}}
         </div>
 
-        <div class="row">
-          <div class="label">Повторите пароль</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-lock" /></svg>
-            <input
-              type="password"
-              name="passwordConfirm"
-              id="passwordConfirm"
-              placeholder="••••••••"
-              minlength="6"
-              autocomplete="new-password"
-              required
-            />
-          </div>
-          <div class="error" id="confirmErr">Пароли не совпадают</div>
-        </div>
+        <div class="auth-actions">
+          <button class="auth-btn" type="submit">Create account</button>
 
-        <label class="remember">
-          <input type="checkbox" id="terms" required />
-          <span>Я принимаю условия сервиса</span>
-        </label>
-
-        <div class="actions">
-          <button class="btn primary" id="registerBtn" type="submit">Зарегистрироваться</button>
-
-          <div class="hint">
-            Уже есть аккаунт?
-            <a href="/login">Войти</a>
+          <div class="auth-links">
+            <span>Already have an account?</span>
+            <a href="/login">Sign in</a>
           </div>
         </div>
       </form>
-
-    </div>
+    </section>
   </div>
-</section>
+
+  <footer class="auth-footer">
+    <span>© Tempasi</span>
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/support">Support</a>
+  </footer>
+</main>
+
+<script>
+(() => {
+  const btn = document.querySelector('[data-auth-toggle="password"]');
+  const input = document.getElementById('password');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => {
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    btn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
+  });
+})();
+</script>

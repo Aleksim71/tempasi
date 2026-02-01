@@ -1,35 +1,30 @@
 {{!-- src/web/views/layouts/main.hbs --}}
 <!doctype html>
 <html lang="en">
-  <head>
-    {{> head}}
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    {{!-- page-specific styles --}}
-    {{#if styles}}
-      {{#each styles}}
-        <link rel="stylesheet" href="{{this}}" />
-      {{/each}}
-    {{/if}}
-  </head>
+  <title>{{#if title}}{{title}} — Tempasi{{else}}Tempasi{{/if}}</title>
 
-  <body class="{{bodyClass}}">
-    {{!-- SVG sprite: MUST be inside BODY --}}
-    {{> icons_sprite}}
+  {{!-- DIAG MARKER: if you don't see it in HTML, this file isn't used --}}
+  <meta name="tp-layout" content="main-hbs-diag-v1" />
 
-    {{!-- GLOBAL HEADER (can be disabled per page) --}}
-    {{#unless hideHeader}}
-      {{> site-header}}
-    {{/unless}}
+  {{!-- base styles --}}
+  <link rel="stylesheet" href="/css/core.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/brand.css" />
 
-    <main class="l-page">
-      <div class="l-main">
-        <div class="l-container l-stack">
-          {{{body}}}
-        </div>
-      </div>
-    </main>
+  {{!-- DIAG: forced auth.css --}}
+  <link rel="stylesheet" href="/css/pages/auth.css" />
+</head>
 
-    {{!-- core JS (safe, page-aware) --}}
-    <script defer src="/js/core.js"></script>
-  </body>
+<body data-brand="gold">
+  {{> header}}
+
+  {{{body}}}
+
+  {{> footer}}
+  <script src="/js/core.js"></script>
+</body>
 </html>

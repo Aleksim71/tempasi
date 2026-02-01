@@ -1,0 +1,254 @@
+/* public/css/pages/auth.css */
+/* Auth pages styling for Tempasi (Variant A). */
+/* Works inside the global layout: .l-page/.l-main/.l-container/.l-stack */
+
+:root {
+  --auth-max: 520px;
+  --auth-gap: 12px;
+  --auth-radius: 12px;
+  --auth-border: rgba(255, 255, 255, 0.14);
+  --auth-muted: rgba(255, 255, 255, 0.68);
+  --auth-muted-2: rgba(255, 255, 255, 0.56);
+  --auth-bg: rgba(0, 0, 0, 0.18);
+  --auth-bg-2: rgba(0, 0, 0, 0.28);
+  --auth-focus: rgba(231, 195, 110, 0.55); /* gold-ish */
+}
+
+/* Ensure the outer page wrapper can stretch.
+   We don't rely on body height; we rely on the auth main itself. */
+main.auth-page {
+  width: 100%;
+  max-width: var(--auth-max);
+  margin: 0;
+  padding: 18px 0 0;
+  display: flex;
+  flex-direction: column;
+
+  /* Key: push footer to the bottom of the viewport area. */
+  min-height: calc(100vh - 160px); /* header + paddings tolerance */
+}
+
+@media (min-height: 720px) {
+  main.auth-page {
+    min-height: calc(100vh - 200px);
+  }
+}
+
+/* Wrap */
+.auth-wrap {
+  width: 100%;
+}
+
+/* Card */
+.auth-card {
+  width: 100%;
+  border: 1px solid var(--auth-border);
+  background: linear-gradient(180deg, var(--auth-bg), var(--auth-bg-2));
+  border-radius: var(--auth-radius);
+  padding: 18px 18px 16px;
+}
+
+/* Head */
+.auth-head {
+  margin: 0 0 12px;
+}
+.auth-title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+/* Alert */
+.auth-alert {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 95, 95, 0.45);
+  background: rgba(255, 95, 95, 0.08);
+}
+
+/* Form */
+.auth-form {
+  display: grid;
+  gap: var(--auth-gap);
+}
+
+.auth-field {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Control: input + optional button (eye) */
+.auth-control {
+  position: relative;
+  width: 100%;
+}
+
+/* Inputs: make them consistent and not "huge" */
+.auth-input {
+  width: 100%;
+  height: 34px; /* <- smaller than before */
+  padding: 6px 10px;
+  padding-right: 40px; /* room for the eye button */
+  box-sizing: border-box;
+
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.auth-input:focus {
+  border-color: rgba(231, 195, 110, 0.55);
+  box-shadow: 0 0 0 3px var(--auth-focus);
+}
+
+/* Eye button: absolute -> DOES NOT affect input width */
+.auth-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+
+  cursor: pointer;
+}
+
+.auth-toggle:hover {
+  border-color: rgba(231, 195, 110, 0.45);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.auth-hint {
+  font-size: 12px;
+  color: var(--auth-muted-2);
+}
+
+.auth-hint--error {
+  color: rgba(255, 120, 120, 0.95);
+}
+
+/* Row: remember + links */
+.auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.auth-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--auth-muted);
+}
+
+.auth-check input {
+  transform: translateY(1px);
+}
+
+.auth-links {
+  font-size: 13px;
+  color: var(--auth-muted);
+}
+
+.auth-links a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(231, 195, 110, 0.35);
+}
+
+.auth-links a:hover {
+  border-bottom-color: rgba(231, 195, 110, 0.7);
+}
+
+/* Actions */
+.auth-actions {
+  margin-top: 4px;
+  display: grid;
+  gap: 10px;
+}
+
+.auth-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+
+  border: 1px solid rgba(231, 195, 110, 0.55);
+  background: rgba(231, 195, 110, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.auth-btn:hover {
+  background: rgba(231, 195, 110, 0.18);
+}
+
+/* Footer: real "footer" (push to bottom) */
+.auth-footer {
+  margin-top: auto; /* <- THIS is the key */
+  padding: 14px 0 0;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.auth-footer a {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Small screens: keep it readable */
+@media (max-width: 520px) {
+  main.auth-page {
+    min-height: auto;
+    padding-top: 10px;
+  }
+
+  .auth-title {
+    font-size: 34px;
+  }
+
+  .auth-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

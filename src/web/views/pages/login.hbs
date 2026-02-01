@@ -1,69 +1,110 @@
-{{!-- src/views/login.hbs --}}
-<section class="auth-page">
+{{!-- src/web/views/pages/login.hbs --}}
+{{#*inline "_head"}}
+<link rel="stylesheet" href="/css/pages/auth.css" />
+{{/inline}}
+
+<main class="auth-page">
   <div class="auth-wrap">
-    <div class="auth">
-      <form id="form" class="body" action="/login" method="POST" novalidate>
-        <div class="row">
-          <div class="label">Email</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-mail" /></svg>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-head">
+        <h1 class="auth-title" id="auth-title">Sign in</h1>
+      </header>
+
+      {{#if error}}
+        <div class="auth-alert" role="alert">{{error}}</div>
+      {{/if}}
+
+      <form class="auth-form" method="post" action="/login" novalidate>
+        <div class="auth-field">
+          <label class="auth-label" for="email">Email</label>
+
+          <div class="auth-control">
             <input
-              type="email"
-              name="email"
+              class="auth-input"
               id="email"
-              placeholder="you@example.com"
+              name="email"
+              type="email"
+              inputmode="email"
               autocomplete="email"
+              placeholder="you@example.com"
+              value="{{form.email}}"
+              aria-invalid="{{#if fieldErrors.email}}true{{else}}false{{/if}}"
               required
             />
           </div>
-          <div class="error" id="emailErr">Введите корректный email</div>
+
+          {{#if fieldErrors.email}}
+            <div class="auth-hint auth-hint--error">{{fieldErrors.email}}</div>
+          {{else}}
+            <div class="auth-hint">Enter your email.</div>
+          {{/if}}
         </div>
 
-        <div class="row">
-          <div class="label">Пароль</div>
-          <div class="input">
-            <svg class="icon"><use href="/icons/icons.svg#i-lock" /></svg>
+        <div class="auth-field">
+          <label class="auth-label" for="password">Password</label>
+
+          <div class="auth-control">
             <input
-              type="password"
-              name="password"
+              class="auth-input auth-password"
               id="password"
-              placeholder="••••••••"
-              minlength="6"
+              name="password"
+              type="password"
               autocomplete="current-password"
+              placeholder="••••••••"
+              aria-invalid="{{#if fieldErrors.password}}true{{else}}false{{/if}}"
+              minlength="6"
               required
             />
-            <button
-              type="button"
-              class="toggle-pass"
-              id="togglePass"
-              aria-label="Показать/скрыть пароль"
-            >
-              <svg class="icon" id="eye"><use href="/icons/icons.svg#i-eye" /></svg>
+
+            <button class="auth-toggle" type="button" aria-label="Show password" data-auth-toggle="password">
+              👁
             </button>
           </div>
-          <div class="hint">Минимум 6 символов</div>
-          <div class="error" id="passErr">Пароль слишком короткий</div>
+
+          {{#if fieldErrors.password}}
+            <div class="auth-hint auth-hint--error">{{fieldErrors.password}}</div>
+          {{else}}
+            <div class="auth-hint">At least 6 characters.</div>
+          {{/if}}
         </div>
 
-        <label class="remember">
-          <input type="checkbox" id="remember" />
-          <span>Запомнить меня</span>
-        </label>
+        <div class="auth-row">
+          <label class="auth-check">
+            <input type="checkbox" name="remember" value="1" {{#if form.remember}}checked{{/if}}>
+            Remember me
+          </label>
 
-        <div class="actions">
-          <button class="btn primary" id="submitBtn" type="submit">Войти</button>
-
-          <div class="hint">
-            Нет аккаунта?
-            <a href="/register">Зарегистрироваться</a>
+          <div class="auth-links" style="margin:0;">
+            <span>No account?</span>
+            <a href="/register">Create one</a>
           </div>
+        </div>
 
-          <div class="hint">
-            Если кнопка не работает, нажмите
-            <a href="#" id="forceLogin">Войти (демо)</a>
-          </div>
+        <div class="auth-actions">
+          <button class="auth-btn" type="submit">Sign in</button>
         </div>
       </form>
-    </div>
+    </section>
   </div>
-</section>
+
+  <footer class="auth-footer">
+    <span>© Tempasi</span>
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/support">Support</a>
+  </footer>
+</main>
+
+<script>
+(() => {
+  const btn = document.querySelector('[data-auth-toggle="password"]');
+  const input = document.getElementById('password');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => {
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    btn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
+  });
+})();
+</script>
