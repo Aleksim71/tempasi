@@ -4,7 +4,7 @@ async function grantEntitlement({ db, userId, templateSlug, orderId = null, deal
   const q = `
     INSERT INTO entitlements (user_id, template_slug, deal_type, order_id)
     VALUES ($1, $2, $3, $4)
-    ON CONFLICT (user_id, template_slug, deal_type)
+    ON CONFLICT (user_id, template_slug)
     DO UPDATE SET
       order_id = COALESCE(EXCLUDED.order_id, entitlements.order_id)
     RETURNING id, user_id, template_slug, deal_type, order_id, created_at
@@ -33,10 +33,10 @@ async function listUserEntitlements({ db, userId, dealType = 'BUY' }) {
   const q = `
     SELECT id, user_id, template_slug, deal_type, order_id, created_at
     FROM entitlements
-    WHERE user_id = $1 AND deal_type = $2
+    WHERE user_id = $1
     ORDER BY created_at DESC
   `;
-  const { rows } = await db.query(q, [userId, String(dealType).toUpperCase()]);
+  const { rows } = await db.query(q, [userId]);
   return rows;
 }
 

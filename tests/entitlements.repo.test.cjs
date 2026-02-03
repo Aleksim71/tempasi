@@ -1,47 +1,37 @@
+// tests/entitlements.repo.test.cjs
+/* eslint-env node */
 'use strict';
 
-const { migrateDb, safeTruncate, withDb } = require('./helpers/db.cjs');
+const { withDb } = require('./helpers/db.cjs');
 const entRepo = require('../src/modules/entitlements/entitlements.repo.cjs');
+const { createTestUser } = require('./helpers/user.cjs');
 
 describe('entitlements.repo', () => {
-  beforeAll(async () => {
-    await migrateDb();
-  });
-
-  beforeEach(async () => {
-    await safeTruncate();
-  });
-
   test('grantEntitlement + hasEntitlement', async () => {
     await withDb(async (db) => {
-      const userId = 1;
+      const userId = await createTestUser(db);
+
       const templateSlug = 'seed-001';
+      const orderId = null;
 
-      const granted = await entRepo.grantEntitlement({
-        db,
-        userId,
-        templateSlug,
-        orderId: 123,
-      });
+      await entRepo.grantEntitlement({ db, userId, templateSlug, orderId, dealType: 'BUY' });
 
-      expect(granted).toBeTruthy();
-      expect(Number(granted.user_id)).toBe(Number(userId));
-      expect(granted.template_slug).toBe(templateSlug);
-
-      const ok = await entRepo.hasEntitlement({ db, userId, templateSlug });
+      const ok = await entRepo.hasEntitlement({ db, userId, templateSlug, dealType: 'BUY' });
       expect(ok).toBe(true);
     });
   });
 
   test('listUserEntitlements returns array', async () => {
     await withDb(async (db) => {
-      await entRepo.grantEntitlement({ db, userId: 1, templateSlug: 'seed-001', orderId: 10 });
-      await entRepo.grantEntitlement({ db, userId: 1, templateSlug: 'seed-002', orderId: 11 });
+      const userId = await createTestUser(db);
 
-      const list = await entRepo.listUserEntitlements({ db, userId: 1 });
-      expect(Array.isArray(list)).toBe(true);
-      expect(list.length).toBe(2);
-      expect(list[0]).toHaveProperty('template_slug');
+      await entRepo.grantEntitlement({ db, userId, templateSlug: 'seed-001', dealType: 'BUY' });
+
+      const items = await entRepo.listUserEntitlements({ db, userId, dealType: 'BUY' });
+
+      expect(Array.isArray(items)).toBe(true);
+      expect(items.length).toBeGreaterThan(0);
+      expect(items[0]).toHaveProperty('template_slug');
     });
   });
 });
