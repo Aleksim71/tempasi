@@ -1,41 +1,49 @@
 // src/web/middleware/request-watchdog.js
-// ESM middleware: request watchdog (debug hangs)
+// Non-blocking request watchdog.
+//
+// Purpose:
+// - Detect "hung" or slow requests during development / troubleshooting.
+// - NEVER block the request pipeline.
+//
+// Behavior:
+// - Calls next() immediately.
+// - Starts a timer; if request not finished in thresholdMs, logs a warning.
+// - Clears timer on finish/close to avoid leaks.
+//
+// Env:
+// - TEMPASI_WATCHDOG_MS (default 2500)
 
-export function requestWatchdog({ timeoutMs = 3000, hardFail = false } = {}) {
-  const tMs = Number(timeoutMs);
-  const hf = Boolean(hardFail);
+export function requestWatchdog(req, res, next) {
+  const thresholdMs = Number(process.env.TEMPASI_WATCHDOG_MS || 2500);
 
-  return function requestWatchdogMiddleware(req, res, next) {
-    const start = Date.now();
-    const id = Math.random().toString(16).slice(2, 8);
-    const url = req.originalUrl || req.url;
+  // Safety: even if misconfigured, never block.
+  if (!Number.isFinite(thresholdMs) || thresholdMs <= 0) {
+    next();
+    return;
+  }
 
-    console.log(`[WD:${id}] -> ${req.method} ${url}`);
+  const startedAt = Date.now();
+  let done = false;
 
-    let finished = false;
+  const tid = setTimeout(() => {
+    if (done) return;
+    const ms = Date.now() - startedAt;
+     
+    console.warn(`[watchdog] slow request ${ms}ms: ${req.method} ${req.originalUrl}`);
+  }, thresholdMs);
 
-    const timer = setTimeout(() => {
-      if (finished) return;
-      const dur = Date.now() - start;
-      console.warn(`[WD:${id}] !! SLOW ${dur}ms ${req.method} ${url}`);
+  // Don't keep process alive because of watchdog timer
+  if (typeof tid.unref === 'function') tid.unref();
 
-      if (hf && !res.headersSent) {
-        res.status(504).type('text').send('504 Gateway Timeout (watchdog)\n');
-      }
-    }, tMs);
+  function cleanup() {
+    if (done) return;
+    done = true;
+    clearTimeout(tid);
+  }
 
-    function cleanup() {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      const dur = Date.now() - start;
-      console.log(`[WD:${id}] <- ${res.statusCode} ${dur}ms ${req.method} ${url}`);
-    }
+  res.on('finish', cleanup);
+  res.on('close', cleanup);
 
-    res.on('finish', cleanup);
-    res.on('close', cleanup);
-    res.on('error', cleanup);
-
-    return next();
-  };
+  // MUST be immediate
+  next();
 }

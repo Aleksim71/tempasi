@@ -5,14 +5,29 @@
 //   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware
 //   TEMPASI_SKIP_SSR=1       -> enable SSR stub (templates ok text)
 //   TEMPASI_SKIP_WATCHDOG=1  -> disable requestWatchdog
+//   TEMPASI_LOG_REQ=1        -> log req/res for debugging
+//
+// Watchdog env:
+//   TEMPASI_WATCHDOG_MS=2500
 
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'module';
 
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
 
 const require = createRequire(import.meta.url);
+
+// --------------------
+// paths
+// --------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// app.js is in /src → project root is ..
+const projectRoot = path.resolve(__dirname, '..');
+const publicDir = path.join(projectRoot, 'public');
 
 // --------------------
 // DB (CJS)
@@ -93,8 +108,6 @@ function unwrapRouterishObject(obj, ctx) {
     if (picked) return picked;
   }
 
-  // sometimes export shape is { profileRoutes: { router: ... } } etc.
-  // If object itself is already router-like (rare), accept it.
   if (isRouterLike(obj) || isMiddlewareFn(obj)) return obj;
 
   return null;
@@ -145,18 +158,14 @@ function callAsFactory(maybeFn, ctx) {
 }
 
 function pickRouter(mod, keys, label = 'router', ctx = { db }) {
-  // module itself can be router/middleware or factory
   const direct = callAsFactory(mod, ctx);
   if (direct) return direct;
 
   if (mod && typeof mod === 'object') {
-    // first: declared keys (preferred)
     for (const k of keys) {
       const picked = callAsFactory(mod[k], ctx);
       if (picked) return picked;
     }
-
-    // then: conventional names
     for (const k of ['router', 'routes', 'default', 'middleware', 'handler']) {
       const picked = callAsFactory(mod[k], ctx);
       if (picked) return picked;
@@ -170,10 +179,8 @@ function pickRouter(mod, keys, label = 'router', ctx = { db }) {
 function resolveAuthMiddleware(maybeInitAuth) {
   if (typeof maybeInitAuth !== 'function') return null;
 
-  // already middleware/router
   if (isMiddlewareFn(maybeInitAuth) || isRouterLike(maybeInitAuth)) return maybeInitAuth;
 
-  // factory: () => middleware/router or () => { middleware }
   try {
     const produced = maybeInitAuth();
     if (isMiddlewareFn(produced) || isRouterLike(produced)) return produced;
@@ -192,7 +199,6 @@ function resolveAuthMiddleware(maybeInitAuth) {
 }
 
 function attachDb(dbInstance) {
-  // ensure dbInstance always has query
   const normalized = normalizeDb(dbInstance);
   return (req, _res, next) => {
     req.db = normalized;
@@ -215,18 +221,27 @@ function makeSsrStubRouter() {
 // --------------------
 const app = express();
 
+// ultra-early request logger (optional)
+if (process.env.TEMPASI_LOG_REQ) {
+  app.use((req, res, next) => {
+    console.log('[REQ]', req.method, req.url);
+    res.on('finish', () => console.log('[RES]', req.method, req.url, res.statusCode));
+    next();
+  });
+}
+
 // health first
 app.get('/__health', (_req, res) => res.status(200).json({ ok: true }));
 
-// watchdog (non-blocking)
-if (!process.env.TEMPASI_SKIP_WATCHDOG) {
-  app.use(requestWatchdog);
-}
+// static MUST be before any auth/watchdog/SSR
+app.use('/css', express.static(path.join(publicDir, 'css'), { fallthrough: false }));
+app.use('/icons', express.static(path.join(publicDir, 'icons'), { fallthrough: false }));
+app.use(express.static(publicDir, { fallthrough: true }));
 
-// ✅ DB MUST BE AVAILABLE BEFORE AUTH
+// DB available before auth/routers
 app.use(attachDb(db));
 
-// auth (optional)
+// auth (optional) — can protect APIs and/or pages depending on middleware logic
 if (!process.env.TEMPASI_SKIP_AUTH) {
   const authMw = resolveAuthMiddleware(initAuth);
   if (!authMw) {
@@ -235,6 +250,13 @@ if (!process.env.TEMPASI_SKIP_AUTH) {
     );
   }
   app.use(authMw);
+}
+
+// watchdog — ONLY for API + downloads (never for SSR pages)
+// (and can be disabled globally)
+if (!process.env.TEMPASI_SKIP_WATCHDOG) {
+  app.use('/api', requestWatchdog);
+  app.use('/downloads', requestWatchdog);
 }
 
 // ---- resolved API routers (ctx: {db}) ----
@@ -283,7 +305,6 @@ if (process.env.TEMPASI_SKIP_SSR) {
     res.status(200).type('text').send('Cabinet OK (WIP)');
   });
 
-  // ---- resolved SSR pages router (ctx: {db, webApp}) ----
   const profileRouter = pickRouter(
     profilePagesMod,
     ['profileRouter', 'profileRoutes', 'router', 'routes'],
@@ -291,7 +312,6 @@ if (process.env.TEMPASI_SKIP_SSR) {
     { db, webApp },
   );
 
-  // mount pages router inside webApp
   webApp.use(profileRouter);
 
   app.use(webApp);
