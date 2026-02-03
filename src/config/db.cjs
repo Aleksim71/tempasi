@@ -30,7 +30,7 @@ function hasPgEnv() {
 }
 
 function makeConfig() {
-  const databaseUrl = process.env.DATABASE_URL || '';
+  const databaseUrl = ((process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) ? (process.env.DATABASE_URL_TEST || process.env.DATABASE_URL) : process.env.DATABASE_URL) || '';
 
   // 1) PG* env → TCP
   if (hasPgEnv()) {

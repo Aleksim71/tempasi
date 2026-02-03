@@ -1,116 +1,90 @@
+// tests/helpers/spawnServer.cjs
+/* eslint-env node */
 'use strict';
 
-const { spawn } = require('child_process');
-const path = require('path');
 const http = require('http');
+const path = require('path');
+const { pathToFileURL } = require('url');
 
-function httpGetJson(url, timeoutMs = 1500) {
-  return new Promise((resolve, reject) => {
-    const req = http.get(url, { timeout: timeoutMs }, (res) => {
-      let data = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => (data += c));
-      res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, body: data });
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-    req.on('timeout', () => {
-      req.destroy(new Error('timeout'));
-    });
-    req.on('error', reject);
-  });
-}
+/**
+ * Start real Tempasi server for API e2e tests, IN-PROCESS (no nodemon, no child_process).
+ *
+ * Why:
+ * - avoids hanging on logs / nodemon restarts
+ * - avoids port collisions with your dev server (:3000)
+ * - makes supertest stable + fast
+ *
+ * Usage:
+ *   const { startServer } = require('./helpers/spawnServer.cjs');
+ *   srv = await startServer({ databaseUrlTest: process.env.DATABASE_URL_TEST });
+ *   await request(srv.baseUrl).get('/__health')
+ *   await srv.stop()
+ */
 
-async function waitForHealth(baseUrl, totalMs = 8000) {
-  const startedAt = Date.now();
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    try {
-      const r = await httpGetJson(`${baseUrl}/__health`, 1200);
-      if (r.status === 200) return true;
-    } catch (_) {}
-
-    if (Date.now() - startedAt > totalMs) {
-      throw new Error(`[spawnServer] healthcheck timeout: ${baseUrl}/__health`);
-    }
-    await new Promise((r) => setTimeout(r, 200));
+function hardUnsetEnv(keys) {
+  for (const k of keys) {
+    if (process.env[k] !== undefined) delete process.env[k];
   }
 }
 
-async function startServer({ databaseUrlTest }) {
-  const cwd = path.join(process.cwd());
+async function importAppEsm() {
+  // project root is process.cwd() when running jest from repo root
+  const appPath = path.resolve(process.cwd(), 'src/app.js');
+  const appUrl = pathToFileURL(appPath).href;
 
-  // Запускаем через node, чтобы nodemon не мешал тестам
-  const child = spawn(process.execPath, ['src/server.js'], {
-    cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      TEMPASI_SKIP_SSR: '1',
-      HOST: '127.0.0.1',
-      PORT: '0',
-      DATABASE_URL: databaseUrlTest,
-    },
-  });
+  // Dynamic ESM import from CJS
+  const mod = await import(appUrl);
+  const app = mod && (mod.default || mod.app || mod);
+  if (!app) {
+    throw new Error(`[spawnServer] Cannot import app from ${appPath}`);
+  }
+  return app;
+}
 
-  let out = '';
-  let baseUrl = '';
-  const reListen = /\[tempasi\] listening on http:\/\/([^\s:]+):(\d+)/;
+async function startServer(opts = {}) {
+  const { databaseUrlTest } = opts;
 
-  child.stdout.on('data', (d) => {
-    out += String(d);
-    const m = String(d).match(reListen);
-    if (m) {
-      const host = m[1];
-      const port = Number(m[2]);
-      baseUrl = `http://${host}:${port}`;
-    }
-  });
+  // Make test env deterministic
+  process.env.NODE_ENV = 'test';
+  process.env.TEMPASI_SKIP_WATCHDOG = '1'; // watchdog can hang tests if something is weird
+  // (auth MUST stay enabled for /api/profile 401 tests)
+  // process.env.TEMPASI_SKIP_AUTH = '1'; // do NOT set in tests unless you intentionally bypass auth
 
-  child.stderr.on('data', (d) => {
-    out += String(d);
-  });
+  // Ensure DB selection is correct (db.cjs has priority: PG* env > DATABASE_URL)
+  // We want DATABASE_URL to be used in tests.
+  hardUnsetEnv(['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE', 'PGSSLMODE']);
 
-  // ждём пока распечатает listen
-  const started = await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`[spawnServer] did not start (no listen line). Output:\n${out}`));
-    }, 8000);
-
-    child.on('exit', (code, signal) => {
-      clearTimeout(timer);
-      reject(new Error(`Server exited early (code=${code}, signal=${signal}). Output:\n${out}`));
-    });
-
-    const tick = setInterval(() => {
-      if (baseUrl) {
-        clearInterval(tick);
-        clearTimeout(timer);
-        resolve(true);
-      }
-    }, 50);
-  });
-
-  if (!started) {
-    child.kill('SIGTERM');
-    throw new Error(`[spawnServer] failed to start. Output:\n${out}`);
+  if (!databaseUrlTest) {
+    throw new Error('[spawnServer] startServer requires { databaseUrlTest }');
   }
 
-  // И ждём health
-  await waitForHealth(baseUrl);
+  // Your code reads DATABASE_URL, while tests pass DATABASE_URL_TEST.
+  // So map it.
+  process.env.DATABASE_URL = databaseUrlTest;
+
+  const app = await importAppEsm();
+
+  const server = http.createServer(app);
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    // port 0 => random free port
+    server.listen(0, '127.0.0.1', resolve);
+  });
+
+  const addr = server.address();
+  const port = addr && typeof addr === 'object' ? addr.port : null;
+  if (!port) {
+    throw new Error('[spawnServer] Cannot determine listening port');
+  }
+
+  const baseUrl = `http://127.0.0.1:${port}`;
 
   return {
     baseUrl,
-    child,
+    port,
     stop: async () => {
-      if (!child || child.killed) return;
-      child.kill('SIGTERM');
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((resolve) => server.close(resolve));
     },
   };
 }
