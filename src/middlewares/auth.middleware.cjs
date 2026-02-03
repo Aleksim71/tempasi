@@ -1,7 +1,12 @@
 'use strict';
 
+// src/middlewares/auth.middleware.cjs
+// CJS auth middleware + cookie helpers.
+// MUST NEVER HANG: always next().
+
 const crypto = require('crypto');
 
+// Pool helper (same pattern used elsewhere)
 let getPool;
 try {
   ({ getPool } = require('../../scripts/db.pool.cjs'));
@@ -10,145 +15,153 @@ try {
     ({ getPool } = require('../db.pool.cjs'));
   } catch (e2) {
     const err = new Error(
-      `DB_POOL_HELPER_NOT_FOUND: tried ../../scripts/db.pool.cjs and ../db.pool.cjs; last: ${e2?.message || e2}`
+      `DB_POOL_HELPER_NOT_FOUND: tried ../../scripts/db.pool.cjs and ../db.pool.cjs; last: ${e2?.message || e2}`,
     );
     err.cause = e2;
     throw err;
   }
 }
 
-const COOKIE_NAME = 'sid';
-
-function isProd() {
-  return process.env.NODE_ENV === 'production';
-}
-
-function devAuthEnabled() {
-  return !isProd() && (process.env.DEV_AUTH === '1' || process.env.ALLOW_DEV_USER === '1');
-}
-
-function getDevUserIdFromReq(req) {
-  const raw =
-    (typeof req.get === 'function' ? req.get('x-dev-user-id') : req.headers['x-dev-user-id']) || '';
-  const v = String(raw).trim();
-  if (!v) return null;
-
-  const id = Number(v);
-  if (!Number.isFinite(id) || id <= 0) return null;
-
-  return id;
-}
-
+// ---- cookie helpers ----
 function newSessionId() {
   return crypto.randomBytes(32).toString('base64url');
 }
 
 function setSessionCookie(res, sid, opts = {}) {
   const maxAgeSeconds = Number(opts.maxAgeSeconds || 60 * 60 * 24 * 30);
-
-  res.cookie(COOKIE_NAME, sid, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProd(),
-    path: '/',
-    maxAge: maxAgeSeconds * 1000,
-  });
+  const parts = [
+    `sid=${encodeURIComponent(String(sid))}`,
+    `Max-Age=${Math.max(0, maxAgeSeconds)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+  ];
+  if (process.env.NODE_ENV === 'production') parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
 }
 
 function clearSessionCookie(res) {
-  res.cookie(COOKIE_NAME, '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProd(),
-    path: '/',
-    maxAge: 0,
-  });
+  const parts = [
+    'sid=',
+    'Max-Age=0',
+    'Path=/',
+    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+    'HttpOnly',
+    'SameSite=Lax',
+  ];
+  if (process.env.NODE_ENV === 'production') parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
 }
 
-function getSidFromReq(req) {
+function parseSid(req) {
   const cookie = String(req.headers.cookie || '');
-  const m = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
-  if (!m) return '';
-  try {
-    return decodeURIComponent(m[1]);
-  } catch {
-    return m[1];
-  }
+  const sidMatch = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
+  return sidMatch ? decodeURIComponent(sidMatch[1]) : '';
 }
 
-async function loadUserFromSession(req) {
-  if (req.user !== undefined) return;
+// ---- timeout helper (prevents DB waits from stalling requests) ----
+const OP_TIMEOUT_MS = Number(process.env.AUTH_OP_TIMEOUT_MS || 2500);
 
-  req.user = null;
+function withTimeout(promise, ms, label) {
+  let t;
+  const timeout = new Promise((_resolve, reject) => {
+    t = setTimeout(() => {
+      const err = new Error(`AUTH_TIMEOUT: ${label} exceeded ${ms}ms`);
+      err.code = 'AUTH_TIMEOUT';
+      reject(err);
+    }, ms);
+    if (t && typeof t.unref === 'function') t.unref();
+  });
 
-  const sid = getSidFromReq(req);
-  if (!sid) return;
-
-  const pool = getPool();
-  const q = `
-    SELECT user_id
-    FROM sessions
-    WHERE id = $1
-      AND (expires_at IS NULL OR expires_at > NOW())
-    LIMIT 1
-  `;
-  const r = await pool.query(q, [sid]);
-  const row = r.rows && r.rows[0];
-  if (!row) return;
-
-  const id = Number(row.user_id);
-  if (!Number.isFinite(id) || id <= 0) return;
-
-  req.user = { id };
-}
-
-async function initAuth(req, res, next) {
-  try {
-    await loadUserFromSession(req);
-    res.locals.user = req.user;
-    return next();
-  } catch (err) {
-    return next(err);
-  }
+  return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
 }
 
 /**
- * Gate middleware.
- * DEV override is handled HERE to guarantee it always works.
+ * initAuth() -> middleware
+ * Sets:
+ *   req.user (object|null)
+ *   req.userId (number|null)
+ *
+ * Key hardening:
+ * - First resolves userId from sessions table ONLY (fast + stable).
+ * - Then best-effort join to users for full req.user (optional).
+ * - NEVER throws outward, NEVER hangs.
  */
-async function requireAuth(req, res, next) {
-  try {
-    // ✅ DEV AUTH OVERRIDE — FIRST
-    if (devAuthEnabled()) {
-      const devId = getDevUserIdFromReq(req);
-      if (devId) {
-        req.user = { id: devId };
-        return next();
+function initAuth() {
+  return async function authMiddleware(req, _res, next) {
+    try {
+      // Always initialize
+      req.user = null;
+      req.userId = null;
+
+      const sid = parseSid(req);
+      if (!sid) return next(); // FAST PATH: no cookie -> no DB
+
+      const pool = getPool();
+
+      // 1) resolve user_id from sessions (no JOIN)
+      const qSid = pool.query(
+        `
+        SELECT user_id
+        FROM sessions
+        WHERE id = $1
+          AND expires_at > NOW()
+        LIMIT 1
+        `,
+        [sid],
+      );
+
+      const sidRes = await withTimeout(qSid, OP_TIMEOUT_MS, 'db:sessions lookup');
+      const userId = sidRes?.rows?.[0]?.user_id;
+
+      if (!userId) return next(); // session not found/expired
+
+      req.userId = Number(userId);
+
+      // 2) best-effort join to users (optional; do NOT block auth if users differs in tests)
+      try {
+        const qUser = pool.query(
+          `
+          SELECT id, email, role, status
+          FROM users
+          WHERE id = $1
+          LIMIT 1
+          `,
+          [userId],
+        );
+
+        const { rows } = await withTimeout(qUser, OP_TIMEOUT_MS, 'db:users lookup');
+        if (rows && rows[0]) req.user = rows[0];
+      } catch {
+        // ignore user lookup failures — keep req.userId
       }
+
+      return next();
+    } catch (_err) {
+      // Critical rule: never block request chain.
+      // Treat as anonymous and continue.
+      req.user = null;
+      req.userId = null;
+      return next();
     }
+  };
+}
 
-    // normal flow
-    await loadUserFromSession(req);
-
-    if (!req.user) {
-      return res.status(401).json({
-        error: {
-          code: 'AUTH_REQUIRED',
-          message: 'Authentication required',
-        },
-      });
-    }
-
-    return next();
-  } catch (err) {
-    return next(err);
-  }
+/**
+ * requireAuth middleware for API routes
+ * Responds 401 JSON (no throw).
+ */
+function requireAuth(req, res, next) {
+  const uid = (req.user && req.user.id) || req.userId;
+  if (uid) return next();
+  return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Login required' } });
 }
 
 module.exports = {
+  initAuth,
+  requireAuth,
+
   newSessionId,
   setSessionCookie,
   clearSessionCookie,
-  initAuth,
-  requireAuth,
 };

@@ -1,69 +1,39 @@
 // src/web/middleware/require-auth.web.js
-// ESM middleware for SSR routes (webApp)
+// ESM middleware for SSR pages: redirects to /login when user is not authenticated.
 //
-// Auth model:
-// - cookie: sid=<sessionId>
-// - table: sessions(id, user_id, expires_at, ...)
-
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-
-// DB pool helper (same approach as src/modules/auth/auth.routes.cjs)
-let getPool;
-try {
-  ({ getPool } = require('../../../scripts/db.pool.cjs'));
-} catch (e1) {
-  try {
-    ({ getPool } = require('../../db.pool.cjs'));
-  } catch (e2) {
-    const err = new Error(
-      `DB_POOL_HELPER_NOT_FOUND: tried ../../../scripts/db.pool.cjs and ../../db.pool.cjs; last: ${
-        e2?.message || e2
-      }`,
-    );
-    err.cause = e2;
-    throw err;
-  }
-}
-
-function parseSidFromCookieHeader(cookieHeader) {
-  const cookie = String(cookieHeader || '');
-  const m = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
+// Dev toggle:
+//   TEMPASI_SKIP_AUTH=1  -> bypass this guard (useful for SSR development)
 
 export function requireAuthWeb(options = {}) {
   const loginPath = options.loginPath || '/login';
 
-  return async function requireAuthWebMiddleware(req, res, next) {
-    try {
-      const sid = parseSidFromCookieHeader(req.headers.cookie);
+  return function requireAuthWebMiddleware(req, res, next) {
+    // ✅ DEV BYPASS (critical for local SSR work)
+    if (process.env.TEMPASI_SKIP_AUTH) return next();
 
-      if (!sid) {
-        return res.redirect(302, loginPath);
-      }
+    // "Logged in" heuristics (supports multiple auth setups)
+    const isAuthed = Boolean(
+      req.user ||
+      req.auth?.user ||
+      req.auth?.userId ||
+      req.session?.user ||
+      req.session?.userId ||
+      req.session?.uid,
+    );
 
-      const pool = getPool();
-      const { rows } = await pool.query(
-        `
-        SELECT user_id
-        FROM sessions
-        WHERE id = $1
-          AND expires_at > NOW()
-        LIMIT 1
-        `,
-        [sid],
-      );
+    if (isAuthed) return next();
 
-      if (!rows || rows.length === 0) {
-        return res.redirect(302, loginPath);
-      }
+    // If this is an API/XHR call, prefer 401 instead of redirect
+    const accept = String(req.headers?.accept || '');
+    const wantsJson =
+      accept.includes('application/json') ||
+      req.xhr ||
+      String(req.headers?.['x-requested-with'] || '').toLowerCase() === 'xmlhttprequest';
 
-      req.userId = rows[0].user_id;
-      return next();
-    } catch (err) {
-      return next(err);
+    if (wantsJson) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
     }
+
+    return res.redirect(loginPath);
   };
 }
