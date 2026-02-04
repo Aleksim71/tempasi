@@ -1,13 +1,14 @@
 {{!-- src/web/views/pages/login.hbs --}}
-{{#*inline "_head"}}
-<link rel="stylesheet" href="/css/pages/auth.css" />
-{{/inline}}
 
 <main class="auth-page">
   <div class="auth-wrap">
     <section class="auth-card" aria-labelledby="auth-title">
       <header class="auth-head">
-        <h1 class="auth-title" id="auth-title">Sign in</h1>
+        <div class="auth-switch" id="auth-title" aria-label="Auth mode">
+          <a class="auth-switch__link is-active" href="/login" aria-current="page">Sign in</a>
+          <span class="auth-switch__sep" aria-hidden="true"></span>
+          <a class="auth-switch__link" href="/register">Register</a>
+        </div>
       </header>
 
       {{#if error}}
@@ -17,67 +18,45 @@
       <form class="auth-form" method="post" action="/login" novalidate>
         <div class="auth-field">
           <label class="auth-label" for="email">Email</label>
-
-          <div class="auth-control">
-            <input
-              class="auth-input"
-              id="email"
-              name="email"
-              type="email"
-              inputmode="email"
-              autocomplete="email"
-              placeholder="you@example.com"
-              value="{{form.email}}"
-              aria-invalid="{{#if fieldErrors.email}}true{{else}}false{{/if}}"
-              required
-            />
-          </div>
-
-          {{#if fieldErrors.email}}
-            <div class="auth-hint auth-hint--error">{{fieldErrors.email}}</div>
-          {{else}}
-            <div class="auth-hint">Enter your email.</div>
-          {{/if}}
+          <input
+            class="auth-input"
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            value="{{form.email}}"
+            required
+          />
+          <p class="auth-hint">Enter your email.</p>
         </div>
 
         <div class="auth-field">
           <label class="auth-label" for="password">Password</label>
-
-          <div class="auth-control">
+          <div class="auth-password">
             <input
-              class="auth-input auth-password"
+              class="auth-input"
               id="password"
               name="password"
               type="password"
               autocomplete="current-password"
               placeholder="••••••••"
-              aria-invalid="{{#if fieldErrors.password}}true{{else}}false{{/if}}"
-              minlength="6"
               required
             />
-
-            <button class="auth-toggle" type="button" aria-label="Show password" data-auth-toggle="password">
+            <button class="auth-eye" type="button" aria-label="Show password" title="Show password">
               👁
             </button>
           </div>
-
-          {{#if fieldErrors.password}}
-            <div class="auth-hint auth-hint--error">{{fieldErrors.password}}</div>
-          {{else}}
-            <div class="auth-hint">At least 6 characters.</div>
-          {{/if}}
+          <p class="auth-hint">At least 6 characters.</p>
         </div>
 
         <div class="auth-row">
           <label class="auth-check">
-            <input type="checkbox" name="remember" value="1" {{#if form.remember}}checked{{/if}}>
+            <input type="checkbox" name="remember" value="1" {{#if form.remember}}checked{{/if}} />
             Remember me
           </label>
 
-          <div class="auth-links" style="margin:0;">
-            <span>No account?</span>
-            <a href="/register">Create one</a>
-          </div>
+          <a href="/register" class="auth-link">No account? Create one</a>
         </div>
 
         <div class="auth-actions">
@@ -86,25 +65,19 @@
       </form>
     </section>
   </div>
-
-  <footer class="auth-footer">
-    <span>© Tempasi</span>
-    <a href="/terms">Terms</a>
-    <a href="/privacy">Privacy</a>
-    <a href="/support">Support</a>
-  </footer>
 </main>
 
 <script>
-(() => {
-  const btn = document.querySelector('[data-auth-toggle="password"]');
-  const input = document.getElementById('password');
-  if (!btn || !input) return;
+  // minimal client helper (optional): toggle password visibility
+  (() => {
+    const eye = document.querySelector('.auth-eye');
+    const input = document.querySelector('#password');
+    if (!eye || !input) return;
 
-  btn.addEventListener('click', () => {
-    const isPass = input.type === 'password';
-    input.type = isPass ? 'text' : 'password';
-    btn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
-  });
-})();
+    eye.addEventListener('click', () => {
+      const next = input.type === 'password' ? 'text' : 'password';
+      input.type = next;
+      eye.setAttribute('aria-label', next === 'text' ? 'Hide password' : 'Show password');
+    });
+  })();
 </script>

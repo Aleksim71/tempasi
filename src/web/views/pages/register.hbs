@@ -1,14 +1,14 @@
 {{!-- src/web/views/pages/register.hbs --}}
-{{#*inline "_head"}}
-<link rel="stylesheet" href="/css/pages/auth.css" />
-{{/inline}}
-
 
 <main class="auth-page">
   <div class="auth-wrap">
     <section class="auth-card" aria-labelledby="auth-title">
       <header class="auth-head">
-        <h1 class="auth-title" id="auth-title">Create account</h1>
+        <div class="auth-switch" id="auth-title" aria-label="Auth mode">
+          <a class="auth-switch__link" href="/login">Sign in</a>
+          <span class="auth-switch__sep" aria-hidden="true"></span>
+          <a class="auth-switch__link is-active" href="/register" aria-current="page">Register</a>
+        </div>
       </header>
 
       {{#if error}}
@@ -17,111 +17,63 @@
 
       <form class="auth-form" method="post" action="/register" novalidate>
         <div class="auth-field">
-          <label class="auth-label" for="name">Full name</label>
-
-          <div class="auth-control">
-            <input
-              class="auth-input"
-              id="name"
-              name="name"
-              type="text"
-              autocomplete="name"
-              placeholder="Your name"
-              value="{{form.name}}"
-              aria-invalid="{{#if fieldErrors.name}}true{{else}}false{{/if}}"
-            />
-          </div>
-
-          {{#if fieldErrors.name}}
-            <div class="auth-hint auth-hint--error">{{fieldErrors.name}}</div>
-          {{else}}
-            <div class="auth-hint">Optional.</div>
-          {{/if}}
-        </div>
-
-        <div class="auth-field">
           <label class="auth-label" for="email">Email</label>
-
-          <div class="auth-control">
-            <input
-              class="auth-input"
-              id="email"
-              name="email"
-              type="email"
-              inputmode="email"
-              autocomplete="email"
-              placeholder="you@example.com"
-              value="{{form.email}}"
-              aria-invalid="{{#if fieldErrors.email}}true{{else}}false{{/if}}"
-              required
-            />
-          </div>
-
-          {{#if fieldErrors.email}}
-            <div class="auth-hint auth-hint--error">{{fieldErrors.email}}</div>
-          {{else}}
-            <div class="auth-hint">Enter your email.</div>
-          {{/if}}
+          <input
+            class="auth-input"
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            value="{{form.email}}"
+            required
+          />
+          <p class="auth-hint">We’ll send a confirmation later (MVP: no email).</p>
         </div>
 
         <div class="auth-field">
           <label class="auth-label" for="password">Password</label>
-
-          <div class="auth-control">
+          <div class="auth-password">
             <input
-              class="auth-input auth-password"
+              class="auth-input"
               id="password"
               name="password"
               type="password"
               autocomplete="new-password"
               placeholder="••••••••"
-              aria-invalid="{{#if fieldErrors.password}}true{{else}}false{{/if}}"
-              minlength="6"
               required
             />
-
-            <button class="auth-toggle" type="button" aria-label="Show password" data-auth-toggle="password">
+            <button class="auth-eye" type="button" aria-label="Show password" title="Show password">
               👁
             </button>
           </div>
+          <p class="auth-hint">At least 6 characters.</p>
+        </div>
 
-          {{#if fieldErrors.password}}
-            <div class="auth-hint auth-hint--error">{{fieldErrors.password}}</div>
-          {{else}}
-            <div class="auth-hint">At least 6 characters.</div>
-          {{/if}}
+        <div class="auth-row">
+          <span style="opacity:.75; font-size:13px;">Already have an account?</span>
+          <a href="/login" class="auth-link">Sign in</a>
         </div>
 
         <div class="auth-actions">
           <button class="auth-btn" type="submit">Create account</button>
-
-          <div class="auth-links">
-            <span>Already have an account?</span>
-            <a href="/login">Sign in</a>
-          </div>
         </div>
       </form>
     </section>
   </div>
-
-  <footer class="auth-footer">
-    <span>© Tempasi</span>
-    <a href="/terms">Terms</a>
-    <a href="/privacy">Privacy</a>
-    <a href="/support">Support</a>
-  </footer>
 </main>
 
 <script>
-(() => {
-  const btn = document.querySelector('[data-auth-toggle="password"]');
-  const input = document.getElementById('password');
-  if (!btn || !input) return;
+  // minimal client helper (optional): toggle password visibility
+  (() => {
+    const eye = document.querySelector('.auth-eye');
+    const input = document.querySelector('#password');
+    if (!eye || !input) return;
 
-  btn.addEventListener('click', () => {
-    const isPass = input.type === 'password';
-    input.type = isPass ? 'text' : 'password';
-    btn.setAttribute('aria-label', isPass ? 'Hide password' : 'Show password');
-  });
-})();
+    eye.addEventListener('click', () => {
+      const next = input.type === 'password' ? 'text' : 'password';
+      input.type = next;
+      eye.setAttribute('aria-label', next === 'text' ? 'Hide password' : 'Show password');
+    });
+  })();
 </script>
