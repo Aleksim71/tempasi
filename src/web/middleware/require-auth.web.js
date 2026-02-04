@@ -4,8 +4,23 @@
 // Dev toggle:
 //   TEMPASI_SKIP_AUTH=1  -> bypass this guard (useful for SSR development)
 
+function safeNextPath(input) {
+  const raw = String(input || '').trim();
+
+  if (!raw) return '';
+  if (raw.length > 512) return '';
+  if (!raw.startsWith('/')) return '';
+  if (raw.startsWith('//')) return '';
+  if (raw.includes('\\')) return '';
+  if (raw.toLowerCase().includes('http://')) return '';
+  if (raw.toLowerCase().includes('https://')) return '';
+
+  return raw;
+}
+
 export function requireAuthWeb(options = {}) {
   const loginPath = options.loginPath || '/login';
+  const defaultNext = options.defaultNext || '/templates';
 
   return function requireAuthWebMiddleware(req, res, next) {
     // ✅ DEV BYPASS (critical for local SSR work)
@@ -18,7 +33,8 @@ export function requireAuthWeb(options = {}) {
       req.auth?.userId ||
       req.session?.user ||
       req.session?.userId ||
-      req.session?.uid,
+      req.session?.uid ||
+      req.userId,
     );
 
     if (isAuthed) return next();
@@ -31,9 +47,21 @@ export function requireAuthWeb(options = {}) {
       String(req.headers?.['x-requested-with'] || '').toLowerCase() === 'xmlhttprequest';
 
     if (wantsJson) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
+      return res.status(401).json({
+        ok: false,
+        error: {
+          code: 'AUTH_REQUIRED',
+          message: 'Нужна авторизация.',
+          field: null,
+          meta: {},
+        },
+      });
     }
 
-    return res.redirect(loginPath);
+    const original = req.originalUrl || req.url || '';
+    const safeNext = safeNextPath(original) || safeNextPath(defaultNext) || '/templates';
+
+    const sep = loginPath.includes('?') ? '&' : '?';
+    return res.redirect(302, `${loginPath}${sep}next=${encodeURIComponent(safeNext)}`);
   };
 }

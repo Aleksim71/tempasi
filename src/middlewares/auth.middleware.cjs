@@ -118,7 +118,7 @@ function initAuth() {
 
       req.userId = Number(userId);
 
-      // 2) best-effort join to users (optional; do NOT block auth if users differs in tests)
+      // 2) best-effort lookup user (optional)
       try {
         const qUser = pool.query(
           `
@@ -139,7 +139,6 @@ function initAuth() {
       return next();
     } catch (_err) {
       // Critical rule: never block request chain.
-      // Treat as anonymous and continue.
       req.user = null;
       req.userId = null;
       return next();
@@ -149,12 +148,21 @@ function initAuth() {
 
 /**
  * requireAuth middleware for API routes
- * Responds 401 JSON (no throw).
+ * Responds 401 JSON (stable error envelope).
  */
 function requireAuth(req, res, next) {
   const uid = (req.user && req.user.id) || req.userId;
   if (uid) return next();
-  return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Login required' } });
+
+  return res.status(401).json({
+    ok: false,
+    error: {
+      code: 'AUTH_REQUIRED',
+      message: 'Нужна авторизация.',
+      field: null,
+      meta: {},
+    },
+  });
 }
 
 module.exports = {

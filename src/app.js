@@ -17,6 +17,7 @@ import { createRequire } from 'module';
 
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
+import { requireAuthWeb } from './web/middleware/require-auth.web.js';
 
 const require = createRequire(import.meta.url);
 
@@ -37,13 +38,6 @@ const dbMod = require('./config/db.cjs');
 /**
  * Normalize anything exported by db.cjs to a Pool/Client-like object
  * that has `.query(sql, params)`.
- *
- * Common export shapes we handle:
- * - module.exports = pool
- * - module.exports = { pool }
- * - module.exports = { db }
- * - module.exports = { POOL }
- * - module.exports = { default: pool }
  */
 function normalizeDb(m) {
   const candidates = [
@@ -88,19 +82,16 @@ const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // ap
 // helpers
 // --------------------
 function isMiddlewareFn(fn) {
-  // (req,res,next) or (err,req,res,next)
   return typeof fn === 'function' && fn.length >= 3;
 }
 
 function isRouterLike(x) {
-  // express.Router() is a callable function with .use/.get/etc
   return typeof x === 'function' && typeof x.use === 'function';
 }
 
 function unwrapRouterishObject(obj, ctx) {
   if (!obj || typeof obj !== 'object') return null;
 
-  // common keys that might contain router or factory
   const keys = ['router', 'routes', 'middleware', 'handler', 'default'];
   for (const k of keys) {
     const v = obj[k];
@@ -109,49 +100,38 @@ function unwrapRouterishObject(obj, ctx) {
   }
 
   if (isRouterLike(obj) || isMiddlewareFn(obj)) return obj;
-
   return null;
 }
 
 function callAsFactory(maybeFn, ctx) {
   if (!maybeFn) return null;
 
-  // 1) already router/middleware
   if (isRouterLike(maybeFn) || isMiddlewareFn(maybeFn)) return maybeFn;
 
-  // 2) object wrapper that contains router/factory
   if (typeof maybeFn === 'object') {
     const unwrapped = unwrapRouterishObject(maybeFn, ctx);
     if (unwrapped) return unwrapped;
     return null;
   }
 
-  // 3) factory case: fn({db}) → router
   if (typeof maybeFn === 'function') {
     try {
       const produced = maybeFn(ctx);
       if (isRouterLike(produced) || isMiddlewareFn(produced)) return produced;
-
       if (produced && typeof produced === 'object') {
         const unwrapped = unwrapRouterishObject(produced, ctx);
         if (unwrapped) return unwrapped;
       }
-    } catch (_e) {
-      // continue
-    }
+    } catch (_e) {}
 
-    // 4) factory expects db directly: fn(db) → router
     try {
       const produced2 = maybeFn(ctx.db);
       if (isRouterLike(produced2) || isMiddlewareFn(produced2)) return produced2;
-
       if (produced2 && typeof produced2 === 'object') {
         const unwrapped2 = unwrapRouterishObject(produced2, ctx);
         if (unwrapped2) return unwrapped2;
       }
-    } catch (_e) {
-      // continue
-    }
+    } catch (_e) {}
   }
 
   return null;
@@ -191,9 +171,7 @@ function resolveAuthMiddleware(maybeInitAuth) {
       if (isMiddlewareFn(produced.auth) || isRouterLike(produced.auth)) return produced.auth;
       if (isMiddlewareFn(produced.router) || isRouterLike(produced.router)) return produced.router;
     }
-  } catch (_e) {
-    // ignore
-  }
+  } catch (_e) {}
 
   return null;
 }
@@ -213,6 +191,7 @@ function makeSsrStubRouter() {
     res.status(200).type('text').send('Template OK (SSR stub)'),
   );
   r.get('/cabinet', (_req, res) => res.status(200).type('text').send('Cabinet OK (SSR stub)'));
+  r.get('/profile', (_req, res) => res.status(200).type('text').send('Profile OK (SSR stub)'));
   return r;
 }
 
@@ -241,7 +220,7 @@ app.use(express.static(publicDir, { fallthrough: true }));
 // DB available before auth/routers
 app.use(attachDb(db));
 
-// auth (optional) — can protect APIs and/or pages depending on middleware logic
+// auth (optional)
 if (!process.env.TEMPASI_SKIP_AUTH) {
   const authMw = resolveAuthMiddleware(initAuth);
   if (!authMw) {
@@ -253,7 +232,6 @@ if (!process.env.TEMPASI_SKIP_AUTH) {
 }
 
 // watchdog — ONLY for API + downloads (never for SSR pages)
-// (and can be disabled globally)
 if (!process.env.TEMPASI_SKIP_WATCHDOG) {
   app.use('/api', requestWatchdog);
   app.use('/downloads', requestWatchdog);
@@ -266,21 +244,18 @@ const authRouter = pickRouter(
   'auth router',
   { db },
 );
-
 const ordersRouter = pickRouter(
   ordersMod,
   ['ordersRouter', 'ordersRoutes', 'router', 'routes'],
   'orders router',
   { db },
 );
-
 const downloadsRouter = pickRouter(
   downloadsMod,
   ['downloadsRouter', 'downloadsRoutes', 'router', 'routes'],
   'downloads router',
   { db },
 );
-
 const profileApiRouter = pickRouter(
   profileApiMod,
   ['profileApiRouter', 'profileApiRoutes', 'router', 'routes'],
@@ -288,7 +263,7 @@ const profileApiRouter = pickRouter(
   { db },
 );
 
-// APIs under strict prefixes (so nothing can shadow SSR pages)
+// APIs under strict prefixes
 app.use('/api/auth', authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/downloads', downloadsRouter);
@@ -300,11 +275,16 @@ if (process.env.TEMPASI_SKIP_SSR) {
 } else {
   const webApp = createWebApp({ db });
 
-  // Cabinet placeholder
-  webApp.get('/cabinet', (_req, res) => {
-    res.status(200).type('text').send('Cabinet OK (WIP)');
-  });
+  // ✅ Protect Cabinet
+  webApp.get(
+    '/cabinet',
+    requireAuthWeb({ loginPath: '/login', defaultNext: '/cabinet' }),
+    (_req, res) => {
+      res.status(200).type('text').send('Cabinet OK (WIP)');
+    },
+  );
 
+  // ✅ Protect Profile pages
   const profileRouter = pickRouter(
     profilePagesMod,
     ['profileRouter', 'profileRoutes', 'router', 'routes'],
@@ -312,7 +292,11 @@ if (process.env.TEMPASI_SKIP_SSR) {
     { db, webApp },
   );
 
-  webApp.use(profileRouter);
+  webApp.use(
+    '/profile',
+    requireAuthWeb({ loginPath: '/login', defaultNext: '/profile' }),
+    profileRouter,
+  );
 
   app.use(webApp);
 }
