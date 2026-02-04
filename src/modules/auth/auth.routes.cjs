@@ -47,6 +47,33 @@ function parseSid(req) {
   return sidMatch ? decodeURIComponent(sidMatch[1]) : '';
 }
 
+/**
+ * safeNextPath: protects against open-redirect.
+ * Accepts ONLY relative paths like "/cabinet" or "/profile".
+ */
+function safeNextPath(input) {
+  const raw = String(input || '').trim();
+
+  if (!raw) return '';
+  if (raw.length > 512) return '';
+  if (!raw.startsWith('/')) return '';
+  if (raw.startsWith('//')) return '';
+  if (raw.includes('\\')) return '';
+  if (raw.toLowerCase().includes('http://')) return '';
+  if (raw.toLowerCase().includes('https://')) return '';
+
+  return raw;
+}
+
+function wantsHtml(req) {
+  return req.accepts(['html', 'json']) === 'html';
+}
+
+function pickNext(req) {
+  const n = safeNextPath(req.query?.next);
+  return n || '/templates';
+}
+
 // ---- password hashing (bcrypt preferred) ----
 function getBcrypt() {
   try {
@@ -160,6 +187,11 @@ router.post('/register', express.json(), async (req, res, next) => {
     const { sid, maxAgeSeconds } = await createSessionForUser(userId);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
+    // ✅ WEB redirect support (safe next)
+    if (wantsHtml(req)) {
+      return res.redirect(303, pickNext(req));
+    }
+
     return res.status(201).json({
       ok: true,
       userId: String(userId),
@@ -230,6 +262,11 @@ router.post('/login', express.json(), async (req, res, next) => {
 
     const { sid, maxAgeSeconds } = await createSessionForUser(u.id);
     setSessionCookie(res, sid, { maxAgeSeconds });
+
+    // ✅ WEB redirect support (safe next)
+    if (wantsHtml(req)) {
+      return res.redirect(303, pickNext(req));
+    }
 
     return res.status(200).json({
       ok: true,
@@ -352,17 +389,12 @@ router.post('/logout', async (req, res, next) => {
 
     if (sid) {
       const pool = getPool();
-      await withTimeout(
-        pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]),
-        OP_TIMEOUT_MS,
-        'db:logout delete',
-      );
+      await withTimeout(pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]), OP_TIMEOUT_MS, 'db:logout delete');
     }
 
     clearSessionCookie(res);
 
-    const wantsHtml = req.accepts(['html', 'json']) === 'html';
-    if (wantsHtml) {
+    if (wantsHtml(req)) {
       return res.redirect(303, '/templates');
     }
 
