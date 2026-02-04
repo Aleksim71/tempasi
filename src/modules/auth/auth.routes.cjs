@@ -341,16 +341,31 @@ router.post('/dev-login', express.json(), async (req, res, next) => {
   }
 });
 
+/**
+ * Logout:
+ * - API: { ok:true }
+ * - Browser (Accept: text/html): 303 -> /templates
+ */
 router.post('/logout', async (req, res, next) => {
   try {
     const sid = parseSid(req);
 
     if (sid) {
       const pool = getPool();
-      await withTimeout(pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]), OP_TIMEOUT_MS, 'db:logout delete');
+      await withTimeout(
+        pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]),
+        OP_TIMEOUT_MS,
+        'db:logout delete',
+      );
     }
 
     clearSessionCookie(res);
+
+    const wantsHtml = req.accepts(['html', 'json']) === 'html';
+    if (wantsHtml) {
+      return res.redirect(303, '/templates');
+    }
+
     return res.status(200).json({ ok: true });
   } catch (err) {
     if (err && err.code === 'AUTH_TIMEOUT') {
