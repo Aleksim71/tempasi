@@ -17,6 +17,14 @@ function safeRead(filePath) {
   }
 }
 
+function registerPartialSafe(name, content) {
+  if (!content) {
+    console.warn('[web] partial missing:', name);
+    return;
+  }
+  hbs.registerPartial(name, content);
+}
+
 export function createWebApp({ db }) {
   const app = express();
 
@@ -33,36 +41,70 @@ export function createWebApp({ db }) {
 
   console.log('[web] createWebApp() boot', { views: viewsRoot, partials: partialsRoot });
 
-  // Partials (only true partials; pages are rendered via res.render(view))
+  // Partials (register directory; we'll also explicitly register critical ones)
   hbs.registerPartials(partialsRoot);
 
   // Explicit partial registration (bulletproof for the critical ones)
   const pIconsDash = path.join(partialsRoot, 'icons-sprite.hbs');
   const pIconsUnd = path.join(partialsRoot, 'icons_sprite.hbs');
   const pHeader = path.join(partialsRoot, 'site-header.hbs');
-  const pFooter = path.join(partialsRoot, 'site-footer.hbs');
+
+  // IMPORTANT: layout uses {{> footer}} and our file is partials/footer.hbs
+  const pFooter = path.join(partialsRoot, 'footer.hbs');
+
+  // Icons used by header (avoid "partial could not be found")
+  const pIconSearch = path.join(partialsRoot, 'icon-search.hbs');
+  const pIconCart = path.join(partialsRoot, 'icon-cart.hbs');
+  const pIconLogin = path.join(partialsRoot, 'icon-login.hbs');
+  const pIconLogout = path.join(partialsRoot, 'icon-logout.hbs');
 
   const iconsDash = safeRead(pIconsDash);
   const iconsUnd = safeRead(pIconsUnd);
   const header = safeRead(pHeader);
   const footer = safeRead(pFooter);
 
-  if (iconsDash) hbs.registerPartial('icons-sprite', iconsDash);
-  if (iconsUnd) hbs.registerPartial('icons_sprite', iconsUnd);
-  if (!iconsDash && iconsUnd) hbs.registerPartial('icons-sprite', iconsUnd);
+  const iconSearch = safeRead(pIconSearch);
+  const iconCart = safeRead(pIconCart);
+  const iconLogin = safeRead(pIconLogin);
+  const iconLogout = safeRead(pIconLogout);
 
-  if (header) hbs.registerPartial('site-header', header);
-  if (footer) hbs.registerPartial('site-footer', footer);
+  // sprite (both names supported)
+  if (iconsDash) registerPartialSafe('icons-sprite', iconsDash);
+  if (iconsUnd) registerPartialSafe('icons_sprite', iconsUnd);
+  if (!iconsDash && iconsUnd) registerPartialSafe('icons-sprite', iconsUnd);
+
+  // critical layout partials
+  registerPartialSafe('site-header', header);
+  registerPartialSafe('footer', footer);
+
+  // icon partials (support both dash + underscore names, just in case)
+  registerPartialSafe('icon-search', iconSearch);
+  registerPartialSafe('icon-cart', iconCart);
+  registerPartialSafe('icon-login', iconLogin);
+  registerPartialSafe('icon-logout', iconLogout);
+
+  registerPartialSafe('icon_search', iconSearch);
+  registerPartialSafe('icon_cart', iconCart);
+  registerPartialSafe('icon_login', iconLogin);
+  registerPartialSafe('icon_logout', iconLogout);
 
   // Helpers
   hbs.registerHelper('eq', (a, b) => a === b);
+
+  // Header state middleware (guest / authed)
+  app.use((req, res, next) => {
+    const user = req.user || (req.session && req.session.user) || null;
+    res.locals.user = user;
+    res.locals.isAuthed = Boolean(user);
+    next();
+  });
 
   // Static
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   // Health + root UX
-  app.get('/__health', (req, res) => res.json({ ok: true }));
-  app.get('/', (req, res) => res.redirect(302, '/templates'));
+  app.get('/__health', (_req, res) => res.json({ ok: true }));
+  app.get('/', (_req, res) => res.redirect(302, '/templates'));
 
   // Web routes
   app.use(createWebRouter());

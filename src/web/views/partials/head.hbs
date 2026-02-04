@@ -2,10 +2,24 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="dark" />
-<title>{{#if title}}{{title}} — {{/if}}Tempasi</title>
 
+<title>
+  {{#if title}}
+    {{title}} — Tempasi
+  {{else}}
+    Tempasi
+  {{/if}}
+</title>
+
+{{!-- Base styles --}}
 <link rel="stylesheet" href="/css/core.css" />
 <link rel="stylesheet" href="/css/layout.css" />
 <link rel="stylesheet" href="/css/typography.css" />
+<link rel="stylesheet" href="/css/brand.css" />
+
+{{!-- Components --}}
 <link rel="stylesheet" href="/css/components/header.css" />
+<link rel="stylesheet" href="/css/components/footer.css" />
+
+{{!-- Favicon --}}
 <link rel="icon" href="/favicon.ico" />

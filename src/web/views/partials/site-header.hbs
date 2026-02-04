@@ -1,51 +1,65 @@
-{{!-- src/web/views/partials/site-header.hbs --}}
-<header class="site-header" role="banner" data-brand="{{brand}}">
-  <div class="site-header__inner l-container">
-    {{!-- Logo --}}
-    <a class="site-header__brand" href="/templates" aria-label="Tempasi home">
-      <img
-        class="site-header__logo"
-        src="/img/brand/logo_tempasi_licht.png"
-        alt="Tempasi"
-        width="28"
-        height="28"
-        loading="eager"
-        decoding="async"
-      />
-      <span class="site-header__wordmark" aria-hidden="true">TEMPASI</span>
-    </a>
+<header class="site-header">
+  <div class="site-header__inner">
 
-    {{!-- Modes --}}
-    <nav class="site-header__modes" aria-label="Modes">
-      <a href="/templates" class="site-header__mode {{#if (eq activePage 'templates')}}is-active{{/if}}">
-        Templates
+    <!-- LEFT -->
+    <div class="site-header__left">
+      <a href="/templates" class="site-header__brand" aria-label="Tempasi home">
+        <img
+          class="site-header__brand-logo"
+          src="/img/logo-tempasi.png"
+          alt="Tempasi"
+          width="22"
+          height="22"
+          loading="eager"
+          decoding="async"
+        />
+        <span class="site-header__title">TEMPASI</span>
       </a>
-      <a href="/profile" class="site-header__mode {{#if (eq activePage 'profile')}}is-active{{/if}}">
-        Cabinet
-      </a>
+    </div>
+
+    <!-- CENTER -->
+    <nav class="site-header__nav" aria-label="Main navigation">
+      <a href="/templates" class="nav-link">Templates</a>
+
+      {{#if isAuthed}}
+        <a href="/cabinet" class="nav-link">Cabinet</a>
+      {{/if}}
     </nav>
 
-    {{!-- Actions --}}
-    <div class="site-header__actions" aria-label="Actions">
-      <a class="site-header__action" href="/templates#search" aria-label="Search" title="Search">
-        <svg class="tp-ico" width="18" height="18" aria-hidden="true">
-          <use href="#tp-action-search"></use>
-        </svg>
+    <!-- RIGHT -->
+    <div class="site-header__actions">
+
+      <!-- search -->
+      <a href="/search" class="header-icon" aria-label="Search">
+        {{> icon-search}}
       </a>
 
-      <a class="site-header__action" href="/cart" aria-label="Cart" title="Cart">
-        <svg class="tp-ico" width="18" height="18" aria-hidden="true">
-          <use href="#tp-action-cart"></use>
-        </svg>
-      </a>
+      {{#if isAuthed}}
 
-      <form class="site-header__logout" action="/api/auth/logout" method="post">
-        <button class="site-header__action" type="submit" aria-label="Logout" title="Logout">
-          <svg class="tp-ico" width="18" height="18" aria-hidden="true">
-            <use href="#tp-action-logout"></use>
-          </svg>
-        </button>
-      </form>
+        <!-- cart -->
+        <a href="/cart" class="header-icon" aria-label="Cart">
+          {{> icon-cart}}
+        </a>
+
+        <!-- logout -->
+        <form method="post" action="/api/auth/logout" class="header-icon">
+          <button type="submit" aria-label="Logout">
+            {{> icon-logout}}
+          </button>
+        </form>
+
+      {{else}}
+
+        <!-- login -->
+        <a href="/login" class="header-icon" aria-label="Login">
+          {{> icon-login}}
+        </a>
+
+        <!-- placeholder (keeps width) -->
+        <span class="header-icon header-icon--placeholder" aria-hidden="true"></span>
+
+      {{/if}}
+
     </div>
   </div>
 </header>
