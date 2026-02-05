@@ -69,9 +69,15 @@ function wantsHtml(req) {
   return req.accepts(['html', 'json']) === 'html';
 }
 
+/**
+ * next can come from:
+ * - query ?next=/cabinet (redirect from guard)
+ * - form body <input name="next" ...>
+ */
 function pickNext(req) {
-  const n = safeNextPath(req.query?.next);
-  return n || '/templates';
+  const fromBody = safeNextPath(req.body?.next);
+  const fromQuery = safeNextPath(req.query?.next);
+  return fromBody || fromQuery || '/templates';
 }
 
 // ---- password hashing (bcrypt preferred) ----
@@ -133,10 +139,13 @@ async function createSessionForUser(userId) {
   return { sid, maxAgeSeconds };
 }
 
+// ✅ Accept BOTH: HTML form (urlencoded) and JSON API
+const parseBody = [express.urlencoded({ extended: false }), express.json()];
+
 // ---------- REAL AUTH ----------
 
 // Register: creates user and logs in (session + cookie)
-router.post('/register', express.json(), async (req, res, next) => {
+router.post('/register', parseBody, async (req, res, next) => {
   const startedAt = Date.now();
   try {
     const email = normalizeEmail(req.body?.email);
@@ -208,7 +217,7 @@ router.post('/register', express.json(), async (req, res, next) => {
 });
 
 // Login: checks password -> session + cookie
-router.post('/login', express.json(), async (req, res, next) => {
+router.post('/login', parseBody, async (req, res, next) => {
   const startedAt = Date.now();
   try {
     const email = normalizeEmail(req.body?.email);
@@ -319,8 +328,7 @@ router.get('/me', async (req, res, next) => {
 });
 
 // DEV-only: create a real cookie session for a given user id.
-// ✅ Guarantee the user exists in DB (tests often start from empty DB).
-router.post('/dev-login', express.json(), async (req, res, next) => {
+router.post('/dev-login', parseBody, async (req, res, next) => {
   try {
     if (!isDev()) return res.status(404).send('Not found');
 
@@ -367,6 +375,11 @@ router.post('/dev-login', express.json(), async (req, res, next) => {
     );
 
     setSessionCookie(res, sid, { maxAgeSeconds });
+
+    if (wantsHtml(req)) {
+      return res.redirect(303, pickNext(req));
+    }
+
     return res.status(200).json({ ok: true, userId: String(userId) });
   } catch (err) {
     if (err && err.code === 'AUTH_TIMEOUT') {
@@ -378,11 +391,7 @@ router.post('/dev-login', express.json(), async (req, res, next) => {
   }
 });
 
-/**
- * Logout:
- * - API: { ok:true }
- * - Browser (Accept: text/html): 303 -> /templates
- */
+// Logout: API JSON or Browser redirect
 router.post('/logout', async (req, res, next) => {
   try {
     const sid = parseSid(req);
