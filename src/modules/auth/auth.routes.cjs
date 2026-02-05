@@ -26,12 +26,22 @@ const { clearSessionCookie, newSessionId, setSessionCookie } = require('../../mi
 
 const router = express.Router();
 
+// Remember me (MVP): short vs long session TTL
+const TTL_SHORT_SECONDS = Number(process.env.SESSION_TTL_SHORT_SECONDS || 60 * 60 * 2); // 2 hours
+const TTL_REMEMBER_SECONDS = Number(process.env.SESSION_TTL_REMEMBER_SECONDS || 60 * 60 * 24 * 30); // 30 days
+
 function isDev() {
   return process.env.NODE_ENV !== 'production';
 }
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function parseBool(v) {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return ['1', 'true', 'on', 'yes'].includes(v.toLowerCase());
+  return false;
 }
 
 function validatePassword(pw) {
@@ -80,6 +90,11 @@ function pickNext(req) {
   return fromBody || fromQuery || '/templates';
 }
 
+function pickSessionTtlSeconds(req) {
+  const remember = parseBool(req.body?.remember);
+  return remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
+}
+
 // ---- password hashing (bcrypt preferred) ----
 function getBcrypt() {
   try {
@@ -118,10 +133,8 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
 }
 
-async function createSessionForUser(userId) {
+async function createSessionForUser(userId, maxAgeSeconds) {
   const sid = newSessionId();
-  const maxAgeSeconds = Number(process.env.SESSION_TTL_SECONDS || 60 * 60 * 24 * 30);
-
   const pool = getPool();
 
   await withTimeout(
@@ -192,8 +205,9 @@ router.post('/register', parseBody, async (req, res, next) => {
       throw err;
     }
 
-    // 3) session + cookie
-    const { sid, maxAgeSeconds } = await createSessionForUser(userId);
+    // 3) session + cookie (Remember me aware)
+    const maxAgeSeconds = pickSessionTtlSeconds(req);
+    const { sid } = await createSessionForUser(userId, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
     // ✅ WEB redirect support (safe next)
@@ -269,7 +283,9 @@ router.post('/login', parseBody, async (req, res, next) => {
       });
     }
 
-    const { sid, maxAgeSeconds } = await createSessionForUser(u.id);
+    // session + cookie (Remember me aware)
+    const maxAgeSeconds = pickSessionTtlSeconds(req);
+    const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
     // ✅ WEB redirect support (safe next)
@@ -359,8 +375,8 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
       'db:dev-login ensure user',
     );
 
+    const maxAgeSeconds = pickSessionTtlSeconds(req);
     const sid = newSessionId();
-    const maxAgeSeconds = Number(process.env.SESSION_TTL_SECONDS || 60 * 60 * 24 * 30);
 
     await withTimeout(
       pool.query(
