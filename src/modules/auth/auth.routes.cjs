@@ -22,9 +22,17 @@ try {
   }
 }
 
-const { clearSessionCookie, newSessionId, setSessionCookie } = require('../../middlewares/auth.middleware.cjs');
+const {
+  clearSessionCookie,
+  newSessionId,
+  setSessionCookie,
+} = require('../../middlewares/auth.middleware.cjs');
 
 const router = express.Router();
+
+/* =========================
+   Config
+   ========================= */
 
 // Remember me (MVP): short vs long session TTL
 const TTL_SHORT_SECONDS = Number(process.env.SESSION_TTL_SHORT_SECONDS || 60 * 60 * 2); // 2 hours
@@ -37,15 +45,18 @@ const LOGIN_RL_MAX_ATTEMPTS = Number(process.env.LOGIN_RL_MAX_ATTEMPTS || 10);
 const LOGIN_RL_KEY_MODE = String(process.env.LOGIN_RL_KEY_MODE || 'ip_email'); // ip | ip_email
 
 // Proxy/IP hardening
-// If TRUST_PROXY=1, we will accept X-Forwarded-For. Otherwise ignore it.
 const TRUST_PROXY = String(process.env.TRUST_PROXY || '').trim() === '1';
-// Optional allowlist for reverse-proxy IPs (comma-separated).
-// If set, we accept XFF only when direct peer IP matches allowlist.
-// Example: TRUST_PROXY=1 TRUST_PROXY_IPS="127.0.0.1,::1"
 const TRUST_PROXY_IPS = String(process.env.TRUST_PROXY_IPS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
+
+// ---- timeouts ----
+const OP_TIMEOUT_MS = Number(process.env.AUTH_OP_TIMEOUT_MS || 4000);
+
+/* =========================
+   Helpers
+   ========================= */
 
 function isDev() {
   return process.env.NODE_ENV !== 'production';
@@ -70,17 +81,16 @@ function validatePassword(pw) {
 
 function parseSid(req) {
   const cookie = String(req.headers.cookie || '');
-  const sidMatch = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
-  return sidMatch ? decodeURIComponent(sidMatch[1]) : '';
+  const m = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
 }
 
-/**
- * safeNextPath: protects against open-redirect.
- * Accepts ONLY relative paths like "/cabinet" or "/profile".
- */
+function wantsHtml(req) {
+  return req.accepts(['html', 'json']) === 'html';
+}
+
 function safeNextPath(input) {
   const raw = String(input || '').trim();
-
   if (!raw) return '';
   if (raw.length > 512) return '';
   if (!raw.startsWith('/')) return '';
@@ -88,41 +98,43 @@ function safeNextPath(input) {
   if (raw.includes('\\')) return '';
   if (raw.toLowerCase().includes('http://')) return '';
   if (raw.toLowerCase().includes('https://')) return '';
-
   return raw;
 }
 
-function wantsHtml(req) {
-  return req.accepts(['html', 'json']) === 'html';
-}
-
-/**
- * next can come from:
- * - query ?next=/cabinet (redirect from guard)
- * - form body <input name="next" ...>
- */
 function pickNext(req) {
-  const fromBody = safeNextPath(req.body?.next);
-  const fromQuery = safeNextPath(req.query?.next);
-  return fromBody || fromQuery || '/templates';
+  return safeNextPath(req.body?.next) || safeNextPath(req.query?.next) || '/templates';
 }
 
 function pickSessionTtlSeconds(req) {
-  const remember = parseBool(req.body?.remember);
-  return remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
+  return parseBool(req.body?.remember) ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
 }
 
-// ---- password hashing (bcrypt preferred) ----
+function withTimeout(promise, ms, label) {
+  let t;
+  const timeout = new Promise((_r, reject) => {
+    t = setTimeout(() => {
+      const err = new Error(`AUTH_TIMEOUT: ${label} exceeded ${ms}ms`);
+      err.code = 'AUTH_TIMEOUT';
+      reject(err);
+    }, ms);
+    if (t && typeof t.unref === 'function') t.unref();
+  });
+
+  return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
+}
+
+/* =========================
+   Crypto
+   ========================= */
+
 function getBcrypt() {
   try {
-    // eslint-disable-next-line global-require
     return require('bcrypt');
   } catch (_) {
     try {
-      // eslint-disable-next-line global-require
       return require('bcryptjs');
     } catch (e2) {
-      const err = new Error('PASSWORD_HASHER_NOT_FOUND: install "bcrypt" or "bcryptjs"');
+      const err = new Error('PASSWORD_HASHER_NOT_FOUND');
       err.cause = e2;
       throw err;
     }
@@ -132,23 +144,9 @@ function getBcrypt() {
 const bcrypt = getBcrypt();
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 
-// ---- timeouts (diagnostic hardening) ----
-const OP_TIMEOUT_MS = Number(process.env.AUTH_OP_TIMEOUT_MS || 4000);
-
-function withTimeout(promise, ms, label) {
-  let t;
-  const timeout = new Promise((_resolve, reject) => {
-    t = setTimeout(() => {
-      const err = new Error(`AUTH_TIMEOUT: ${label} exceeded ${ms}ms`);
-      err.code = 'AUTH_TIMEOUT';
-      reject(err);
-    }, ms);
-    // don't keep process alive
-    if (t && typeof t.unref === 'function') t.unref();
-  });
-
-  return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
-}
+/* =========================
+   Sessions
+   ========================= */
 
 async function createSessionForUser(userId, maxAgeSeconds) {
   const sid = newSessionId();
@@ -169,65 +167,55 @@ async function createSessionForUser(userId, maxAgeSeconds) {
   return { sid, maxAgeSeconds };
 }
 
-/**
- * Session rotation (anti-fixation):
- * If request already has a sid cookie, delete that session before issuing a new sid.
- */
 async function rotateSession(req) {
   const sid = parseSid(req);
   if (!sid) return;
-
   const pool = getPool();
-  await withTimeout(pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]), OP_TIMEOUT_MS, 'db:rotate delete old sid');
+  await withTimeout(
+    pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]),
+    OP_TIMEOUT_MS,
+    'db:rotate delete',
+  );
 }
 
-// ✅ Accept BOTH: HTML form (urlencoded) and JSON API
+/* =========================
+   Body parser
+   ========================= */
+
 const parseBody = [express.urlencoded({ extended: false }), express.json()];
 
 /* =========================
-   Login rate limiter (in-memory)
+   Login rate limit (in-memory)
    ========================= */
 
-const loginAttempts = new Map(); // key -> { count, resetAtMs, lastSeenMs }
+const loginAttempts = new Map();
 
 function nowMs() {
   return Date.now();
 }
 
-/**
- * Hardened client IP:
- * - If TRUST_PROXY != 1 -> ignore X-Forwarded-For entirely.
- * - If TRUST_PROXY == 1 and TRUST_PROXY_IPS is set:
- *   accept XFF only if the direct peer IP is in allowlist.
- * - Otherwise (TRUST_PROXY==1 and no allowlist) accept XFF.
- */
 function getClientIp(req) {
   const directIp =
     req.ip ||
-    (req.connection && req.connection.remoteAddress) ||
-    (req.socket && req.socket.remoteAddress) ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
     'unknown';
 
   if (!TRUST_PROXY) return directIp;
 
   if (TRUST_PROXY_IPS.length > 0 && !TRUST_PROXY_IPS.includes(String(directIp))) {
-    // Proxy allowlist configured but direct peer isn't trusted → ignore XFF
     return directIp;
   }
 
   const xff = String(req.headers['x-forwarded-for'] || '').trim();
   if (!xff) return directIp;
-
-  // Take the first IP in the chain (original client)
-  const first = xff.split(',')[0].trim();
-  return first || directIp;
+  return xff.split(',')[0].trim() || directIp;
 }
 
 function makeLoginKey(req, email) {
   const ip = getClientIp(req);
   const e = normalizeEmail(email);
-  if (LOGIN_RL_KEY_MODE === 'ip') return `ip:${ip}`;
-  return `ip:${ip}|email:${e || 'empty'}`;
+  return LOGIN_RL_KEY_MODE === 'ip' ? `ip:${ip}` : `ip:${ip}|email:${e || 'empty'}`;
 }
 
 function checkAndBumpLoginRateLimit(req, email) {
@@ -237,29 +225,22 @@ function checkAndBumpLoginRateLimit(req, email) {
 
   const entry = loginAttempts.get(key);
   if (!entry || ms >= entry.resetAtMs) {
-    loginAttempts.set(key, { count: 1, resetAtMs: ms + windowMs, lastSeenMs: ms });
-    return { ok: true, remaining: Math.max(0, LOGIN_RL_MAX_ATTEMPTS - 1) };
+    loginAttempts.set(key, { count: 1, resetAtMs: ms + windowMs });
+    return { ok: true };
   }
 
-  entry.lastSeenMs = ms;
-
   if (entry.count >= LOGIN_RL_MAX_ATTEMPTS) {
-    const retryAfterSec = Math.max(1, Math.ceil((entry.resetAtMs - ms) / 1000));
-    return { ok: false, retryAfterSec };
+    return { ok: false, retryAfterSec: Math.ceil((entry.resetAtMs - ms) / 1000) };
   }
 
   entry.count += 1;
-  return { ok: true, remaining: Math.max(0, LOGIN_RL_MAX_ATTEMPTS - entry.count) };
+  return { ok: true };
 }
 
-// opportunistic cleanup to avoid unbounded memory growth
 function cleanupLoginRateLimitMap() {
   const ms = nowMs();
-  let scanned = 0;
   for (const [k, v] of loginAttempts) {
-    scanned += 1;
-    if (ms >= v.resetAtMs + 60_000) loginAttempts.delete(k); // keep 1 min after window
-    if (scanned >= 2000) break; // cap per request
+    if (ms >= v.resetAtMs + 60_000) loginAttempts.delete(k);
   }
 }
 
@@ -267,189 +248,121 @@ function cleanupLoginRateLimitMap() {
    Routes
    ========================= */
 
-// Register: creates user and logs in (session + cookie)
+// register
 router.post('/register', parseBody, async (req, res, next) => {
-  const startedAt = Date.now();
   try {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
 
-    if (!email) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'email is required' } });
-    }
+    if (!email) return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
 
-    const pwOk = validatePassword(password);
-    if (!pwOk.ok) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: pwOk.message } });
-    }
+    const pw = validatePassword(password);
+    if (!pw.ok) return res.status(400).json({ error: { code: 'BAD_REQUEST', message: pw.message } });
 
-    // 1) hash (can hang if hasher blocks)
-    const passwordHash = await withTimeout(
-      Promise.resolve(bcrypt.hash(password, BCRYPT_ROUNDS)),
+    const hash = await withTimeout(
+      bcrypt.hash(password, BCRYPT_ROUNDS),
       OP_TIMEOUT_MS,
       'bcrypt:hash',
     );
 
-    // 2) insert user (can hang if DB/pool blocks)
     const pool = getPool();
     let userId;
 
     try {
-      const q = pool.query(
-        `
-        INSERT INTO users (email, password_hash, status, role, created_at, updated_at)
-        VALUES ($1::citext, $2, 'active', 'user', NOW(), NOW())
-        RETURNING id
-        `,
-        [email, passwordHash],
+      const { rows } = await withTimeout(
+        pool.query(
+          `
+          INSERT INTO users (email, password_hash, status, role, created_at, updated_at)
+          VALUES ($1::citext, $2, 'active', 'user', NOW(), NOW())
+          RETURNING id
+          `,
+          [email, hash],
+        ),
+        OP_TIMEOUT_MS,
+        'db:insert user',
       );
-
-      const { rows } = await withTimeout(q, OP_TIMEOUT_MS, 'db:insert user');
-      userId = rows?.[0]?.id;
+      userId = rows[0].id;
     } catch (err) {
-      if (err && err.code === '23505') {
-        return res.status(409).json({
-          error: { code: 'EMAIL_TAKEN', message: 'Email is already registered' },
-        });
+      if (err.code === '23505') {
+        return res.status(409).json({ error: { code: 'EMAIL_TAKEN' } });
       }
       throw err;
     }
 
-    // rotate old session if present (anti-fixation)
     await rotateSession(req);
-
-    // session + cookie (Remember me aware)
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(userId, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
-    // WEB redirect support (safe next)
-    if (wantsHtml(req)) {
-      return res.redirect(303, pickNext(req));
-    }
-
-    return res.status(201).json({
-      ok: true,
-      userId: String(userId),
-      _ms: Date.now() - startedAt,
-    });
+    return wantsHtml(req)
+      ? res.redirect(303, pickNext(req))
+      : res.status(201).json({ ok: true, userId: String(userId) });
   } catch (err) {
-    if (err && err.code === 'AUTH_TIMEOUT') {
-      return res.status(504).json({
-        error: { code: 'TIMEOUT', message: err.message },
-      });
-    }
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
     return next(err);
   }
 });
 
-// Login: checks password -> session + cookie
+// login
 router.post('/login', parseBody, async (req, res, next) => {
-  const startedAt = Date.now();
   try {
     cleanupLoginRateLimitMap();
 
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
 
-    if (!email || !password) {
-      return res.status(400).json({
-        error: { code: 'BAD_REQUEST', message: 'email and password are required' },
-      });
-    }
+    if (!email || !password) return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
 
-    // rate limit BEFORE DB/bcrypt (protect resources)
     const rl = checkAndBumpLoginRateLimit(req, email);
     if (!rl.ok) {
       res.setHeader('Retry-After', String(rl.retryAfterSec));
-      if (wantsHtml(req)) {
-        return res
-          .status(429)
-          .type('text/plain; charset=utf-8')
-          .send(`Too many login attempts. Try again in ${rl.retryAfterSec}s.`);
-      }
-      return res.status(429).json({
-        error: { code: 'RATE_LIMITED', message: `Too many login attempts. Try again in ${rl.retryAfterSec}s.` },
-      });
+      return res.status(429).json({ error: { code: 'RATE_LIMITED' } });
     }
 
     const pool = getPool();
     const { rows } = await withTimeout(
       pool.query(
-        `
-        SELECT id, password_hash, status
-        FROM users
-        WHERE email = $1::citext
-        LIMIT 1
-        `,
+        `SELECT id, password_hash, status FROM users WHERE email=$1::citext LIMIT 1`,
         [email],
       ),
       OP_TIMEOUT_MS,
       'db:select user',
     );
 
-    const u = rows && rows[0];
-    if (!u) {
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' },
-      });
-    }
-
-    if (String(u.status) !== 'active') {
-      return res.status(403).json({
-        error: { code: 'FORBIDDEN', message: 'User is not active' },
-      });
+    const u = rows[0];
+    if (!u || u.status !== 'active') {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED' } });
     }
 
     const ok = await withTimeout(
-      Promise.resolve(bcrypt.compare(password, String(u.password_hash || ''))),
+      bcrypt.compare(password, u.password_hash),
       OP_TIMEOUT_MS,
       'bcrypt:compare',
     );
 
-    if (!ok) {
-      return res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' },
-      });
-    }
+    if (!ok) return res.status(401).json({ error: { code: 'UNAUTHORIZED' } });
 
-    // success: reset counter for this key (UX)
-    try {
-      loginAttempts.delete(makeLoginKey(req, email));
-    } catch (_) {}
+    loginAttempts.delete(makeLoginKey(req, email));
 
-    // rotate old session if present (anti-fixation)
     await rotateSession(req);
-
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
-    // WEB redirect support (safe next)
-    if (wantsHtml(req)) {
-      return res.redirect(303, pickNext(req));
-    }
-
-    return res.status(200).json({
-      ok: true,
-      userId: String(u.id),
-      _ms: Date.now() - startedAt,
-    });
+    return wantsHtml(req)
+      ? res.redirect(303, pickNext(req))
+      : res.status(200).json({ ok: true, userId: String(u.id) });
   } catch (err) {
-    if (err && err.code === 'AUTH_TIMEOUT') {
-      return res.status(504).json({
-        error: { code: 'TIMEOUT', message: err.message },
-      });
-    }
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
     return next(err);
   }
 });
 
-// Me: reads current session -> returns user basic info
+// me
 router.get('/me', async (req, res, next) => {
   try {
     const sid = parseSid(req);
-    if (!sid) return res.status(200).json({ ok: true, user: null });
+    if (!sid) return res.json({ ok: true, user: null });
 
     const pool = getPool();
     const { rows } = await withTimeout(
@@ -458,63 +371,47 @@ router.get('/me', async (req, res, next) => {
         SELECT u.id, u.email, u.role, u.status
         FROM sessions s
         JOIN users u ON u.id = s.user_id
-        WHERE s.id = $1
-          AND s.expires_at > NOW()
+        WHERE s.id = $1 AND s.expires_at > NOW()
         LIMIT 1
         `,
         [sid],
       ),
       OP_TIMEOUT_MS,
-      'db:me join',
+      'db:me',
     );
 
-    if (!rows || rows.length === 0) return res.status(200).json({ ok: true, user: null });
-    return res.status(200).json({ ok: true, user: rows[0] });
+    return res.json({ ok: true, user: rows[0] || null });
   } catch (err) {
-    if (err && err.code === 'AUTH_TIMEOUT') {
-      return res.status(504).json({
-        error: { code: 'TIMEOUT', message: err.message },
-      });
-    }
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
     return next(err);
   }
 });
 
-// DEV-only: create a real cookie session for a given user id.
+// dev-login
 router.post('/dev-login', parseBody, async (req, res, next) => {
   try {
-    if (!isDev()) return res.status(404).send('Not found');
+    if (!isDev()) return res.status(404).end();
 
-    const userIdRaw = String(req.body?.userId || '').trim();
-    const userId = Number(userIdRaw);
-
+    const userId = Number(req.body?.userId);
     if (!Number.isFinite(userId) || userId <= 0) {
-      return res.status(400).json({
-        error: { code: 'BAD_REQUEST', message: 'userId must be a positive number' },
-      });
+      return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
     }
 
     const pool = getPool();
-
-    // Ensure user exists (id-based), so auth JOIN can succeed
-    const devEmail = `dev-${userId}@tempasi.local`;
-
     await withTimeout(
       pool.query(
         `
         INSERT INTO users (id, email, password_hash, status, role, created_at, updated_at)
-        VALUES ($1::bigint, $2::citext, $3, 'active', 'user', NOW(), NOW())
+        VALUES ($1, $2::citext, 'DEV', 'active', 'user', NOW(), NOW())
         ON CONFLICT (id) DO NOTHING
         `,
-        [userId, devEmail, 'DEV_LOGIN'],
+        [userId, `dev-${userId}@tempasi.local`],
       ),
       OP_TIMEOUT_MS,
-      'db:dev-login ensure user',
+      'db:dev ensure user',
     );
 
-    // rotate old session if present (anti-fixation)
     await rotateSession(req);
-
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const sid = newSessionId();
 
@@ -527,49 +424,68 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
         [sid, userId, String(maxAgeSeconds)],
       ),
       OP_TIMEOUT_MS,
-      'db:dev-login insert session',
+      'db:dev insert session',
     );
 
     setSessionCookie(res, sid, { maxAgeSeconds });
-
-    if (wantsHtml(req)) {
-      return res.redirect(303, pickNext(req));
-    }
-
-    return res.status(200).json({ ok: true, userId: String(userId) });
+    return res.json({ ok: true, userId: String(userId) });
   } catch (err) {
-    if (err && err.code === 'AUTH_TIMEOUT') {
-      return res.status(504).json({
-        error: { code: 'TIMEOUT', message: err.message },
-      });
-    }
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
     return next(err);
   }
 });
 
-// Logout: API JSON or Browser redirect
+// logout (current session)
 router.post('/logout', async (req, res, next) => {
   try {
     const sid = parseSid(req);
-
     if (sid) {
       const pool = getPool();
-      await withTimeout(pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]), OP_TIMEOUT_MS, 'db:logout delete');
+      await withTimeout(
+        pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]),
+        OP_TIMEOUT_MS,
+        'db:logout',
+      );
     }
 
     clearSessionCookie(res);
-
-    if (wantsHtml(req)) {
-      return res.redirect(303, '/templates');
-    }
-
-    return res.status(200).json({ ok: true });
+    return wantsHtml(req)
+      ? res.redirect(303, '/templates')
+      : res.json({ ok: true });
   } catch (err) {
-    if (err && err.code === 'AUTH_TIMEOUT') {
-      return res.status(504).json({
-        error: { code: 'TIMEOUT', message: err.message },
-      });
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    return next(err);
+  }
+});
+
+// 🔐 logout-all (revoke ALL sessions)
+router.post('/logout-all', async (req, res, next) => {
+  try {
+    const sid = parseSid(req);
+    if (!sid) {
+      clearSessionCookie(res);
+      return res.status(204).end();
     }
+
+    const pool = getPool();
+    await withTimeout(
+      pool.query(
+        `
+        DELETE FROM sessions
+        WHERE user_id = (
+          SELECT user_id FROM sessions WHERE id = $1
+        )
+        `,
+        [sid],
+      ),
+      OP_TIMEOUT_MS,
+      'db:logout-all',
+    );
+
+    clearSessionCookie(res);
+    return res.status(204).end();
+  } catch (err) {
+    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
     return next(err);
   }
 });
