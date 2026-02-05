@@ -36,6 +36,17 @@ const LOGIN_RL_WINDOW_SECONDS = Number(process.env.LOGIN_RL_WINDOW_SECONDS || 10
 const LOGIN_RL_MAX_ATTEMPTS = Number(process.env.LOGIN_RL_MAX_ATTEMPTS || 10);
 const LOGIN_RL_KEY_MODE = String(process.env.LOGIN_RL_KEY_MODE || 'ip_email'); // ip | ip_email
 
+// Proxy/IP hardening
+// If TRUST_PROXY=1, we will accept X-Forwarded-For. Otherwise ignore it.
+const TRUST_PROXY = String(process.env.TRUST_PROXY || '').trim() === '1';
+// Optional allowlist for reverse-proxy IPs (comma-separated).
+// If set, we accept XFF only when direct peer IP matches allowlist.
+// Example: TRUST_PROXY=1 TRUST_PROXY_IPS="127.0.0.1,::1"
+const TRUST_PROXY_IPS = String(process.env.TRUST_PROXY_IPS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 function isDev() {
   return process.env.NODE_ENV !== 'production';
 }
@@ -161,8 +172,6 @@ async function createSessionForUser(userId, maxAgeSeconds) {
 /**
  * Session rotation (anti-fixation):
  * If request already has a sid cookie, delete that session before issuing a new sid.
- * - Safe even if sid doesn't exist.
- * - Helps avoid session fixation and cleans up old sessions on re-login.
  */
 async function rotateSession(req) {
   const sid = parseSid(req);
@@ -185,16 +194,33 @@ function nowMs() {
   return Date.now();
 }
 
+/**
+ * Hardened client IP:
+ * - If TRUST_PROXY != 1 -> ignore X-Forwarded-For entirely.
+ * - If TRUST_PROXY == 1 and TRUST_PROXY_IPS is set:
+ *   accept XFF only if the direct peer IP is in allowlist.
+ * - Otherwise (TRUST_PROXY==1 and no allowlist) accept XFF.
+ */
 function getClientIp(req) {
-  // Prefer X-Forwarded-For when behind proxy; otherwise req.ip / socket
-  const xff = String(req.headers['x-forwarded-for'] || '').trim();
-  if (xff) return xff.split(',')[0].trim();
-  return (
+  const directIp =
     req.ip ||
     (req.connection && req.connection.remoteAddress) ||
     (req.socket && req.socket.remoteAddress) ||
-    'unknown'
-  );
+    'unknown';
+
+  if (!TRUST_PROXY) return directIp;
+
+  if (TRUST_PROXY_IPS.length > 0 && !TRUST_PROXY_IPS.includes(String(directIp))) {
+    // Proxy allowlist configured but direct peer isn't trusted → ignore XFF
+    return directIp;
+  }
+
+  const xff = String(req.headers['x-forwarded-for'] || '').trim();
+  if (!xff) return directIp;
+
+  // Take the first IP in the chain (original client)
+  const first = xff.split(',')[0].trim();
+  return first || directIp;
 }
 
 function makeLoginKey(req, email) {
@@ -289,15 +315,15 @@ router.post('/register', parseBody, async (req, res, next) => {
       throw err;
     }
 
-    // ✅ rotate old session if present (anti-fixation)
+    // rotate old session if present (anti-fixation)
     await rotateSession(req);
 
-    // 3) session + cookie (Remember me aware)
+    // session + cookie (Remember me aware)
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(userId, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
-    // ✅ WEB redirect support (safe next)
+    // WEB redirect support (safe next)
     if (wantsHtml(req)) {
       return res.redirect(303, pickNext(req));
     }
@@ -332,7 +358,7 @@ router.post('/login', parseBody, async (req, res, next) => {
       });
     }
 
-    // ✅ rate limit BEFORE DB/bcrypt (protect resources)
+    // rate limit BEFORE DB/bcrypt (protect resources)
     const rl = checkAndBumpLoginRateLimit(req, email);
     if (!rl.ok) {
       res.setHeader('Retry-After', String(rl.retryAfterSec));
@@ -387,19 +413,19 @@ router.post('/login', parseBody, async (req, res, next) => {
       });
     }
 
-    // ✅ success: reset counter for this key (UX)
+    // success: reset counter for this key (UX)
     try {
       loginAttempts.delete(makeLoginKey(req, email));
     } catch (_) {}
 
-    // ✅ rotate old session if present (anti-fixation)
+    // rotate old session if present (anti-fixation)
     await rotateSession(req);
 
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
 
-    // ✅ WEB redirect support (safe next)
+    // WEB redirect support (safe next)
     if (wantsHtml(req)) {
       return res.redirect(303, pickNext(req));
     }
@@ -486,7 +512,7 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
       'db:dev-login ensure user',
     );
 
-    // ✅ rotate old session if present (anti-fixation)
+    // rotate old session if present (anti-fixation)
     await rotateSession(req);
 
     const maxAgeSeconds = pickSessionTtlSeconds(req);
