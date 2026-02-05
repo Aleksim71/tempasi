@@ -30,6 +30,12 @@ const router = express.Router();
 const TTL_SHORT_SECONDS = Number(process.env.SESSION_TTL_SHORT_SECONDS || 60 * 60 * 2); // 2 hours
 const TTL_REMEMBER_SECONDS = Number(process.env.SESSION_TTL_REMEMBER_SECONDS || 60 * 60 * 24 * 30); // 30 days
 
+// Login rate-limit (MVP, in-memory)
+// Defaults: 10 attempts per 10 minutes per (ip + email)
+const LOGIN_RL_WINDOW_SECONDS = Number(process.env.LOGIN_RL_WINDOW_SECONDS || 10 * 60);
+const LOGIN_RL_MAX_ATTEMPTS = Number(process.env.LOGIN_RL_MAX_ATTEMPTS || 10);
+const LOGIN_RL_KEY_MODE = String(process.env.LOGIN_RL_KEY_MODE || 'ip_email'); // ip | ip_email
+
 function isDev() {
   return process.env.NODE_ENV !== 'production';
 }
@@ -155,7 +161,71 @@ async function createSessionForUser(userId, maxAgeSeconds) {
 // ✅ Accept BOTH: HTML form (urlencoded) and JSON API
 const parseBody = [express.urlencoded({ extended: false }), express.json()];
 
-// ---------- REAL AUTH ----------
+/* =========================
+   Login rate limiter (in-memory)
+   ========================= */
+
+const loginAttempts = new Map(); // key -> { count, resetAtMs, lastSeenMs }
+
+function nowMs() {
+  return Date.now();
+}
+
+function getClientIp(req) {
+  // Prefer X-Forwarded-For when behind proxy; otherwise req.ip / socket
+  const xff = String(req.headers['x-forwarded-for'] || '').trim();
+  if (xff) return xff.split(',')[0].trim();
+  return (
+    req.ip ||
+    (req.connection && req.connection.remoteAddress) ||
+    (req.socket && req.socket.remoteAddress) ||
+    'unknown'
+  );
+}
+
+function makeLoginKey(req, email) {
+  const ip = getClientIp(req);
+  const e = normalizeEmail(email);
+  if (LOGIN_RL_KEY_MODE === 'ip') return `ip:${ip}`;
+  return `ip:${ip}|email:${e || 'empty'}`;
+}
+
+function checkAndBumpLoginRateLimit(req, email) {
+  const key = makeLoginKey(req, email);
+  const ms = nowMs();
+  const windowMs = LOGIN_RL_WINDOW_SECONDS * 1000;
+
+  const entry = loginAttempts.get(key);
+  if (!entry || ms >= entry.resetAtMs) {
+    loginAttempts.set(key, { count: 1, resetAtMs: ms + windowMs, lastSeenMs: ms });
+    return { ok: true, remaining: Math.max(0, LOGIN_RL_MAX_ATTEMPTS - 1) };
+  }
+
+  entry.lastSeenMs = ms;
+
+  if (entry.count >= LOGIN_RL_MAX_ATTEMPTS) {
+    const retryAfterSec = Math.max(1, Math.ceil((entry.resetAtMs - ms) / 1000));
+    return { ok: false, retryAfterSec };
+  }
+
+  entry.count += 1;
+  return { ok: true, remaining: Math.max(0, LOGIN_RL_MAX_ATTEMPTS - entry.count) };
+}
+
+// opportunistic cleanup to avoid unbounded memory growth
+function cleanupLoginRateLimitMap() {
+  const ms = nowMs();
+  let scanned = 0;
+  for (const [k, v] of loginAttempts) {
+    scanned += 1;
+    if (ms >= v.resetAtMs + 60_000) loginAttempts.delete(k); // keep 1 min after window
+    if (scanned >= 2000) break; // cap per request
+  }
+}
+
+/* =========================
+   Routes
+   ========================= */
 
 // Register: creates user and logs in (session + cookie)
 router.post('/register', parseBody, async (req, res, next) => {
@@ -234,12 +304,29 @@ router.post('/register', parseBody, async (req, res, next) => {
 router.post('/login', parseBody, async (req, res, next) => {
   const startedAt = Date.now();
   try {
+    cleanupLoginRateLimitMap();
+
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
 
     if (!email || !password) {
       return res.status(400).json({
         error: { code: 'BAD_REQUEST', message: 'email and password are required' },
+      });
+    }
+
+    // ✅ rate limit BEFORE DB/bcrypt (protect resources)
+    const rl = checkAndBumpLoginRateLimit(req, email);
+    if (!rl.ok) {
+      res.setHeader('Retry-After', String(rl.retryAfterSec));
+      if (wantsHtml(req)) {
+        return res
+          .status(429)
+          .type('text/plain; charset=utf-8')
+          .send(`Too many login attempts. Try again in ${rl.retryAfterSec}s.`);
+      }
+      return res.status(429).json({
+        error: { code: 'RATE_LIMITED', message: `Too many login attempts. Try again in ${rl.retryAfterSec}s.` },
       });
     }
 
@@ -283,7 +370,12 @@ router.post('/login', parseBody, async (req, res, next) => {
       });
     }
 
-    // session + cookie (Remember me aware)
+    // ✅ success: create session; (optional) reset counter for this key
+    // (keeps UX nicer after user finally types correct password)
+    try {
+      loginAttempts.delete(makeLoginKey(req, email));
+    } catch (_) {}
+
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
     setSessionCookie(res, sid, { maxAgeSeconds });
