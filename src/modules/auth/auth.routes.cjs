@@ -158,6 +158,20 @@ async function createSessionForUser(userId, maxAgeSeconds) {
   return { sid, maxAgeSeconds };
 }
 
+/**
+ * Session rotation (anti-fixation):
+ * If request already has a sid cookie, delete that session before issuing a new sid.
+ * - Safe even if sid doesn't exist.
+ * - Helps avoid session fixation and cleans up old sessions on re-login.
+ */
+async function rotateSession(req) {
+  const sid = parseSid(req);
+  if (!sid) return;
+
+  const pool = getPool();
+  await withTimeout(pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]), OP_TIMEOUT_MS, 'db:rotate delete old sid');
+}
+
 // ✅ Accept BOTH: HTML form (urlencoded) and JSON API
 const parseBody = [express.urlencoded({ extended: false }), express.json()];
 
@@ -275,6 +289,9 @@ router.post('/register', parseBody, async (req, res, next) => {
       throw err;
     }
 
+    // ✅ rotate old session if present (anti-fixation)
+    await rotateSession(req);
+
     // 3) session + cookie (Remember me aware)
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(userId, maxAgeSeconds);
@@ -370,11 +387,13 @@ router.post('/login', parseBody, async (req, res, next) => {
       });
     }
 
-    // ✅ success: create session; (optional) reset counter for this key
-    // (keeps UX nicer after user finally types correct password)
+    // ✅ success: reset counter for this key (UX)
     try {
       loginAttempts.delete(makeLoginKey(req, email));
     } catch (_) {}
+
+    // ✅ rotate old session if present (anti-fixation)
+    await rotateSession(req);
 
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
@@ -466,6 +485,9 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
       OP_TIMEOUT_MS,
       'db:dev-login ensure user',
     );
+
+    // ✅ rotate old session if present (anti-fixation)
+    await rotateSession(req);
 
     const maxAgeSeconds = pickSessionTtlSeconds(req);
     const sid = newSessionId();
