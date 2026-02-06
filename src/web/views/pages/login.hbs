@@ -17,19 +17,35 @@
       </div>
     {{/if}}
 
-    <form class="auth-form" method="post" action="/login" novalidate>
+    <form class="auth-form" method="post" action="/login" novalidate autocomplete="on">
       {{#if next}}
         <input type="hidden" name="next" value="{{next}}">
       {{/if}}
 
       <div class="auth-field">
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{email}}">
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="username"
+          inputmode="email"
+          autocapitalize="none"
+          spellcheck="false"
+          required
+          {{#if email}}value="{{email}}"{{/if}}
+        >
       </div>
 
       <div class="auth-field">
         <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        >
       </div>
 
       <div class="auth-row">
