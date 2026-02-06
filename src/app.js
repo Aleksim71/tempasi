@@ -71,6 +71,7 @@ const { initAuth } = require('./middlewares/auth.middleware.cjs');
 // ROUTERS (CJS)
 // --------------------
 const authMod = require('./modules/auth/auth.routes.cjs');
+const passwordResetMod = require('./modules/auth/passwordReset.routes.cjs');
 const ordersMod = require('./modules/orders/orders.routes.cjs');
 const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
 
@@ -238,24 +239,34 @@ if (!process.env.TEMPASI_SKIP_WATCHDOG) {
 }
 
 // ---- resolved API routers (ctx: {db}) ----
+const passwordResetRouter = pickRouter(
+  passwordResetMod,
+  ['passwordResetRouter', 'passwordResetRoutes', 'router', 'routes'],
+  'password reset router',
+  { db },
+);
+
 const authRouter = pickRouter(
   authMod,
   ['authRouter', 'authRoutes', 'router', 'routes'],
   'auth router',
   { db },
 );
+
 const ordersRouter = pickRouter(
   ordersMod,
   ['ordersRouter', 'ordersRoutes', 'router', 'routes'],
   'orders router',
   { db },
 );
+
 const downloadsRouter = pickRouter(
   downloadsMod,
   ['downloadsRouter', 'downloadsRoutes', 'router', 'routes'],
   'downloads router',
   { db },
 );
+
 const profileApiRouter = pickRouter(
   profileApiMod,
   ['profileApiRouter', 'profileApiRoutes', 'router', 'routes'],
@@ -264,7 +275,9 @@ const profileApiRouter = pickRouter(
 );
 
 // APIs under strict prefixes
+app.use('/api/auth', passwordResetRouter);
 app.use('/api/auth', authRouter);
+
 app.use('/api/orders', ordersRouter);
 app.use('/downloads', downloadsRouter);
 app.use('/api/profile', profileApiRouter);

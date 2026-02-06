@@ -10,6 +10,16 @@ const require = createRequire(import.meta.url);
 // Reuse cookie/session helpers from existing auth middleware (CJS)
 const { newSessionId, setSessionCookie } = require('../../middlewares/auth.middleware.cjs');
 
+// Mount password reset flow (CJS) into SSR router to avoid duplicating POST logic
+// Routes provided by that router (POST):
+//   POST /forgot-password
+//   POST /reset-password
+const passwordResetMod = require('../../modules/auth/passwordReset.routes.cjs');
+const passwordResetRouter =
+  (passwordResetMod && passwordResetMod.passwordResetRouter) ||
+  (passwordResetMod && passwordResetMod.router) ||
+  passwordResetMod;
+
 // Use the same pool helper pattern as API auth routes (CJS)
 let getPool;
 try {
@@ -22,6 +32,10 @@ try {
     getPool = null;
   }
 }
+
+// Remember me TTL (same as API auth routes)
+const TTL_SHORT_SECONDS = Number(process.env.SESSION_TTL_SHORT_SECONDS || 60 * 60 * 2); // 2 hours
+const TTL_REMEMBER_SECONDS = Number(process.env.SESSION_TTL_REMEMBER_SECONDS || 60 * 60 * 24 * 30); // 30 days
 
 function normalizeEmail(value) {
   return String(value || '')
@@ -42,17 +56,45 @@ function safeNext(value) {
   if (!s) return '';
   if (!s.startsWith('/')) return '';
   if (s.startsWith('//')) return '';
+  if (s.includes('\\')) return '';
   return s;
+}
+
+function parseBool(v) {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return ['1', 'true', 'on', 'yes'].includes(v.toLowerCase());
+  return false;
+}
+
+function pickSessionTtlSeconds(req) {
+  const remember = parseBool(req.body?.remember);
+  return remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
+}
+
+function parseSid(req) {
+  const cookie = String(req.headers.cookie || '');
+  const sidMatch = cookie.match(/(?:^|;\s*)sid=([^;]+)/);
+  return sidMatch ? decodeURIComponent(sidMatch[1]) : '';
+}
+
+/**
+ * Session rotation (anti-fixation) for SSR form handlers:
+ * If request already has a sid cookie, delete that session before issuing a new sid.
+ */
+async function rotateSession(req) {
+  if (!getPool) return;
+  const sid = parseSid(req);
+  if (!sid) return;
+  const pool = getPool();
+  await pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]);
 }
 
 // ---- password hashing (bcrypt preferred) ----
 function getBcrypt() {
   try {
-     
     return require('bcrypt');
   } catch (_) {
     try {
-       
       return require('bcryptjs');
     } catch (e2) {
       const err = new Error('PASSWORD_HASHER_NOT_FOUND: install "bcrypt" or "bcryptjs"');
@@ -65,10 +107,10 @@ function getBcrypt() {
 const bcrypt = getBcrypt();
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 
-async function createSessionForUser(userId) {
+async function createSessionForUser(userId, maxAgeSeconds) {
   if (!getPool) throw new Error('DB_POOL_HELPER_NOT_FOUND');
+
   const sid = newSessionId();
-  const maxAgeSeconds = Number(process.env.SESSION_TTL_SECONDS || 60 * 60 * 24 * 30);
   const pool = getPool();
 
   await pool.query(
@@ -109,10 +151,34 @@ function renderRegister(req, res, opts = {}) {
   });
 }
 
+function renderForgotPassword(req, res, opts = {}) {
+  return res.status(200).render('pages/forgot-password', {
+    title: 'Forgot password',
+    styles: ['/css/pages/auth.css'],
+    bodyClass: 'auth',
+    hideHeader: false,
+    email: opts.email || '',
+    note: opts.note || null,
+    errors: opts.errors || null,
+  });
+}
+
+function renderResetPassword(req, res, opts = {}) {
+  return res.status(200).render('pages/reset-password', {
+    title: 'Reset password',
+    styles: ['/css/pages/auth.css'],
+    bodyClass: 'auth',
+    hideHeader: false,
+    token: opts.token || '',
+    note: opts.note || null,
+    errors: opts.errors || null,
+  });
+}
+
 export function createAuthPagesRouter() {
   const router = express.Router();
 
-  // Parse classic HTML forms
+  // Parse classic HTML forms for SSR handlers
   router.use(express.urlencoded({ extended: false }));
 
   // --- GET pages ---
@@ -126,19 +192,33 @@ export function createAuthPagesRouter() {
     return renderRegister(req, res);
   });
 
+  // ✅ GET /forgot-password (SSR page)
+  router.get('/forgot-password', (req, res) => {
+    if (req.userId) return res.redirect('/templates');
+    return renderForgotPassword(req, res);
+  });
+
+  // ✅ GET /reset-password?token=... (SSR page)
+  router.get('/reset-password', (req, res) => {
+    if (req.userId) return res.redirect('/templates');
+    const token = String(req.query?.token || '').trim();
+    // We render even if token missing; POST will validate strictly.
+    return renderResetPassword(req, res, { token });
+  });
+
   // --- POST /login (form) ---
   router.post('/login', async (req, res, next) => {
     try {
       const email = normalizeEmail(req.body?.email);
       const password = String(req.body?.password || '');
-      const remember = Boolean(req.body?.remember);
+      const remember = parseBool(req.body?.remember);
       const nextUrl = safeNext(req.body?.next) || '/templates';
 
       const errors = [];
       if (!email) errors.push('Email is required');
       if (!password) errors.push('Password is required');
-
       if (errors.length) return renderLogin(req, res, { email, remember, errors });
+
       if (!getPool)
         return renderLogin(req, res, { email, remember, errors: ['Server misconfigured'] });
 
@@ -164,8 +244,14 @@ export function createAuthPagesRouter() {
       if (!ok)
         return renderLogin(req, res, { email, remember, errors: ['Invalid email or password'] });
 
-      const { sid, maxAgeSeconds } = await createSessionForUser(u.id);
-      setSessionCookie(res, sid, { maxAgeSeconds });
+      // Session rotation (anti-fixation)
+      await rotateSession(req);
+
+      const maxAgeSeconds = remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
+      const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
+
+      // IMPORTANT: cookie helper expects (req, res, sid, opts)
+      setSessionCookie(req, res, sid, { maxAgeSeconds });
 
       return res.redirect(nextUrl);
     } catch (err) {
@@ -191,12 +277,11 @@ export function createAuthPagesRouter() {
       if (errors.length) return renderRegister(req, res, { email, errors });
       if (!getPool) return renderRegister(req, res, { email, errors: ['Server misconfigured'] });
 
-      // 1) hash
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-      // 2) insert user
       const pool = getPool();
       let userId;
+
       try {
         const { rows } = await pool.query(
           `
@@ -214,15 +299,26 @@ export function createAuthPagesRouter() {
         throw err;
       }
 
-      // 3) session + cookie (auto-login)
-      const { sid, maxAgeSeconds } = await createSessionForUser(userId);
-      setSessionCookie(res, sid, { maxAgeSeconds });
+      // Session rotation (anti-fixation)
+      await rotateSession(req);
+
+      const maxAgeSeconds = pickSessionTtlSeconds(req);
+      const { sid } = await createSessionForUser(userId, maxAgeSeconds);
+
+      setSessionCookie(req, res, sid, { maxAgeSeconds });
 
       return res.redirect(nextUrl);
     } catch (err) {
       return next(err);
     }
   });
+
+  // Mount password reset POST endpoints AFTER GET pages
+  // So GET /forgot-password and GET /reset-password are handled here (SSR render),
+  // while POST /forgot-password and POST /reset-password use the shared CJS router logic.
+  if (typeof passwordResetRouter === 'function' && typeof passwordResetRouter.use === 'function') {
+    router.use(passwordResetRouter);
+  }
 
   return router;
 }
