@@ -1,101 +1,114 @@
 /* public/css/pages/templates.css */
-/* Templates page layout: sidebar + main (Tempasi Variant A friendly) */
+/* Templates catalog page: sidebar + main (Tempasi Variant A) */
+/* Scoped to .templates-page to avoid being overridden by generic rules */
 
-.templates-layout {
+:root {
+  /* Adjust if header height changes */
+  --tpl-sticky-top: 76px;
+}
+
+/* Layout */
+.templates-page .templates-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
-.templates-side {
+/* Sidebar as a "card" like template-details boxes */
+.templates-page .templates-side {
   position: sticky;
-  top: 76px; /* под хедер; если нужно — подгони на 64/72/80 */
+  top: var(--tpl-sticky-top);
   align-self: start;
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.22);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
   padding: 14px;
 }
 
-.templates-side__section + .templates-side__section {
+/* Sections inside sidebar */
+.templates-page .templates-side__section + .templates-side__section {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.templates-side__title {
+.templates-page .templates-side__title {
+  margin: 0 0 10px 0;
+  font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  margin-bottom: 10px;
+  color: rgba(231, 238, 252, 0.72);
 }
 
-.templates-side__links {
+/* Quick links */
+.templates-page .templates-side__links {
   display: grid;
   gap: 8px;
 }
 
-.templates-side__link {
+.templates-page .templates-side__link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 14px;
+
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(231, 238, 252, 0.86);
 
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.templates-side__link:hover {
+.templates-page .templates-side__link:hover {
   border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.26);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Make existing filters stack nicely in sidebar */
-.templates-filters {
+/* Filters stack nicely in sidebar */
+.templates-page .templates-filters {
   margin: 0;
 }
 
-.templates-filters__row {
+.templates-page .templates-filters__row {
   display: grid;
   gap: 12px;
 }
 
-.templates-search {
+.templates-page .templates-search {
   width: 100%;
 }
 
-/* Ensure chips wrap in sidebar */
-.templates-chips {
+/* Chips wrap nicely */
+.templates-page .templates-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.templates-filters__meta {
+.templates-page .templates-filters__meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
 /* Main column stays flexible */
-.templates-main {
+.templates-page .templates-main {
   min-width: 0;
 }
 
 /* Mobile: stack sidebar above content */
 @media (max-width: 900px) {
-  .templates-layout {
+  .templates-page .templates-layout {
     grid-template-columns: 1fr;
   }
 
-  .templates-side {
+  .templates-page .templates-side {
     position: static;
   }
 }

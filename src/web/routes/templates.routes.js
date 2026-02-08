@@ -37,7 +37,7 @@ export function createTemplatesRouter() {
         title: 'Templates — Tempasi',
         bodyClass: 'templates-page',
         activePage: 'templates',
-        styles: ['/css/pages/catalog.css'],
+        styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
         templates,
       });
     } catch (err) {
