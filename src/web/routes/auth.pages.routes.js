@@ -68,6 +68,11 @@ function pickAuthOk(req) {
   return { message: 'Done.' };
 }
 
+function isFatalResetTokenError(uiErr) {
+  if (!uiErr) return false;
+  return uiErr.code === 'AUTH_RESET_TOKEN_INVALID' || uiErr.code === 'AUTH_RESET_TOKEN_EXPIRED';
+}
+
 /* =========================
    Helpers
    ========================= */
@@ -253,14 +258,22 @@ function renderResetPassword(req, res, opts = {}) {
   const errors = opts.errors || (uiErr ? [uiErr.message] : null);
   const note = opts.note || defaultNote;
 
+  const fatalTokenError = isFatalResetTokenError(uiErr);
+
   return res.status(200).render('pages/reset-password', {
     title: 'Reset password',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
     hideHeader: false,
-    token: opts.token || '',
+
+    // If token is invalid/expired, don't keep token in the form (UX + safety)
+    token: fatalTokenError ? '' : opts.token || '',
+
     note,
     errors,
+
+    // 👇 UX: hide form when token is invalid/expired
+    showForm: !fatalTokenError,
   });
 }
 
