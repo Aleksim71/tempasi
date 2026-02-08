@@ -1,62 +1,217 @@
 {{!-- src/web/views/pages/templates/index.hbs --}}
 
+<!-- DEBUG: TPL index.hbs ACTIVE -->
+
 <section class="templates-page">
   <div class="templates-layout">
     {{!-- SIDEBAR --}}
-    <aside class="templates-side" aria-label="Templates sidebar">
-      <div class="templates-side__section">
-        <div class="templates-side__title">Filters</div>
+    <aside class="templates-side" aria-label="Templates filters">
+      <form class="templates-filters" method="get" action="/templates">
+        {{!-- Search --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Filters</div>
 
-        <section class="templates-filters" aria-label="Filters">
-          <div class="templates-filters__row">
+          <input
+            class="templates-search"
+            type="search"
+            name="q"
+            placeholder="Search (title / slug)…"
+            aria-label="Search templates"
+            value="{{query.q}}"
+          />
+        </div>
+
+        {{!-- Access: rent / buy --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Access</div>
+
+          <div class="templates-chips templates-chips--wide">
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="access" value="rent" checked />
+              <span class="chip-label">Rent</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="access" value="buy" checked />
+              <span class="chip-label">Buy</span>
+            </label>
+          </div>
+        </div>
+
+        {{!-- ZIP status --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">ZIP status</div>
+
+          <div class="templates-chips templates-chips--wide">
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="radio" name="zip" value="" checked />
+              <span class="chip-label">All</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="radio" name="zip" value="ready" />
+              <span class="chip-label">ZIP ready</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="radio" name="zip" value="not-ready" />
+              <span class="chip-label">Not ready</span>
+            </label>
+          </div>
+        </div>
+
+        {{!-- Categories --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Categories</div>
+
+          <div class="templates-chips templates-chips--wide">
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="landing" />
+              <span class="chip-label">Landing pages</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="ecommerce" />
+              <span class="chip-label">E-commerce</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="blog" />
+              <span class="chip-label">Blog / Media</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="portfolio" />
+              <span class="chip-label">Portfolio</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="saas" />
+              <span class="chip-label">SaaS / IT</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="restaurant" />
+              <span class="chip-label">Restaurant / Café</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="real-estate" />
+              <span class="chip-label">Real estate</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="education" />
+              <span class="chip-label">Education</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="events" />
+              <span class="chip-label">Events</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="cat" value="health" />
+              <span class="chip-label">Healthcare</span>
+            </label>
+          </div>
+        </div>
+
+        {{!-- Price --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Price</div>
+
+          <div class="templates-price">
+            <div class="templates-price__row">
+              <span>$0</span>
+              <span class="templates-price__mid">$250</span>
+              <span>$1000</span>
+            </div>
+
             <input
-              class="templates-search"
-              type="search"
-              placeholder="Search (title / slug)…"
-              aria-label="Search templates"
-              data-js="templates-search"
+              class="templates-price__range"
+              type="range"
+              min="0"
+              max="1000"
+              value="250"
+              name="priceMax"
+              aria-label="Max price"
             />
 
-            <div class="templates-chips" aria-label="ZIP status" data-js="chips-zip">
-              <button type="button" class="chip is-active" data-value="all">All</button>
-              <button type="button" class="chip" data-value="zip">ZIP ready</button>
-              <button type="button" class="chip" data-value="nozip">Not ready</button>
-              <button type="button" class="chip chip--ghost" data-action="reset">Reset</button>
-            </div>
-
-            <div class="templates-chips" aria-label="License" data-js="chips-license">
-              <button type="button" class="chip is-active" data-value="all">All</button>
-              <button type="button" class="chip" data-value="free">Free</button>
-              <button type="button" class="chip" data-value="pu">PU</button>
-              <button type="button" class="chip" data-value="cu">CU</button>
-              <button type="button" class="chip" data-value="el">EL</button>
-              <button type="button" class="chip" data-value="ml">ML</button>
-              <button type="button" class="chip" data-value="ex">EX</button>
-            </div>
-
-            <div class="templates-chips" aria-label="Brand" data-js="chips-brand">
-              <button type="button" class="chip is-active" data-value="all">Brand: All</button>
-              <button type="button" class="chip" data-value="gold">Brand: Gold</button>
-              <button type="button" class="chip" data-value="red">Brand: Red</button>
-              <button type="button" class="chip" data-value="amber">Brand: Amber</button>
-            </div>
-
-            <div class="templates-filters__meta">
-              <div class="templates-count" data-js="templates-count">0/0</div>
+            <div class="templates-price__fields">
+              <label class="templates-price__field">
+                <span class="templates-price__label">Up to</span>
+                <input class="templates-price__input" type="number" name="priceMaxN" min="0" max="1000" placeholder="250" />
+              </label>
             </div>
           </div>
-        </section>
-      </div>
-
-      <nav class="templates-side__section" aria-label="Quick links">
-        <div class="templates-side__title">Quick</div>
-        <div class="templates-side__links">
-          <a class="templates-side__link" href="/templates">Templates</a>
-          <a class="templates-side__link" href="/pricing">Pricing</a>
-          <a class="templates-side__link" href="/how-it-works">How it works</a>
-          <a class="templates-side__link" href="/contact">Support</a>
         </div>
-      </nav>
+
+        {{!-- Licenses --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Licenses</div>
+
+          <div class="templates-chips templates-chips--grid">
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="PU" />
+              <span class="chip-label">PU</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="CU" />
+              <span class="chip-label">CU</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="EL" />
+              <span class="chip-label">EL</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="SL" />
+              <span class="chip-label">SL</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="ML" />
+              <span class="chip-label">ML</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="EX" />
+              <span class="chip-label">EX</span>
+            </label>
+
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="lic" value="RF" />
+              <span class="chip-label">RF</span>
+            </label>
+          </div>
+        </div>
+
+        {{!-- Actions --}}
+        <div class="templates-side__section">
+          <div class="templates-filters__meta">
+            <div class="templates-count" data-js="templates-count">0/0</div>
+
+            <div class="templates-actions">
+              <button type="submit" class="chip chip--primary">Apply</button>
+              <a class="chip chip--ghost" href="/templates">Reset</a>
+            </div>
+          </div>
+        </div>
+
+        {{!-- Quick links --}}
+        <nav class="templates-side__section" aria-label="Quick links">
+          <div class="templates-side__title">Quick</div>
+          <div class="templates-side__links">
+            <a class="templates-side__link" href="/templates">Templates</a>
+            <a class="templates-side__link" href="/pricing">Pricing</a>
+            <a class="templates-side__link" href="/how-it-works">How it works</a>
+            <a class="templates-side__link" href="/contact">Support</a>
+          </div>
+        </nav>
+      </form>
     </aside>
 
     {{!-- MAIN --}}
@@ -72,13 +227,6 @@
         {{#each templates}}
           <article class="template-card" data-template-slug="{{this.slug}}">
             <div class="template-card__preview">
-              {{!--
-                ✅ Catalog preview fallback:
-                - Prefer explicit previewUrl if provided by backend
-                - Else fallback to predictable preview path that you verified works:
-                  /t/:slug/preview.png
-                If the image fails to load, swap to the text placeholder.
-              --}}
               <div class="template-card__no-preview" style="display:none;">Preview not available</div>
 
               <img
