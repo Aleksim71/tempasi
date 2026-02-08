@@ -1,0 +1,101 @@
+/* public/css/pages/templates.css */
+/* Templates page layout: sidebar + main (Tempasi Variant A friendly) */
+
+.templates-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.templates-side {
+  position: sticky;
+  top: 76px; /* под хедер; если нужно — подгони на 64/72/80 */
+  align-self: start;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 14px;
+}
+
+.templates-side__section + .templates-side__section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.templates-side__title {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 10px;
+}
+
+.templates-side__links {
+  display: grid;
+  gap: 8px;
+}
+
+.templates-side__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.86);
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.templates-side__link:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+/* Make existing filters stack nicely in sidebar */
+.templates-filters {
+  margin: 0;
+}
+
+.templates-filters__row {
+  display: grid;
+  gap: 12px;
+}
+
+.templates-search {
+  width: 100%;
+}
+
+/* Ensure chips wrap in sidebar */
+.templates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.templates-filters__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Main column stays flexible */
+.templates-main {
+  min-width: 0;
+}
+
+/* Mobile: stack sidebar above content */
+@media (max-width: 900px) {
+  .templates-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .templates-side {
+    position: static;
+  }
+}
