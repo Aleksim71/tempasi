@@ -116,15 +116,7 @@
     </aside>
 
     {{!-- MAIN --}}
-    <div class="templates-main">
-      <header class="templates-hero">
-        <h1 class="templates-title">Templates</h1>
-        <p class="templates-subtitle">
-          Ready-to-use website templates. Preview online and download instantly.
-        </p>
-      </header>
-
-      <section class="templates-grid" data-js="templates-grid" aria-label="Templates">
+    <div class="templates-main"><section class="templates-grid" data-js="templates-grid" aria-label="Templates">
         {{#each templates}}
           <article class="template-card" data-template-slug="{{this.slug}}">
             <div class="template-card__preview">
