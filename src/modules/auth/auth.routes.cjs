@@ -74,8 +74,8 @@ function parseBool(v) {
 
 function validatePassword(pw) {
   const s = String(pw || '');
-  if (s.length < 8) return { ok: false, message: 'Password must be at least 8 characters' };
-  if (s.length > 200) return { ok: false, message: 'Password is too long' };
+  if (s.length < 8) return { ok: false, message: 'Password must be at least 8 characters.' };
+  if (s.length > 200) return { ok: false, message: 'Password is too long.' };
   return { ok: true };
 }
 
@@ -121,6 +121,42 @@ function withTimeout(promise, ms, label) {
   });
 
   return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
+}
+
+/* =========================
+   Auth error helpers (API + optional HTML redirect)
+   ========================= */
+
+function jsonAuthError(res, status, code, message) {
+  return res.status(status).json({ error: { code, message } });
+}
+
+function redirectAuthError(req, res, pagePath, code) {
+  // For HTML form posts, redirect back to the page with ?e=CODE and preserve next.
+  const next = safeNextPath(req.body?.next) || safeNextPath(req.query?.next) || '';
+  const qs = new URLSearchParams();
+  qs.set('e', code);
+  if (next) qs.set('next', next);
+  return res.redirect(303, `${pagePath}?${qs.toString()}`);
+}
+
+function sendAuthError(req, res, status, code, message, pagePathForHtml) {
+  if (wantsHtml(req) && pagePathForHtml) {
+    return redirectAuthError(req, res, pagePathForHtml, code);
+  }
+  return jsonAuthError(res, status, code, message);
+}
+
+function sendTimeout(req, res) {
+  // Keep JSON stable; if HTML, you can later route to a generic error page.
+  return sendAuthError(
+    req,
+    res,
+    504,
+    'AUTH_TIMEOUT',
+    'Request timed out. Try again.',
+    null,
+  );
 }
 
 /* =========================
@@ -254,10 +290,29 @@ router.post('/register', parseBody, async (req, res, next) => {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
 
-    if (!email) return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
+    if (!email) {
+      return sendAuthError(
+        req,
+        res,
+        400,
+        'AUTH_INVALID_INPUT',
+        'Check the form fields and try again.',
+        '/register',
+      );
+    }
 
     const pw = validatePassword(password);
-    if (!pw.ok) return res.status(400).json({ error: { code: 'BAD_REQUEST', message: pw.message } });
+    if (!pw.ok) {
+      // map to AUTH_PASSWORD_WEAK (and keep message short)
+      return sendAuthError(
+        req,
+        res,
+        400,
+        'AUTH_PASSWORD_WEAK',
+        pw.message || 'Password must be at least 8 characters.',
+        '/register',
+      );
+    }
 
     const hash = await withTimeout(
       bcrypt.hash(password, BCRYPT_ROUNDS),
@@ -284,7 +339,14 @@ router.post('/register', parseBody, async (req, res, next) => {
       userId = rows[0].id;
     } catch (err) {
       if (err.code === '23505') {
-        return res.status(409).json({ error: { code: 'EMAIL_TAKEN' } });
+        return sendAuthError(
+          req,
+          res,
+          409,
+          'AUTH_EMAIL_TAKEN',
+          'This email is already in use.',
+          '/register',
+        );
       }
       throw err;
     }
@@ -298,7 +360,7 @@ router.post('/register', parseBody, async (req, res, next) => {
       ? res.redirect(303, pickNext(req))
       : res.status(201).json({ ok: true, userId: String(userId) });
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
@@ -311,12 +373,28 @@ router.post('/login', parseBody, async (req, res, next) => {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
 
-    if (!email || !password) return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
+    if (!email || !password) {
+      return sendAuthError(
+        req,
+        res,
+        400,
+        'AUTH_INVALID_INPUT',
+        'Enter your email and password.',
+        '/login',
+      );
+    }
 
     const rl = checkAndBumpLoginRateLimit(req, email);
     if (!rl.ok) {
       res.setHeader('Retry-After', String(rl.retryAfterSec));
-      return res.status(429).json({ error: { code: 'RATE_LIMITED' } });
+      return sendAuthError(
+        req,
+        res,
+        429,
+        'AUTH_TOO_MANY_ATTEMPTS',
+        'Too many attempts. Try again later.',
+        '/login',
+      );
     }
 
     const pool = getPool();
@@ -331,7 +409,15 @@ router.post('/login', parseBody, async (req, res, next) => {
 
     const u = rows[0];
     if (!u || u.status !== 'active') {
-      return res.status(401).json({ error: { code: 'UNAUTHORIZED' } });
+      // do NOT reveal whether email exists
+      return sendAuthError(
+        req,
+        res,
+        401,
+        'AUTH_INVALID_CREDENTIALS',
+        'Incorrect email or password.',
+        '/login',
+      );
     }
 
     const ok = await withTimeout(
@@ -340,7 +426,16 @@ router.post('/login', parseBody, async (req, res, next) => {
       'bcrypt:compare',
     );
 
-    if (!ok) return res.status(401).json({ error: { code: 'UNAUTHORIZED' } });
+    if (!ok) {
+      return sendAuthError(
+        req,
+        res,
+        401,
+        'AUTH_INVALID_CREDENTIALS',
+        'Incorrect email or password.',
+        '/login',
+      );
+    }
 
     loginAttempts.delete(makeLoginKey(req, email));
 
@@ -353,7 +448,7 @@ router.post('/login', parseBody, async (req, res, next) => {
       ? res.redirect(303, pickNext(req))
       : res.status(200).json({ ok: true, userId: String(u.id) });
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
@@ -382,7 +477,7 @@ router.get('/me', async (req, res, next) => {
 
     return res.json({ ok: true, user: rows[0] || null });
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
@@ -394,7 +489,7 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
 
     const userId = Number(req.body?.userId);
     if (!Number.isFinite(userId) || userId <= 0) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST' } });
+      return jsonAuthError(res, 400, 'AUTH_INVALID_INPUT', 'Bad request.');
     }
 
     const pool = getPool();
@@ -430,7 +525,7 @@ router.post('/dev-login', parseBody, async (req, res, next) => {
     setSessionCookie(res, sid, { maxAgeSeconds });
     return res.json({ ok: true, userId: String(userId) });
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
@@ -453,7 +548,7 @@ router.post('/logout', async (req, res, next) => {
       ? res.redirect(303, '/templates')
       : res.json({ ok: true });
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
@@ -485,7 +580,7 @@ router.post('/logout-all', async (req, res, next) => {
     clearSessionCookie(res);
     return res.status(204).end();
   } catch (err) {
-    if (err.code === 'AUTH_TIMEOUT') return res.status(504).json({ error: { code: 'TIMEOUT' } });
+    if (err.code === 'AUTH_TIMEOUT') return sendTimeout(req, res);
     return next(err);
   }
 });
