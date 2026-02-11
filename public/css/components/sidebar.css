@@ -1,5 +1,5 @@
 /* public/css/components/sidebar.css */
-/* Tempasi — Templates sidebar pills (no double contour) */
+/* Tempasi — Templates sidebar filters (scoped, no conflicts) */
 
 :root {
   --tpl-sticky-top: 76px;
@@ -23,8 +23,7 @@
   --radius-pill: 999px;
 }
 
-/* Sidebar container */
-
+/* Sidebar card */
 .templates-side {
   position: sticky;
   top: var(--tpl-sticky-top);
@@ -35,8 +34,6 @@
   background: var(--side-bg);
   padding: 14px;
 }
-
-/* Sections */
 
 .templates-side__section + .templates-side__section {
   margin-top: 14px;
@@ -49,32 +46,39 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--side-title);
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
 }
 
-/* Reset label.chip base (important to avoid double border) */
+/* Chips container (ONLY inside sidebar) */
+.templates-side .templates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
+/* Wide chips */
+.templates-side .templates-chips--wide .chip {
+  width: 100%;
+}
+
+/* Grid chips */
+.templates-side .templates-chips--grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Base chip */
 .templates-side .chip {
-  border: 0 !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-
   display: block;
   margin: 0;
-  cursor: pointer;
 }
-
-/* Hide input but keep accessible */
 
 .templates-side .chip-input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
-
-/* The actual pill */
 
 .templates-side .chip-label {
   display: flex;
@@ -86,15 +90,14 @@
 
   border-radius: var(--radius-pill);
   border: 1px solid var(--pill-border);
-
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)), var(--pill-bg);
 
   color: var(--side-text);
-  transition: 140ms ease;
-}
+  cursor: pointer;
 
-/* Hover */
+  transition: all 140ms ease;
+}
 
 .templates-side .chip-label:hover {
   border-color: var(--pill-border-2);
@@ -103,44 +106,14 @@
     var(--pill-bg-2);
 }
 
-/* Checkbox square */
-
-.templates-side .chip-label::before {
-  content: '';
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.22);
-  flex: 0 0 auto;
-}
-
-/* Active */
-
 .templates-side .chip-input:checked + .chip-label {
   border-color: var(--gold-2);
-  box-shadow: 0 0 0 1px rgba(255, 215, 120, 0.22);
-}
+  background:
+    radial-gradient(120% 140% at 10% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.22);
 
-.templates-side .chip-input:checked + .chip-label::before {
-  border-color: rgba(255, 215, 120, 0.9);
-  background: rgba(255, 215, 120, 0.85);
-}
-
-/* Focus */
-
-.templates-side .chip-input:focus-visible + .chip-label {
-  outline: none;
   box-shadow:
-    0 0 0 2px rgba(255, 215, 120, 0.28),
+    0 0 0 1px rgba(255, 215, 120, 0.22),
     0 10px 26px rgba(0, 0, 0, 0.55);
-}
-
-/* Mobile */
-
-@media (max-width: 900px) {
-  .templates-side {
-    position: static;
-  }
 }
