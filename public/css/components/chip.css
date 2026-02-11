@@ -1,29 +1,28 @@
-/* public/css/components/chip.css */
-/* Chip component (filters, toggles) */
+/* public/css/components/chips.css */
+/* Shared chips layout helpers used by Templates sidebar + other pages */
 
-.chip {
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(231, 238, 252, 0.88);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
+.templates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.chip:hover {
-  background: rgba(255, 255, 255, 0.07);
+.templates-chips--wide {
+  flex-direction: column;
 }
 
-.chip--active {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(231, 238, 252, 0.98);
+.templates-chips--wide .chip {
+  width: 100%;
 }
 
-.chip--ghost {
-  background: transparent;
+.templates-chips--grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .templates-chips--grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

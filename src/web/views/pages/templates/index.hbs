@@ -4,7 +4,8 @@
 
 <section class="templates-page">
   <div class="templates-layout">
-    {{!-- SIDEBAR --}}
+
+    {{!-- SIDEBAR (ORIGINAL, DO NOT CHANGE CONTENT) --}}
     <aside class="templates-side" aria-label="Templates filters">
       <form class="templates-filters" method="get" action="/templates">
         {{!-- Search --}}
@@ -116,13 +117,26 @@
     </aside>
 
     {{!-- MAIN --}}
-    <div class="templates-main"><section class="templates-grid" data-js="templates-grid" aria-label="Templates">
+    <div class="templates-main">
+      <div class="templates-toolbar" aria-label="View mode">
+        <button type="button" id="viewMini" class="view-toggle" aria-label="Mini view" aria-pressed="true">▦</button>
+        <button type="button" id="viewMaxi" class="view-toggle" aria-label="Maxi view" aria-pressed="false">≡</button>
+      </div>
+
+      <section
+        id="templatesView"
+        class="templates-grid templates-grid--mini"
+        data-js="templates-grid"
+        data-view="mini"
+        aria-label="Templates"
+      >
         {{#each templates}}
           <article class="template-card" data-template-slug="{{this.slug}}">
             <div class="template-card__preview">
               <div class="template-card__no-preview" style="display:none;">Preview not available</div>
 
               <img
+                class="template-card__img"
                 src="{{#if this.previewUrl}}{{this.previewUrl}}{{else}}/t/{{this.slug}}/preview.png{{/if}}"
                 alt="Preview {{this.slug}}"
                 loading="lazy"
@@ -131,16 +145,102 @@
             </div>
 
             <div class="template-card__body">
-              <div class="template-card__slug">{{this.slug}}</div>
+              <div class="template-card__head">
+                <h3 class="template-card__title">{{this.title}}</h3>
 
-              <div class="template-card__actions">
-                <a class="template-card__link" href="/templates/{{this.slug}}">Preview</a>
-                <a class="template-card__btn" href="/api/templates/{{this.slug}}/download">Download</a>
+                {{!-- Prices (best-effort; keep backward compatible with existing this.price) --}}
+                <div class="template-card__prices" aria-label="Prices">
+                  {{#if this.rentPrice}}
+                    <span class="template-card__price">Rent: {{this.rentPrice}}€</span>
+                  {{/if}}
+
+                  {{#if this.rent_price}}
+                    <span class="template-card__price">Rent: {{this.rent_price}}€</span>
+                  {{/if}}
+
+                  {{#if this.price}}
+                    <span class="template-card__price">Buy: {{this.price}}€</span>
+                  {{/if}}
+
+                  {{#if this.buyPrice}}
+                    <span class="template-card__price">Buy: {{this.buyPrice}}€</span>
+                  {{/if}}
+                </div>
+              </div>
+
+              {{!-- MAXI extra --}}
+              <div class="template-card__extra">
+                {{#if this.author}}
+                  <div class="template-card__author">{{this.author}}</div>
+                {{/if}}
+
+                {{#if this.tech}}
+                  <div class="template-card__tech">
+                    {{#each this.tech}}
+                      <span class="tech-item">{{this}}</span>
+                    {{/each}}
+                  </div>
+                {{/if}}
+
+                {{#if this.excerpt}}
+                  <div class="template-card__excerpt">{{this.excerpt}}</div>
+                {{else}}
+                  {{#if this.description}}
+                    <div class="template-card__excerpt">{{this.description}}</div>
+                  {{/if}}
+                {{/if}}
+              </div>
+
+              <div class="template-card__actions" aria-label="Template actions">
+                <a class="template-card__link" href="/templates/{{this.slug}}">Details</a>
+                <a class="template-card__link" href="/preview/{{this.slug}}" target="_blank" rel="noopener">Demo</a>
               </div>
             </div>
           </article>
         {{/each}}
       </section>
     </div>
+
   </div>
 </section>
+
+<script>
+(function () {
+  const view = document.getElementById('templatesView');
+  const miniBtn = document.getElementById('viewMini');
+  const maxiBtn = document.getElementById('viewMaxi');
+  if (!view || !miniBtn || !maxiBtn) return;
+
+  function setPressed(miniPressed) {
+    miniBtn.setAttribute('aria-pressed', miniPressed ? 'true' : 'false');
+    maxiBtn.setAttribute('aria-pressed', miniPressed ? 'false' : 'true');
+  }
+
+  function setMode(mode) {
+    const isMaxi = mode === 'maxi';
+
+    // classes (for existing CSS)
+    view.classList.toggle('templates-grid--mini', !isMaxi);
+    view.classList.toggle('templates-grid--maxi', isMaxi);
+
+    // attribute (for future CSS if needed)
+    view.dataset.view = isMaxi ? 'maxi' : 'mini';
+    document.documentElement.dataset.templatesView = isMaxi ? 'maxi' : 'mini';
+
+    // toolbar state
+    miniBtn.classList.toggle('active', !isMaxi);
+    maxiBtn.classList.toggle('active', isMaxi);
+    setPressed(!isMaxi);
+
+    try { localStorage.setItem('templatesView', isMaxi ? 'maxi' : 'mini'); } catch (e) {}
+  }
+
+  // init
+  let saved = null;
+  try { saved = localStorage.getItem('templatesView'); } catch (e) {}
+  setMode(saved === 'maxi' ? 'maxi' : 'mini');
+
+  miniBtn.addEventListener('click', (e) => { e.preventDefault(); setMode('mini'); });
+  maxiBtn.addEventListener('click', (e) => { e.preventDefault(); setMode('maxi'); });
+})();
+</script>
