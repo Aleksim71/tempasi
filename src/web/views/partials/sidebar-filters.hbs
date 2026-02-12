@@ -1,20 +1,19 @@
+{{!-- src/web/views/partials/sidebar-filters.hbs --}}
 {{!-- Templates sidebar filters (content only) --}}
 
 <section class="templates-side__section">
   <div class="templates-side__title">Access</div>
 
   <div class="templates-chips templates-chips--wide" data-js="chips-access">
-    <button type="button" class="chip is-active" data-value="all">
-      All
-    </button>
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="access" value="rent" />
+      <span class="chip-label">Rent</span>
+    </label>
 
-    <button type="button" class="chip" data-value="rent">
-      Rent
-    </button>
-
-    <button type="button" class="chip" data-value="buy">
-      Buy
-    </button>
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="access" value="buy" />
+      <span class="chip-label">Buy</span>
+    </label>
   </div>
 </section>
 
@@ -22,17 +21,55 @@
   <div class="templates-side__title">Category</div>
 
   <div class="templates-chips templates-chips--wide" data-js="chips-category">
-    <button type="button" class="chip is-active" data-value="all">All</button>
-    <button type="button" class="chip" data-value="landing">Landing pages</button>
-    <button type="button" class="chip" data-value="shop">E-commerce</button>
-    <button type="button" class="chip" data-value="blog">Blog / Media</button>
-    <button type="button" class="chip" data-value="portfolio">Portfolio</button>
-    <button type="button" class="chip" data-value="saas">SaaS / IT</button>
-    <button type="button" class="chip" data-value="cafe">Restaurant / Cafe</button>
-    <button type="button" class="chip" data-value="realty">Real estate</button>
-    <button type="button" class="chip" data-value="edu">Education</button>
-    <button type="button" class="chip" data-value="events">Events</button>
-    <button type="button" class="chip" data-value="medical">Healthcare</button>
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="landing" />
+      <span class="chip-label">Landing pages</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="shop" />
+      <span class="chip-label">E-commerce</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="blog" />
+      <span class="chip-label">Blog / Media</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="portfolio" />
+      <span class="chip-label">Portfolio</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="saas" />
+      <span class="chip-label">SaaS / IT</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="cafe" />
+      <span class="chip-label">Restaurant / Cafe</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="realty" />
+      <span class="chip-label">Real estate</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="edu" />
+      <span class="chip-label">Education</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="events" />
+      <span class="chip-label">Events</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="medical" />
+      <span class="chip-label">Healthcare</span>
+    </label>
   </div>
 </section>
 
@@ -62,12 +99,34 @@
   <div class="templates-side__title">License</div>
 
   <div class="templates-chips templates-chips--grid" data-js="chips-license">
-    <button type="button" class="chip is-active" data-value="all">All</button>
-    <button type="button" class="chip" data-value="free">Free</button>
-    <button type="button" class="chip" data-value="pu">PU</button>
-    <button type="button" class="chip" data-value="cu">CU</button>
-    <button type="button" class="chip" data-value="el">EL</button>
-    <button type="button" class="chip" data-value="ml">ML</button>
-    <button type="button" class="chip" data-value="ex">EX</button>
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="free" />
+      <span class="chip-label">Free</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="pu" />
+      <span class="chip-label">PU</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="cu" />
+      <span class="chip-label">CU</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="el" />
+      <span class="chip-label">EL</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="ml" />
+      <span class="chip-label">ML</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="ex" />
+      <span class="chip-label">EX</span>
+    </label>
   </div>
 </section>

@@ -1,86 +1,44 @@
 /* public/css/components/sidebar.css */
-/* Tempasi — Templates sidebar filters (scoped, no conflicts) */
+/* Templates sidebar — single custom checkbox (works with: label > input + span) */
 
-:root {
-  --tpl-sticky-top: 76px;
-
-  --side-bg: rgba(255, 255, 255, 0.03);
-  --side-border: rgba(255, 255, 255, 0.1);
-  --side-divider: rgba(255, 255, 255, 0.08);
-
-  --side-title: rgba(231, 238, 252, 0.65);
-  --side-text: rgba(231, 238, 252, 0.92);
-
-  --gold: rgba(255, 215, 120, 0.85);
-  --gold-2: rgba(255, 215, 120, 0.55);
-
-  --pill-bg: rgba(0, 0, 0, 0.18);
-  --pill-bg-2: rgba(0, 0, 0, 0.26);
-  --pill-border: rgba(255, 255, 255, 0.12);
-  --pill-border-2: rgba(255, 255, 255, 0.18);
-
-  --radius-card: 18px;
-  --radius-pill: 999px;
-}
-
-/* Sidebar card */
 .templates-side {
-  position: sticky;
-  top: var(--tpl-sticky-top);
-  align-self: start;
-
-  border-radius: var(--radius-card);
-  border: 1px solid var(--side-border);
-  background: var(--side-bg);
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.templates-side__section + .templates-side__section {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--side-divider);
+/* Section */
+.templates-side__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .templates-side__title {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--side-title);
-  margin: 0 0 10px 0;
+  opacity: 0.6;
 }
 
-/* Chips container (ONLY inside sidebar) */
-.templates-side .templates-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* Wide chips */
-.templates-side .templates-chips--wide .chip {
-  width: 100%;
-}
-
-/* Grid chips */
-.templates-side .templates-chips--grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-/* Base chip */
-.templates-side .chip {
+/* Chip wrapper (label) */
+.chip {
+  position: relative;
   display: block;
   margin: 0;
 }
 
-.templates-side .chip-input {
+/* Hide native checkbox completely (no duplicate UI) */
+.chip-input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+  width: 0;
+  height: 0;
 }
 
-.templates-side .chip-label {
+/* Pill */
+.chip-label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -88,32 +46,77 @@
   width: 100%;
   padding: 12px 14px;
 
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--pill-border);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)), var(--pill-bg);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
 
-  color: var(--side-text);
   cursor: pointer;
+  user-select: none;
 
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+/* Small chips (licenses grid) */
+.chip--small .chip-label {
+  justify-content: center;
+  padding: 10px 12px;
+}
+
+/* Hover */
+.chip-label:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+/* Custom checkbox square (the ONLY visible checkbox) */
+.chip-label::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.22);
+
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+
+  flex: 0 0 auto;
   transition: all 140ms ease;
 }
 
-.templates-side .chip-label:hover {
-  border-color: var(--pill-border-2);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
-    var(--pill-bg-2);
-}
-
-.templates-side .chip-input:checked + .chip-label {
-  border-color: var(--gold-2);
+/* Checked state */
+.chip-input:checked + .chip-label {
+  border-color: rgba(255, 215, 120, 0.6);
   background:
     radial-gradient(120% 140% at 10% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(0, 0, 0, 0.22);
 
   box-shadow:
     0 0 0 1px rgba(255, 215, 120, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.chip-input:checked + .chip-label::before {
+  border-color: rgba(255, 215, 120, 0.9);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 235, 180, 0.95),
+    rgba(255, 200, 80, 0.85)
+  );
+
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(255, 215, 120, 0.22);
+}
+
+/* Keyboard focus */
+.chip-input:focus-visible + .chip-label {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 215, 120, 0.28),
     0 10px 26px rgba(0, 0, 0, 0.55);
 }
