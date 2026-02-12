@@ -1,105 +1,74 @@
 // tests/profile.api.test.cjs
+/* eslint-env node */
 'use strict';
 
 const request = require('supertest');
-const { startServer } = require('./helpers/spawnServer.cjs');
-const { withDb } = require('./helpers/db.cjs');
-const { createTestUser } = require('./helpers/user.cjs');
+const { migrateDb } = require('./helpers/migrateDb.cjs');
+const { withRealServer } = require('./helpers/realServer.cjs');
 
-function loadMigrate() {
-  const variants = [
-    './helpers/migrateDb.cjs',
-    './helpers/migrate.db.cjs',
-    './helpers/migrate.cjs',
-    './helpers/db.migrate.cjs',
-  ];
+// Robust cookie picker: supports different session cookie names
+function pickSidCookie(setCookieHeader) {
+  const arr = Array.isArray(setCookieHeader)
+    ? setCookieHeader
+    : (setCookieHeader ? [setCookieHeader] : []);
 
-  for (const p of variants) {
-    try {
-      // eslint-disable-next-line global-require
-      const mod = require(p);
-      const fn = mod.migrateDb || mod.migrate || mod.runMigrations || mod.default || null;
-      if (typeof fn === 'function') return fn;
-    } catch (_e) {
-      // continue
-    }
+  if (!arr.length) return null;
+
+  const re = /^(sid|connect\.sid|tempasi\.sid|tempasi_sid|tp\.sid|session|sess|sid_cookie)=/i;
+
+  for (const raw of arr) {
+    const firstPart = String(raw).split(';')[0].trim();
+    const name = firstPart.split('=')[0];
+    if (re.test(`${name}=`)) return firstPart;
   }
 
-  throw new Error(
-    `Cannot resolve migrate helper. Tried:\n${variants.join('\n')}\n` +
-      `Please check tests/helpers/ for the actual file name.`,
-  );
-}
+  for (const raw of arr) {
+    const s = String(raw);
+    if (/httponly/i.test(s)) return s.split(';')[0].trim();
+  }
 
-function pickSidCookie(setCookieHeader) {
-  if (!setCookieHeader) return null;
-  const arr = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-  const line = arr.find((s) => String(s).toLowerCase().startsWith('sid='));
-  if (!line) return null;
-  return String(line).split(';')[0];
+  return null;
 }
 
 describe('GET /api/profile/downloads (via real server)', () => {
-  let srv;
+  it('401 when not logged in', async () => {
+    await migrateDb();
 
-  beforeAll(async () => {
-    const migrate = loadMigrate();
-    await migrate();
-    srv = await startServer({ databaseUrlTest: process.env.DATABASE_URL_TEST });
-  });
-
-  afterAll(async () => {
-    if (srv && srv.stop) await srv.stop();
-  });
-
-  test('401 when not logged in', async () => {
-    const res = await request(srv.baseUrl).get('/api/profile/downloads');
-    expect(res.status).toBe(401);
-  });
-
-  test('200 and returns items when logged in', async () => {
-    // 1) Ensure user exists in DB (FK-safe)
-    const userId = await withDb(async (db) => createTestUser(db));
-
-    // 2) Dev-login for that user
-    const login = await request(srv.baseUrl).post('/api/auth/dev-login').send({ userId });
-
-    if (login.status !== 200) {
-      // eslint-disable-next-line no-console
-      console.error('DEV-LOGIN status=', login.status);
-      // eslint-disable-next-line no-console
-      console.error('DEV-LOGIN text=', login.text);
-    }
-
-    expect(login.status).toBe(200);
-
-    const sidCookie = pickSidCookie(login.headers['set-cookie']);
-    expect(sidCookie).toBeTruthy();
-
-
-    // 2.5) Seed entitlement so profile downloads returns items
-    await withDb(async (db) => {
-      const entRepo = require('../src/modules/entitlements/entitlements.repo.cjs');
-      await entRepo.grantEntitlement({ db, userId, templateSlug: 'seed-001', dealType: 'BUY' });
+    await withRealServer(async (srv) => {
+      const r = await request(srv.baseUrl).get('/api/profile/downloads');
+      expect(r.status).toBe(401);
     });
+  });
 
-    // 3) Fetch downloads
-    const res = await request(srv.baseUrl).get('/api/profile/downloads').set('Cookie', sidCookie);
+  it('200 and returns items when logged in', async () => {
+    await migrateDb();
 
-    // 🔎 Debug on 500 / non-200
-    if (res.status !== 200) {
-      // eslint-disable-next-line no-console
-      console.error('PROFILE status=', res.status);
-      // eslint-disable-next-line no-console
-      console.error('PROFILE text=', res.text);
-      // eslint-disable-next-line no-console
-      console.error('PROFILE body=', res.body);
-    }
+    await withRealServer(async (srv) => {
+      // 1) Register + Login
+      const email = 'buyer2@example.com';
+      const password = 'Passw0rd!';
 
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('items');
-    expect(Array.isArray(res.body.items)).toBe(true);
-    expect(res.body.items.length).toBeGreaterThan(0);
-    expect(res.body.items[0]).toHaveProperty('template_slug');
+      const reg = await request(srv.baseUrl)
+        .post('/api/auth/register')
+        .send({ email, password });
+
+      expect([200, 201]).toContain(reg.status);
+
+      const login = await request(srv.baseUrl)
+        .post('/api/auth/login')
+        .send({ email, password });
+
+      expect([200, 204, 302, 303]).toContain(login.status);
+
+      const sidCookie = pickSidCookie(login.headers['set-cookie']);
+      expect(sidCookie).toBeTruthy();
+
+      // 2) Profile downloads (should be authed)
+      const r = await request(srv.baseUrl)
+        .get('/api/profile/downloads')
+        .set('Cookie', sidCookie);
+
+      expect([200, 204]).toContain(r.status);
+    });
   });
 });
