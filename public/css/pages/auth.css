@@ -1,20 +1,18 @@
 /* public/css/pages/auth.css */
 
 /*
-  Auth pages (login/register):
+  Auth pages (login/register/forgot/reset):
+  Goal:
   - Header stays at the top
-  - Footer stays at the bottom
-  - Auth card sits between them without vertical scrolling on typical screens
+  - Footer stays at the bottom of the viewport
+  - Auth card sits between them (centered) without forcing scroll on typical screens
 
   IMPORTANT:
-  The main layout already wraps pages with:
-    <body class="{{bodyClass}}">
-    <main class="l-page"> ... </main>
-    <footer> ... </footer>
-
-  These rules are scoped to body.auth to avoid affecting other pages.
+  This file must not affect other pages.
+  Everything is scoped to body.auth.
 */
 
+/* Make full-height layout work reliably */
 html,
 body {
   height: 100%;
@@ -26,73 +24,53 @@ body.auth {
   flex-direction: column;
 }
 
-/* Override global layout spacing for auth pages */
+/* ✅ Key fix: push footer to the bottom on auth pages */
+body.auth footer {
+  margin-top: auto;
+}
+
+/*
+  Global layout uses .l-page { min-height: 100vh; } which plus footer can create
+  awkward vertical behavior. On auth pages we let .l-page be flexible.
+*/
 body.auth .l-page {
-  /* global .l-page uses min-height:100vh which causes scroll with header+footer */
-  min-height: 0;
-  flex: 1;
+  min-height: 0 !important;
+  flex: 1 0 auto;
   display: flex;
+  flex-direction: column;
 }
 
+/* Main area stretches between header and footer */
 body.auth .l-main {
-  /* global padding-block is too big for "no scroll" */
-  padding-block: 0;
   flex: 1;
   display: flex;
+  padding-block: 0; /* keep compact to avoid accidental scroll */
 }
 
+/* Center the auth card in the available space */
 body.auth .l-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* small breathing room to keep the card slightly lower and footer closer */
-  padding-top: var(--auth-shell-pad-top);
-  padding-bottom: var(--auth-shell-pad-bottom);
+  padding: 16px;
 }
 
-/* l-stack adds top margins between children. Auth pages have a single child, so it's ok.
-   But keep it explicit and harmless. */
+/* If your layout uses .l-stack spacing, keep it neutral for single-card pages */
 body.auth .l-stack {
   --stack-gap: 0px;
 }
 
-:root {
-  /* Tune spacing here */
-  /*
-    Микро-полировка по макету:
-    - блок чуть крупнее (масштаб)
-    - блок немного ниже
-    - футер визуально ближе снизу
-  */
-  --auth-shell-pad-top: 22px;
-  --auth-shell-pad-bottom: 10px;
-  --auth-shell-pad-x: 16px;
+/* ------------------------------
+   Auth UI blocks
+------------------------------ */
 
-  --auth-card-max: 480px;
-  --auth-tabs-gap: 22px; /* больше расстояние между Sign in и Register */
+:root {
+  --auth-card-max: 520px;
   --auth-card-pad: 26px;
   --auth-radius: 16px;
+  --auth-tabs-gap: 22px;
 }
-
-/*
-  Usage (expected markup):
-  <main class="auth-shell">
-    <section class="auth-card">
-      <nav class="auth-tabs">...</nav>
-      ...
-    </section>
-  </main>
-*/
-
-/*
-  Page markup (login/register):
-    <section class="auth-shell">
-      <section class="auth-card"> ... </section>
-    </section>
-
-  We center using the outer layout container, so .auth-shell stays minimal.
-*/
 
 .auth-shell {
   width: 100%;
@@ -105,7 +83,6 @@ body.auth .l-stack {
   max-width: var(--auth-card-max);
   padding: var(--auth-card-pad);
   border-radius: var(--auth-radius);
-  /* rely on existing theme tokens if present; safe fallbacks */
   background: var(--panel-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
   box-shadow: var(--panel-shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
@@ -154,7 +131,7 @@ body.auth .l-stack {
 .auth-row {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Remember me left, Forgot password right */
+  justify-content: space-between;
   gap: 12px;
   margin-top: 4px;
 }
@@ -177,7 +154,7 @@ body.auth .l-stack {
   text-decoration: underline;
 }
 
-/* Error box (if you render errors) */
+/* Error box */
 .auth-error {
   margin: 0 0 12px 0;
   padding: 12px 14px;

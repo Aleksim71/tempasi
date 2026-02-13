@@ -1,0 +1,59 @@
+{{!-- src/web/views/pages/templates/show.hbs --}}
+
+<section class="template-details">
+
+  <div class="template-details__layout">
+
+    {{!-- LEFT: Preview --}}
+    <div class="template-details__preview">
+      <img
+        src="{{template.previewUrl}}"
+        alt="{{template.title}} preview"
+        class="template-details__img"
+      />
+    </div>
+
+    {{!-- RIGHT: Info --}}
+    <div class="template-details__info">
+
+      <h1 class="template-details__title">
+        {{template.title}}
+      </h1>
+
+      <div class="template-details__mini">
+        <span class="badge">MINI</span>
+        <span class="template-details__price">
+          Buy: ${{template.priceBuy}}
+        </span>
+        <span class="template-details__price">
+          Rent: ${{template.priceRent}} / mo
+        </span>
+      </div>
+
+      <div class="template-details__block">
+        <h3>Description</h3>
+        <p>{{template.description}}</p>
+      </div>
+
+      <div class="template-details__block">
+        <h3>Tech stack</h3>
+        <ul class="template-details__tech">
+          {{#each template.tech}}
+            <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+
+      <div class="template-details__block">
+        <h3>Author</h3>
+        <div class="template-details__author">
+          <strong>{{template.author.name}}</strong>
+          <p>{{template.author.bio}}</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>

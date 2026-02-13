@@ -1,102 +1,246 @@
-
 {{!-- src/web/views/pages/templates/index.hbs --}}
 
+<!-- DEBUG: TPL index.hbs ACTIVE -->
+
 <section class="templates-page">
-  <div class="container">
+  <div class="templates-layout">
 
-    <header class="templates-hero">
-      <h1 class="templates-title">Templates</h1>
-      <p class="templates-subtitle">
-        Ready-to-use website templates. Preview online, download ZIP when ready.
-      </p>
-    </header>
+    {{!-- SIDEBAR (ORIGINAL, DO NOT CHANGE CONTENT) --}}
+    <aside class="templates-side" aria-label="Templates filters">
+      <form class="templates-filters" method="get" action="/templates">
+        {{!-- Search --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Filters</div>
 
-    <section class="templates-filters" aria-label="Filters">
-      <div class="templates-filters__row">
-        <input
-          class="templates-search"
-          type="search"
-          placeholder="Search (title / slug)..."
-          aria-label="Search templates"
-          data-js="templates-search"
-        />
-
-        <div class="templates-chips" aria-label="ZIP status" data-js="chips-zip">
-          <button type="button" class="c-chip is-active" data-chip="all">All</button>
-          <button type="button" class="c-chip" data-chip="zip-ready">ZIP ready</button>
-          <button type="button" class="c-chip" data-chip="zip-not-ready">Not ready</button>
+          <input
+            class="templates-search"
+            type="search"
+            name="q"
+            placeholder="Search (title / slug)…"
+            aria-label="Search templates"
+            value="{{query.q}}"
+          />
         </div>
 
-        <div class="templates-chips" aria-label="License" data-js="chips-license">
-          <button type="button" class="c-chip is-active" data-chip="all">All</button>
-          <button type="button" class="c-chip" data-chip="free">Free</button>
-          <button type="button" class="c-chip" data-chip="pu">PU</button>
-          <button type="button" class="c-chip" data-chip="cu">CU</button>
-          <button type="button" class="c-chip" data-chip="el">EL</button>
-          <button type="button" class="c-chip" data-chip="ml">ML</button>
-          <button type="button" class="c-chip" data-chip="ex">EX</button>
-          <button type="button" class="c-chip" data-chip="reset">Reset</button>
-        </div>
+        {{!-- Access: rent / buy --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Access</div>
 
-        <div class="templates-chips" aria-label="Brand" data-js="chips-brand">
-          <button type="button" class="c-chip" data-chip="brand-gold">Brand: Gold</button>
-          <button type="button" class="c-chip" data-chip="brand-red">Brand: Red</button>
-          <button type="button" class="c-chip" data-chip="brand-amber">Brand: Amber</button>
-        </div>
+          <div class="templates-chips templates-chips--wide">
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="access" value="rent" checked />
+              <span class="chip-label">Rent</span>
+            </label>
 
-        <div class="templates-filters__meta">
-          <div class="templates-count" data-js="templates-count">0/0</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="templates-grid" data-js="templates-grid" aria-label="Templates">
-      {{#each templates}}
-        <article class="template-card" data-template-card data-slug="{{slug}}">
-
-          <div class="template-card__top">
-            {{#if zipReady}}
-              <span class="c-chip c-chip--success">ZIP READY</span>
-            {{else}}
-              <span class="c-chip">ZIP NOT READY</span>
-            {{/if}}
-
-            {{#if license}}
-              <span class="c-chip">{{license}}</span>
-            {{/if}}
+            <label class="chip chip--toggle">
+              <input class="chip-input" type="checkbox" name="access" value="buy" checked />
+              <span class="chip-label">Buy</span>
+            </label>
           </div>
+        </div>
 
-          {{!-- IMPORTANT: /t is the only real preview source in current setup --}}
-          <a class="template-card__preview" href="/preview/{{slug}}">
-            <img
-              class="template-card__img"
-              src="/t/{{slug}}/preview/preview.png"
-              alt="{{title}} preview"
-              loading="lazy"
-              onload="this.closest('.template-card__preview')?.classList.remove('is-error');"
-              onerror="this.onerror=null; this.closest('.template-card__preview')?.classList.add('is-error');"
+        {{!-- Categories --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Categories</div>
+
+          <div class="templates-chips templates-chips--wide">
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="landing" /><span class="chip-label">Landing pages</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="ecommerce" /><span class="chip-label">E-commerce</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="blog" /><span class="chip-label">Blog / Media</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="portfolio" /><span class="chip-label">Portfolio</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="saas" /><span class="chip-label">SaaS / IT</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="restaurant" /><span class="chip-label">Restaurant / Café</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="real-estate" /><span class="chip-label">Real estate</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="education" /><span class="chip-label">Education</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="events" /><span class="chip-label">Events</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="health" /><span class="chip-label">Healthcare</span></label>
+          </div>
+        </div>
+
+        {{!-- Price --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Price</div>
+
+          <div class="templates-price">
+            <div class="templates-price__row">
+              <span>$0</span>
+              <span class="templates-price__mid">$250</span>
+              <span>$1000</span>
+            </div>
+
+            <input
+              class="templates-price__range"
+              type="range"
+              min="0"
+              max="1000"
+              value="250"
+              name="priceMax"
+              aria-label="Max price"
             />
-            <div class="template-card__placeholder">Preview not available</div>
-          </a>
 
-          <div class="template-card__body">
-            <h3 class="template-card__title">{{title}}</h3>
-            <div class="template-card__meta">{{slug}}</div>
+            <div class="templates-price__fields">
+              <label class="templates-price__field">
+                <span class="templates-price__label">Up to</span>
+                <input class="templates-price__input" type="number" name="priceMaxN" min="0" max="1000" placeholder="250" />
+              </label>
+            </div>
           </div>
+        </div>
 
-          <div class="template-card__actions">
-            <a class="c-btn c-btn--ghost" href="/preview/{{slug}}">Preview</a>
+        {{!-- Licenses --}}
+        <div class="templates-side__section">
+          <div class="templates-side__title">Licenses</div>
 
-            {{#if zipReady}}
-              <a class="c-btn c-btn--primary" href="/download/{{slug}}">Download</a>
-            {{else}}
-              <a class="c-btn c-btn--primary" href="/{{slug}}/buy">Buy</a>
-            {{/if}}
+          <div class="templates-chips templates-chips--grid">
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="PU" /><span class="chip-label">PU</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="CU" /><span class="chip-label">CU</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="EL" /><span class="chip-label">EL</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="SL" /><span class="chip-label">SL</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="ML" /><span class="chip-label">ML</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="EX" /><span class="chip-label">EX</span></label>
+            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="RF" /><span class="chip-label">RF</span></label>
           </div>
+        </div>
 
-        </article>
-      {{/each}}
-    </section>
+        {{!-- Actions --}}
+        <div class="templates-side__section">
+          <div class="templates-filters__meta">
+            <div class="templates-count" data-js="templates-count">0/0</div>
+
+            <div class="templates-actions">
+              <button type="submit" class="chip chip--primary">Apply</button>
+              <a class="chip chip--ghost" href="/templates">Reset</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </aside>
+
+    {{!-- MAIN --}}
+    <div class="templates-main">
+      <div class="templates-toolbar" aria-label="View mode">
+        <button type="button" id="viewMini" class="view-toggle" aria-label="Mini view" aria-pressed="true">▦</button>
+        <button type="button" id="viewMaxi" class="view-toggle" aria-label="Maxi view" aria-pressed="false">≡</button>
+      </div>
+
+      <section
+        id="templatesView"
+        class="templates-grid templates-grid--mini"
+        data-js="templates-grid"
+        data-view="mini"
+        aria-label="Templates"
+      >
+        {{#each templates}}
+          <article class="template-card" data-template-slug="{{this.slug}}">
+            <div class="template-card__preview">
+              <div class="template-card__no-preview" style="display:none;">Preview not available</div>
+
+              <img
+                class="template-card__img"
+                src="{{#if this.previewUrl}}{{this.previewUrl}}{{else}}/t/{{this.slug}}/preview.png{{/if}}"
+                alt="Preview {{this.slug}}"
+                loading="lazy"
+                onerror="try{const box=this.closest('.template-card__preview'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"
+              />
+            </div>
+
+            <div class="template-card__body">
+              <div class="template-card__head">
+                <h3 class="template-card__title">{{this.title}}</h3>
+
+                {{!-- Prices (best-effort; keep backward compatible with existing this.price) --}}
+                <div class="template-card__prices" aria-label="Prices">
+                  {{#if this.rentPrice}}
+                    <span class="template-card__price">Rent: {{this.rentPrice}}€</span>
+                  {{/if}}
+
+                  {{#if this.rent_price}}
+                    <span class="template-card__price">Rent: {{this.rent_price}}€</span>
+                  {{/if}}
+
+                  {{#if this.price}}
+                    <span class="template-card__price">Buy: {{this.price}}€</span>
+                  {{/if}}
+
+                  {{#if this.buyPrice}}
+                    <span class="template-card__price">Buy: {{this.buyPrice}}€</span>
+                  {{/if}}
+                </div>
+              </div>
+
+              {{!-- MAXI extra --}}
+              <div class="template-card__extra">
+                {{#if this.author}}
+                  <div class="template-card__author">{{this.author}}</div>
+                {{/if}}
+
+                {{#if this.tech}}
+                  <div class="template-card__tech">
+                    {{#each this.tech}}
+                      <span class="tech-item">{{this}}</span>
+                    {{/each}}
+                  </div>
+                {{/if}}
+
+                {{#if this.excerpt}}
+                  <div class="template-card__excerpt">{{this.excerpt}}</div>
+                {{else}}
+                  {{#if this.description}}
+                    <div class="template-card__excerpt">{{this.description}}</div>
+                  {{/if}}
+                {{/if}}
+              </div>
+
+              <div class="template-card__actions" aria-label="Template actions">
+                <a class="template-card__link" href="/templates/{{this.slug}}">Details</a>
+                <a class="template-card__link" href="/preview/{{this.slug}}" target="_blank" rel="noopener">Demo</a>
+              </div>
+            </div>
+          </article>
+        {{/each}}
+      </section>
+    </div>
 
   </div>
 </section>
+
+<script>
+(function () {
+  const view = document.getElementById('templatesView');
+  const miniBtn = document.getElementById('viewMini');
+  const maxiBtn = document.getElementById('viewMaxi');
+  if (!view || !miniBtn || !maxiBtn) return;
+
+  function setPressed(miniPressed) {
+    miniBtn.setAttribute('aria-pressed', miniPressed ? 'true' : 'false');
+    maxiBtn.setAttribute('aria-pressed', miniPressed ? 'false' : 'true');
+  }
+
+  function setMode(mode) {
+    const isMaxi = mode === 'maxi';
+
+    // classes (for existing CSS)
+    view.classList.toggle('templates-grid--mini', !isMaxi);
+    view.classList.toggle('templates-grid--maxi', isMaxi);
+
+    // attribute (for future CSS if needed)
+    view.dataset.view = isMaxi ? 'maxi' : 'mini';
+    document.documentElement.dataset.templatesView = isMaxi ? 'maxi' : 'mini';
+
+    // toolbar state
+    miniBtn.classList.toggle('active', !isMaxi);
+    maxiBtn.classList.toggle('active', isMaxi);
+    setPressed(!isMaxi);
+
+    try { localStorage.setItem('templatesView', isMaxi ? 'maxi' : 'mini'); } catch (e) {}
+  }
+
+  // init
+  let saved = null;
+  try { saved = localStorage.getItem('templatesView'); } catch (e) {}
+  setMode(saved === 'maxi' ? 'maxi' : 'mini');
+
+  miniBtn.addEventListener('click', (e) => { e.preventDefault(); setMode('mini'); });
+  maxiBtn.addEventListener('click', (e) => { e.preventDefault(); setMode('maxi'); });
+})();
+</script>

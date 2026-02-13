@@ -48,6 +48,9 @@ function isHttpsRequest(req) {
 }
 
 function setSessionCookie(req, res, sid, opts = {}) {
+  // Guard: do nothing if res is not available (prevents 500 on misuse)
+  if (!res || typeof res.setHeader !== 'function') return;
+
   const maxAgeSeconds = Number(opts.maxAgeSeconds || 60 * 60 * 24 * 30);
 
   const parts = [
@@ -67,6 +70,9 @@ function setSessionCookie(req, res, sid, opts = {}) {
 }
 
 function clearSessionCookie(req, res) {
+  // Guard: do nothing if res is not available (prevents 500 on misuse)
+  if (!res || typeof res.setHeader !== 'function') return;
+
   const parts = [
     'sid=',
     'Max-Age=0',

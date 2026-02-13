@@ -31,6 +31,23 @@ const projectRoot = path.resolve(__dirname, '..');
 const publicDir = path.join(projectRoot, 'public');
 
 // --------------------
+// IMPORTANT: test DB wiring
+// --------------------
+// In tests we run migrations against DATABASE_URL_TEST.
+// Make the running server also point to the same DB.
+if (process.env.NODE_ENV === 'test' && process.env.DATABASE_URL_TEST) {
+  // Prefer DATABASE_URL in db.cjs resolution (avoid PG* picking dev DB)
+  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
+
+  // Optional: neutralize PG* if present (safer)
+  delete process.env.PGHOST;
+  delete process.env.PGPORT;
+  delete process.env.PGUSER;
+  delete process.env.PGDATABASE;
+  delete process.env.PGPASSWORD;
+}
+
+// --------------------
 // DB (CJS)
 // --------------------
 const dbMod = require('./config/db.cjs');
@@ -217,6 +234,10 @@ app.get('/__health', (_req, res) => res.status(200).json({ ok: true }));
 app.use('/css', express.static(path.join(publicDir, 'css'), { fallthrough: false }));
 app.use('/icons', express.static(path.join(publicDir, 'icons'), { fallthrough: false }));
 app.use(express.static(publicDir, { fallthrough: true }));
+
+// ✅ API body parsing (tests send JSON)
+app.use('/api', express.json({ limit: '1mb' }));
+app.use('/api', express.urlencoded({ extended: false }));
 
 // DB available before auth/routers
 app.use(attachDb(db));

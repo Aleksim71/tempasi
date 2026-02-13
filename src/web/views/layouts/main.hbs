@@ -4,7 +4,18 @@
   <head>
     {{> head}}
 
-    {{!-- page-specific styles --}}
+    {{!-- Core layout --}}
+    <link rel="stylesheet" href="/css/layout.css" />
+
+    {{!-- Components (global) --}}
+    <link rel="stylesheet" href="/css/components/button.css" />
+    <link rel="stylesheet" href="/css/components/card.css" />
+    <link rel="stylesheet" href="/css/components/header.css" />
+    <link rel="stylesheet" href="/css/components/badge.css" />
+    <link rel="stylesheet" href="/css/components/chips.css" />
+    <link rel="stylesheet" href="/css/components/sidebar.css" />
+
+    {{!-- Page-specific styles --}}
     {{#if styles}}
       {{#each styles}}
         <link rel="stylesheet" href="{{this}}" />

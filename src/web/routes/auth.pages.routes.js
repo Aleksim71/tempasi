@@ -37,6 +37,46 @@ try {
 const TTL_SHORT_SECONDS = Number(process.env.SESSION_TTL_SHORT_SECONDS || 60 * 60 * 2); // 2 hours
 const TTL_REMEMBER_SECONDS = Number(process.env.SESSION_TTL_REMEMBER_SECONDS || 60 * 60 * 24 * 30); // 30 days
 
+/* =========================
+   UI messages (SSR banners)
+   ========================= */
+
+const AUTH_UI_MESSAGES = {
+  AUTH_INVALID_INPUT: 'Check the form fields and try again.',
+  AUTH_INVALID_CREDENTIALS: 'Incorrect email or password.',
+  AUTH_TOO_MANY_ATTEMPTS: 'Too many attempts. Try again later.',
+  AUTH_EMAIL_TAKEN: 'This email is already in use.',
+  AUTH_PASSWORD_WEAK: 'Password must be at least 8 characters.',
+  AUTH_TIMEOUT: 'Request timed out. Try again.',
+  AUTH_INVALID_EMAIL: 'Enter a valid email address.',
+  AUTH_RESET_TOKEN_INVALID: 'This reset link is invalid. Request a new one.',
+  AUTH_RESET_TOKEN_EXPIRED: 'This reset link has expired. Request a new one.',
+};
+
+function pickAuthError(req) {
+  const code = String(req.query?.e || '').trim();
+  if (!code) return null;
+  const message = AUTH_UI_MESSAGES[code];
+  if (!message) return null;
+  return { code, message };
+}
+
+function pickAuthOk(req) {
+  const ok = String(req.query?.ok || '').trim();
+  if (ok !== '1') return null;
+  // Keep it generic; pages may override via note
+  return { message: 'Done.' };
+}
+
+function isFatalResetTokenError(uiErr) {
+  if (!uiErr) return false;
+  return uiErr.code === 'AUTH_RESET_TOKEN_INVALID' || uiErr.code === 'AUTH_RESET_TOKEN_EXPIRED';
+}
+
+/* =========================
+   Helpers
+   ========================= */
+
 function normalizeEmail(value) {
   return String(value || '')
     .trim()
@@ -45,8 +85,8 @@ function normalizeEmail(value) {
 
 function validatePassword(pw) {
   const s = String(pw || '');
-  if (s.length < 8) return { ok: false, message: 'Password must be at least 8 characters' };
-  if (s.length > 200) return { ok: false, message: 'Password is too long' };
+  if (s.length < 8) return { ok: false, message: 'Password must be at least 8 characters.' };
+  if (s.length > 200) return { ok: false, message: 'Password is too long.' };
   return { ok: true };
 }
 
@@ -57,6 +97,9 @@ function safeNext(value) {
   if (!s.startsWith('/')) return '';
   if (s.startsWith('//')) return '';
   if (s.includes('\\')) return '';
+  if (s.length > 512) return '';
+  if (s.toLowerCase().includes('http://')) return '';
+  if (s.toLowerCase().includes('https://')) return '';
   return s;
 }
 
@@ -89,7 +132,17 @@ async function rotateSession(req) {
   await pool.query(`DELETE FROM sessions WHERE id = $1`, [sid]);
 }
 
-// ---- password hashing (bcrypt preferred) ----
+function redirectWithError(res, pagePath, code, next) {
+  const qs = new URLSearchParams();
+  qs.set('e', code);
+  if (next) qs.set('next', next);
+  return res.redirect(303, `${pagePath}?${qs.toString()}`);
+}
+
+/* =========================
+   Password hashing (bcrypt preferred)
+   ========================= */
+
 function getBcrypt() {
   try {
     return require('bcrypt');
@@ -124,8 +177,21 @@ async function createSessionForUser(userId, maxAgeSeconds) {
   return { sid, maxAgeSeconds };
 }
 
+/* =========================
+   Render helpers
+   ========================= */
+
 function renderLogin(req, res, opts = {}) {
   const next = safeNext(req.query?.next || req.body?.next);
+  const uiErr = pickAuthError(req);
+  const uiOk = pickAuthOk(req);
+
+  // Prefer explicit opts errors (legacy) if provided; otherwise use new error banner
+  const errors = opts.errors || (uiErr ? [uiErr.message] : null);
+
+  // Prefer explicit note (for ok messages); else take generic ok
+  const note = opts.note || (uiOk ? uiOk.message : null);
+
   return res.status(200).render('pages/login', {
     title: 'Login',
     styles: ['/css/pages/auth.css'],
@@ -134,12 +200,19 @@ function renderLogin(req, res, opts = {}) {
     next,
     email: opts.email || '',
     remember: Boolean(opts.remember),
-    errors: opts.errors || null,
+    note,
+    errors,
   });
 }
 
 function renderRegister(req, res, opts = {}) {
   const next = safeNext(req.query?.next || req.body?.next);
+  const uiErr = pickAuthError(req);
+  const uiOk = pickAuthOk(req);
+
+  const errors = opts.errors || (uiErr ? [uiErr.message] : null);
+  const note = opts.note || (uiOk ? uiOk.message : null);
+
   return res.status(200).render('pages/register', {
     title: 'Create account',
     styles: ['/css/pages/auth.css'],
@@ -147,31 +220,60 @@ function renderRegister(req, res, opts = {}) {
     hideHeader: false,
     next,
     email: opts.email || '',
-    errors: opts.errors || null,
+    note,
+    errors,
   });
 }
 
 function renderForgotPassword(req, res, opts = {}) {
+  const uiErr = pickAuthError(req);
+
+  // For forgot-password, use ok=1 to show the “check inbox” note by default
+  const ok = String(req.query?.ok || '').trim() === '1';
+  const defaultNote = ok
+    ? 'Check your inbox. If the email exists, you’ll receive a link shortly.'
+    : null;
+
+  const errors = opts.errors || (uiErr ? [uiErr.message] : null);
+  const note = opts.note || defaultNote;
+
   return res.status(200).render('pages/forgot-password', {
     title: 'Forgot password',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
     hideHeader: false,
     email: opts.email || '',
-    note: opts.note || null,
-    errors: opts.errors || null,
+    note,
+    errors,
   });
 }
 
 function renderResetPassword(req, res, opts = {}) {
+  const uiErr = pickAuthError(req);
+
+  // For reset-password, ok=1 means “password updated” (we can send to login instead too)
+  const ok = String(req.query?.ok || '').trim() === '1';
+  const defaultNote = ok ? 'Password updated. You can sign in.' : null;
+
+  const errors = opts.errors || (uiErr ? [uiErr.message] : null);
+  const note = opts.note || defaultNote;
+
+  const fatalTokenError = isFatalResetTokenError(uiErr);
+
   return res.status(200).render('pages/reset-password', {
     title: 'Reset password',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
     hideHeader: false,
-    token: opts.token || '',
-    note: opts.note || null,
-    errors: opts.errors || null,
+
+    // If token is invalid/expired, don't keep token in the form (UX + safety)
+    token: fatalTokenError ? '' : opts.token || '',
+
+    note,
+    errors,
+
+    // 👇 UX: hide form when token is invalid/expired
+    showForm: !fatalTokenError,
   });
 }
 
@@ -214,13 +316,20 @@ export function createAuthPagesRouter() {
       const remember = parseBool(req.body?.remember);
       const nextUrl = safeNext(req.body?.next) || '/templates';
 
-      const errors = [];
-      if (!email) errors.push('Email is required');
-      if (!password) errors.push('Password is required');
-      if (errors.length) return renderLogin(req, res, { email, remember, errors });
+      // Validation
+      if (!email || !password) {
+        return redirectWithError(
+          res,
+          '/login',
+          'AUTH_INVALID_INPUT',
+          safeNext(req.body?.next) || '',
+        );
+      }
 
-      if (!getPool)
-        return renderLogin(req, res, { email, remember, errors: ['Server misconfigured'] });
+      if (!getPool) {
+        // Keep message generic in UI
+        return redirectWithError(res, '/login', 'AUTH_TIMEOUT', safeNext(req.body?.next) || '');
+      }
 
       const pool = getPool();
       const { rows } = await pool.query(
@@ -234,15 +343,26 @@ export function createAuthPagesRouter() {
       );
 
       const u = rows && rows[0];
-      if (!u)
-        return renderLogin(req, res, { email, remember, errors: ['Invalid email or password'] });
-      if (String(u.status) !== 'active') {
-        return renderLogin(req, res, { email, remember, errors: ['User is not active'] });
+
+      // Do NOT reveal whether email exists
+      if (!u || String(u.status) !== 'active') {
+        return redirectWithError(
+          res,
+          '/login',
+          'AUTH_INVALID_CREDENTIALS',
+          safeNext(req.body?.next) || '',
+        );
       }
 
       const ok = await bcrypt.compare(password, String(u.password_hash || ''));
-      if (!ok)
-        return renderLogin(req, res, { email, remember, errors: ['Invalid email or password'] });
+      if (!ok) {
+        return redirectWithError(
+          res,
+          '/login',
+          'AUTH_INVALID_CREDENTIALS',
+          safeNext(req.body?.next) || '',
+        );
+      }
 
       // Session rotation (anti-fixation)
       await rotateSession(req);
@@ -267,15 +387,38 @@ export function createAuthPagesRouter() {
       const password2 = String(req.body?.password2 || '');
       const nextUrl = safeNext(req.body?.next) || '/templates';
 
-      const errors = [];
-      if (!email) errors.push('Email is required');
+      // Validation (redirect with error code, preserve next)
+      if (!email) {
+        return redirectWithError(
+          res,
+          '/register',
+          'AUTH_INVALID_INPUT',
+          safeNext(req.body?.next) || '',
+        );
+      }
 
       const pwOk = validatePassword(password);
-      if (!pwOk.ok) errors.push(pwOk.message);
-      if (password !== password2) errors.push('Passwords do not match');
+      if (!pwOk.ok) {
+        return redirectWithError(
+          res,
+          '/register',
+          'AUTH_PASSWORD_WEAK',
+          safeNext(req.body?.next) || '',
+        );
+      }
 
-      if (errors.length) return renderRegister(req, res, { email, errors });
-      if (!getPool) return renderRegister(req, res, { email, errors: ['Server misconfigured'] });
+      if (password !== password2) {
+        return redirectWithError(
+          res,
+          '/register',
+          'AUTH_INVALID_INPUT',
+          safeNext(req.body?.next) || '',
+        );
+      }
+
+      if (!getPool) {
+        return redirectWithError(res, '/register', 'AUTH_TIMEOUT', safeNext(req.body?.next) || '');
+      }
 
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
@@ -294,7 +437,12 @@ export function createAuthPagesRouter() {
         userId = rows?.[0]?.id;
       } catch (err) {
         if (err && err.code === '23505') {
-          return renderRegister(req, res, { email, errors: ['Email is already registered'] });
+          return redirectWithError(
+            res,
+            '/register',
+            'AUTH_EMAIL_TAKEN',
+            safeNext(req.body?.next) || '',
+          );
         }
         throw err;
       }
@@ -316,6 +464,11 @@ export function createAuthPagesRouter() {
   // Mount password reset POST endpoints AFTER GET pages
   // So GET /forgot-password and GET /reset-password are handled here (SSR render),
   // while POST /forgot-password and POST /reset-password use the shared CJS router logic.
+  //
+  // IMPORTANT:
+  // passwordResetRouter should redirect back with ?ok=1 or ?e=AUTH_* for SSR UX.
+  // If it currently renders errors internally, it will still work because we pass
+  // errors/note through templates.
   if (typeof passwordResetRouter === 'function' && typeof passwordResetRouter.use === 'function') {
     router.use(passwordResetRouter);
   }

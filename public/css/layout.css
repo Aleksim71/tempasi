@@ -1,35 +1,56 @@
 /* public/css/layout.css */
 /* Layout primitives: page shell / container / stack / grid */
 
+/* ==============================
+   Page shell
+   ============================== */
+
 .l-page {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* main wrapper */
+/* Main wrapper */
 .l-main {
+  flex: 1;
   padding-block: var(--space-10, 32px);
 }
 
-/* centered container */
+/* ==============================
+   Container
+   ============================== */
+
 .l-container {
   max-width: 1120px;
   margin-inline: auto;
   padding-inline: 16px;
 }
 
-/* vertical rhythm */
+/* ==============================
+   Vertical rhythm
+   ============================== */
+
 .l-stack {
   --stack-gap: var(--space-8, 24px);
 }
+
 .l-stack > * + * {
   margin-top: var(--stack-gap);
 }
 
-/* simple grid helper (optional) */
+/* ==============================
+   Grid helper
+   ============================== */
+
 .l-grid {
   display: grid;
   gap: var(--space-6, 16px);
 }
+
+/* ==============================
+   Responsive
+   ============================== */
 
 @media (max-width: 640px) {
   .l-main {

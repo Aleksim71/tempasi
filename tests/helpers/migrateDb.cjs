@@ -58,6 +58,11 @@ async function ensureExtensions(db) {
   await db.query('CREATE EXTENSION IF NOT EXISTS citext;');
 }
 
+/**
+ * IMPORTANT:
+ * Some migrations (e.g. orders/entitlements) may reference users table.
+ * So we must ensure users exists BEFORE applying migrations.
+ */
 async function ensureUsersTable(db) {
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -65,14 +70,10 @@ async function ensureUsersTable(db) {
       email text,
       password_hash text,
       role text NOT NULL DEFAULT 'user',
+      status text NOT NULL DEFAULT 'active',
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
-  `);
-
-  await db.query(`
-    ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
   `);
 
   await db.query(`
@@ -174,13 +175,16 @@ async function migrateDb() {
     await resetPublicSchema(client);
     await ensureExtensions(client);
 
+    // 🔥 FIX: users must exist before migrations that reference it
+    await ensureUsersTable(client);
+
     for (const f of files) {
       // eslint-disable-next-line no-console
       console.log('[migrateDb] applying', path.basename(f));
       await execSqlFile(client, f);
     }
 
-    await ensureUsersTable(client);
+    // Post-migration compatibility patches (safe no-ops if already present)
     await ensureEntitlementsKind(client);
     await ensureOrdersDealType(client);
     await ensureOrdersAmountCents(client);

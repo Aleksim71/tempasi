@@ -1,104 +1,182 @@
 {{!-- src/web/views/pages/template-details.hbs --}}
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>{{title}}</title>
+<section class="tpl-details">
+  <div class="tpl-head">
+    <div class="tpl-head__left">
+      <h1 class="tpl-title">{{template.title}}</h1>
 
-    <!-- Core -->
-    <link rel="stylesheet" href="/css/core.css" />
-    <link rel="stylesheet" href="/css/layout.css" />
+      <div class="tpl-meta">
+        {{#if template.category}}
+          <span class="tpl-muted">{{template.category}}</span>
+        {{/if}}
 
-    <!-- Components -->
-    <link rel="stylesheet" href="/css/components/button.css" />
-    <link rel="stylesheet" href="/css/components/card.css" />
-    <link rel="stylesheet" href="/css/components/header.css" />
-    <link rel="stylesheet" href="/css/components/badge.css" />
+        {{#if template.license}}
+          <span class="tpl-muted">· {{template.license}}</span>
+        {{/if}}
 
-    <!-- Page -->
-    <link rel="stylesheet" href="/css/pages/template-details.css" />
+        {{#if template.type}}
+          <span class="tpl-muted">· {{template.type}}</span>
+        {{/if}}
 
-    <!-- Global core -->
-    <script defer src="/js/core.js"></script>
-  </head>
+        {{#if template.version}}
+          <span class="tpl-muted">· v{{template.version}}</span>
+        {{/if}}
+      </div>
 
-  <body class="{{bodyClass}}">
+      {{#if template.description}}
+        <p class="tpl-desc">{{template.description}}</p>
+      {{/if}}
+    </div>
 
+    <div class="tpl-head__right">
+      <div class="tpl-price">
+        {{#if template.prices.buy}}
+          Buy: {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
+        {{else}}
+          {{#if template.price}}
+            Buy: {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
+          {{else}}
+            —
+          {{/if}}
+        {{/if}}
+      </div>
 
-    <main class="l-page">
-      <div class="l-main">
-        <div class="l-container l-stack">
+      <div class="tpl-cta">
+        <div class="tpl-ctaRow">
+          {{#if template.demoUrl}}
+            <a class="c-btn c-btn--primary" href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">
+              Demo
+            </a>
+          {{else}}
+            <a class="c-btn c-btn--primary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">
+              Demo
+            </a>
+          {{/if}}
 
-          <section class="tpl-details">
-            <div class="tpl-details__grid">
-              <div class="tpl-details__left">
-                <div class="tpl-details__preview">
-                  <img class="tpl-details__img" src="{{template.preview}}" alt="{{template.title}}" loading="lazy" />
-                </div>
-              </div>
+          <a class="c-btn" href="/templates">← Back</a>
+        </div>
 
-              <div class="tpl-details__right">
-                <h1 class="tpl-details__title">{{template.title}}</h1>
+        <div class="tpl-ctaRow">
+          {{!-- BUY --}}
+          <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
+            <input type="hidden" name="dealType" value="BUY" />
+            {{#if template.prices.buy}}
+              <input type="hidden" name="amount" value="{{template.prices.buy.amount}}" />
+              <input type="hidden" name="currency" value="{{template.prices.buy.currency}}" />
+            {{else}}
+              <input type="hidden" name="amount" value="{{template.price}}" />
+              <input type="hidden" name="currency" value="EUR" />
+            {{/if}}
+            <button type="submit" class="c-btn">Buy</button>
+          </form>
 
-                <div class="tpl-details__meta">
-                  {{#if template.category}}
-                    <span class="badge badge--muted">{{template.category}}</span>
-                  {{/if}}
-                  {{#if template.license}}
-                    <span class="badge badge--pill">{{template.license}}</span>
-                  {{/if}}
-                  {{#if template.type}}
-                    <span class="badge badge--muted">{{template.type}}</span>
-                  {{/if}}
-                  {{#if template.version}}
-                    <span class="badge badge--muted">v{{template.version}}</span>
-                  {{/if}}
-                  {{#if template.hasZip}}
-                    <span class="badge badge--ok">ZIP ready</span>
-                  {{else}}
-                    <span class="badge badge--muted">ZIP not ready</span>
-                  {{/if}}
-                </div>
+          {{!-- RENT (если есть в контракте) --}}
+          {{#if template.prices.rent}}
+            <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/rent">
+              <input type="hidden" name="dealType" value="RENT" />
+              <input type="hidden" name="amount" value="{{template.prices.rent.amount}}" />
+              <input type="hidden" name="currency" value="{{template.prices.rent.currency}}" />
+              <button type="submit" class="c-btn">Rent</button>
+            </form>
+          {{/if}}
 
-                {{#if template.description}}
-                  <p class="tpl-details__desc">{{template.description}}</p>
-                {{/if}}
+          {{!-- Download (если zip готов) --}}
+          {{#if template.hasZip}}
+            <a class="c-btn" href="/download/{{template.slug}}">Download</a>
+          {{/if}}
+        </div>
 
-                <div class="tpl-details__price">
-                  <div class="tpl-details__price-label">Price</div>
-                  <div class="tpl-details__price-value">{{formatPrice template.price}}</div>
-                </div>
-
-                <div class="tpl-details__actions">
-                  <a class="c-btn c-btn--primary" href="/preview/{{template.slug}}">Open live preview</a>
-
-                  {{#if (isFree template.price)}}
-                    {{#if template.hasZip}}
-                      <a class="c-btn" href="/download/{{template.slug}}">Download</a>
-                    {{/if}}
-                  {{else}}
-                    <form method="POST" action="/api/orders/{{template.slug}}/buy" style="margin:0;">
-                      <input type="hidden" name="dealType" value="BUY" />
-                      <input type="hidden" name="amount" value="{{template.price}}" />
-                      <input type="hidden" name="currency" value="EUR" />
-                      <button type="submit" class="c-btn">Buy</button>
-                    </form>
-
-                    {{#if template.hasZip}}
-                      <a class="c-btn" href="/download/{{template.slug}}">Download</a>
-                    {{/if}}
-                  {{/if}}
-
-                  <a class="c-btn" href="/templates">← Back to catalog</a>
-                </div>
-              </div>
-            </div>
-          </section>
-
+        <div class="tpl-hint">
+          Secure checkout · instant access after purchase
         </div>
       </div>
-    </main>
-  </body>
-</html>
+    </div>
+  </div>
+
+  <div class="tpl-layout">
+    <div>
+      <div class="tpl-preview">
+        <img
+          class="tpl-preview__img"
+          src="{{#if template.previewUrl}}{{template.previewUrl}}{{else}}/t/{{template.slug}}/preview.png{{/if}}"
+          alt="Preview {{template.title}}"
+          loading="lazy"
+        />
+      </div>
+
+      <div class="tpl-underCta">
+        {{#if template.longDescription}}
+          <div class="tpl-box">
+            <div class="tpl-box__title">About this template</div>
+            <p class="tpl-desc">{{template.longDescription}}</p>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+
+    <aside class="tpl-side">
+      <div class="tpl-box">
+        <div class="tpl-box__title">Template info</div>
+
+        <dl class="tpl-dl">
+          <div class="tpl-dl__row">
+            <dt>Slug</dt>
+            <dd>{{template.slug}}</dd>
+          </div>
+
+          {{#if template.tech}}
+            <div class="tpl-dl__row">
+              <dt>Tech</dt>
+              <dd>
+                {{#each template.tech}}
+                  <span class="tpl-muted">{{this}}</span>{{#unless @last}}, {{/unless}}
+                {{/each}}
+              </dd>
+            </div>
+          {{/if}}
+
+          {{#if template.updatedAt}}
+            <div class="tpl-dl__row">
+              <dt>Updated</dt>
+              <dd>{{template.updatedAt}}</dd>
+            </div>
+          {{/if}}
+
+          <div class="tpl-dl__row">
+            <dt>ZIP</dt>
+            <dd>{{#if template.hasZip}}Ready{{else}}Not ready{{/if}}</dd>
+          </div>
+        </dl>
+
+        {{#if template.features}}
+          <div class="tpl-note">Highlights</div>
+          <ul class="tpl-list">
+            {{#each template.features}}
+              <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        {{/if}}
+      </div>
+
+      <div class="tpl-box">
+        <div class="tpl-box__title">Author</div>
+
+        {{#if template.author}}
+          {{#if template.author.name}}
+            <div><strong>{{template.author.name}}</strong></div>
+          {{/if}}
+          {{#if template.author.bio}}
+            <div class="tpl-note">{{template.author.bio}}</div>
+          {{/if}}
+          {{#if template.author.url}}
+            <div class="tpl-note">
+              <a class="c-btn" href="{{template.author.url}}" target="_blank" rel="noopener">Profile</a>
+            </div>
+          {{/if}}
+        {{else}}
+          <div class="tpl-muted">—</div>
+        {{/if}}
+      </div>
+    </aside>
+  </div>
+</section>

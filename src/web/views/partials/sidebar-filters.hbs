@@ -1,134 +1,132 @@
-<aside class="sidebar" aria-label="Фильтры">
-  <div class="sidebar-card">
-    <form class="filters" method="get" action="/templates">
-      <section class="sidebar-group">
-        <h3 class="sidebar-title">Шаблоны</h3>
+{{!-- src/web/views/partials/sidebar-filters.hbs --}}
+{{!-- Templates sidebar filters (content only) --}}
 
-        <div class="sidebar-chips">
-          {{!-- single-select category --}}
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="landing" />
-            <span class="chip-label">Лендинги</span>
-          </label>
+<section class="templates-side__section">
+  <div class="templates-side__title">Access</div>
 
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="shop" />
-            <span class="chip-label">Интернет-магазины</span>
-          </label>
+  <div class="templates-chips templates-chips--wide" data-js="chips-access">
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="access" value="rent" />
+      <span class="chip-label">Rent</span>
+    </label>
 
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="blog" />
-            <span class="chip-label">Блог / Медиа</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="portfolio" />
-            <span class="chip-label">Портфолио</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="saas" />
-            <span class="chip-label">SaaS / IT</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="cafe" />
-            <span class="chip-label">Ресторан / Кафе</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="realty" />
-            <span class="chip-label">Недвижимость</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="edu" />
-            <span class="chip-label">Образование</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="events" />
-            <span class="chip-label">События</span>
-          </label>
-
-          <label class="chip chip-wide">
-            <input class="chip-input" type="radio" name="cat" value="med" />
-            <span class="chip-label">Медицина</span>
-          </label>
-
-          {{!-- quick reset category --}}
-          <label class="chip chip-wide chip-muted">
-            <input class="chip-input" type="radio" name="cat" value="" checked />
-            <span class="chip-label">Все</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="sidebar-group">
-        <h3 class="sidebar-title">Цена</h3>
-
-        <div class="sidebar-range">
-          <span class="range-min">0$</span>
-          <input
-            type="range"
-            min="0"
-            max="1000"
-            value="250"
-            name="priceMax"
-            class="range-input"
-          />
-          <span class="range-max">1000$</span>
-        </div>
-
-        <div class="sidebar-row">
-          <label class="sidebar-field">
-            <span class="sidebar-field__label">До</span>
-            <input class="sidebar-input" type="number" name="priceMaxN" min="0" max="1000" placeholder="250" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sidebar-group">
-        <h3 class="sidebar-title">Лицензии</h3>
-
-        <div class="sidebar-chips grid-licenses">
-          {{!-- multi-select --}}
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="PU" />
-            <span class="chip-label">PU</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="CU" />
-            <span class="chip-label">CU</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="EL" />
-            <span class="chip-label">EL</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="SL" />
-            <span class="chip-label">SL</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="ML" />
-            <span class="chip-label">ML</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="EX" />
-            <span class="chip-label">EX</span>
-          </label>
-          <label class="chip chip-small">
-            <input class="chip-input" type="checkbox" name="lic" value="RF" />
-            <span class="chip-label">RF</span>
-          </label>
-        </div>
-
-        <button type="submit" class="btn primary sidebar-apply">
-          Применить фильтры
-        </button>
-
-        <a class="btn sidebar-clear" href="/templates">Сбросить</a>
-      </section>
-    </form>
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="access" value="buy" />
+      <span class="chip-label">Buy</span>
+    </label>
   </div>
-</aside>
+</section>
+
+<section class="templates-side__section">
+  <div class="templates-side__title">Category</div>
+
+  <div class="templates-chips templates-chips--wide" data-js="chips-category">
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="landing" />
+      <span class="chip-label">Landing pages</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="shop" />
+      <span class="chip-label">E-commerce</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="blog" />
+      <span class="chip-label">Blog / Media</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="portfolio" />
+      <span class="chip-label">Portfolio</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="saas" />
+      <span class="chip-label">SaaS / IT</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="cafe" />
+      <span class="chip-label">Restaurant / Cafe</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="realty" />
+      <span class="chip-label">Real estate</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="edu" />
+      <span class="chip-label">Education</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="events" />
+      <span class="chip-label">Events</span>
+    </label>
+
+    <label class="chip chip--toggle">
+      <input class="chip-input" type="checkbox" name="category" value="medical" />
+      <span class="chip-label">Healthcare</span>
+    </label>
+  </div>
+</section>
+
+<section class="templates-side__section">
+  <div class="templates-side__title">Price</div>
+
+  <div class="templates-price">
+    <div class="templates-price__row">
+      <span>$0</span>
+      <span class="templates-price__mid">$250</span>
+      <span>$1000+</span>
+    </div>
+
+    <input
+      class="templates-price__range"
+      type="range"
+      min="0"
+      max="1000"
+      step="10"
+      value="250"
+      data-js="price-range"
+    />
+  </div>
+</section>
+
+<section class="templates-side__section">
+  <div class="templates-side__title">License</div>
+
+  <div class="templates-chips templates-chips--grid" data-js="chips-license">
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="free" />
+      <span class="chip-label">Free</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="pu" />
+      <span class="chip-label">PU</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="cu" />
+      <span class="chip-label">CU</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="el" />
+      <span class="chip-label">EL</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="ml" />
+      <span class="chip-label">ML</span>
+    </label>
+
+    <label class="chip chip--toggle chip--small">
+      <input class="chip-input" type="checkbox" name="license" value="ex" />
+      <span class="chip-label">EX</span>
+    </label>
+  </div>
+</section>

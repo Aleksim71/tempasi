@@ -1,0 +1,62 @@
+{{!-- src/web/views/partials/template-card.hbs --}}
+<article class="template-card" data-template-slug="{{this.slug}}">
+
+  <div class="template-card__preview">
+    <div class="template-card__placeholder" style="display:none;">Preview not available</div>
+
+    <img
+      class="template-card__img"
+      src="{{#if this.previewUrl}}{{this.previewUrl}}{{else}}/t/{{this.slug}}/preview.png{{/if}}"
+      alt="Preview {{this.title}}"
+      loading="lazy"
+      onerror="try{const box=this.closest('.template-card__preview'); const ph=box && box.querySelector('.template-card__placeholder'); if(ph) ph.style.display='flex'; this.remove();}catch(e){}"
+    />
+  </div>
+
+  <div class="template-card__body">
+
+    {{!-- TITLE --}}
+    <h3 class="template-card__title">{{this.title}}</h3>
+
+    {{!-- PRICES (MINI contract) --}}
+    <div class="template-card__prices">
+      {{#if this.price}}
+        <span class="template-card__price">Buy: {{this.price}}€</span>
+      {{/if}}
+
+      {{#if this.rentPrice}}
+        <span class="template-card__price">Rent: {{this.rentPrice}}€</span>
+      {{/if}}
+    </div>
+
+    {{!-- MAXI extra (hidden in MINI via CSS) --}}
+    <div class="template-card__extra">
+      {{#if this.author}}
+        <div class="template-card__author">By {{this.author}}</div>
+      {{/if}}
+
+      {{#if this.tech}}
+        <div class="template-card__tech">
+          {{#each this.tech}}
+            <span class="tech-item">{{this}}</span>
+          {{/each}}
+        </div>
+      {{/if}}
+
+      {{#if this.excerpt}}
+        <div class="template-card__excerpt">{{this.excerpt}}</div>
+      {{else}}
+        {{#if this.description}}
+          <div class="template-card__excerpt">{{this.description}}</div>
+        {{/if}}
+      {{/if}}
+    </div>
+
+    {{!-- ACTIONS (MINI contract) --}}
+    <div class="template-card__actions">
+      <a class="template-card__link" href="/preview/{{this.slug}}" target="_blank" rel="noopener">Demo</a>
+      <a class="template-card__link" href="/templates/{{this.slug}}">Details</a>
+    </div>
+
+  </div>
+</article>

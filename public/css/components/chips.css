@@ -1,0 +1,28 @@
+/* public/css/components/chips.css */
+/* Shared chips layout helpers used by Templates sidebar + other pages */
+
+.templates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.templates-chips--wide {
+  flex-direction: column;
+}
+
+.templates-chips--wide .chip {
+  width: 100%;
+}
+
+.templates-chips--grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .templates-chips--grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
