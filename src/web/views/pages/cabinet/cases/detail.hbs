@@ -1,0 +1,68 @@
+{{!-- src/web/views/pages/cabinet/cases/detail.hbs --}}
+<link rel="stylesheet" href="/css/pages/cabinet-cases.css" />
+
+<section class="cabinet-case" data-page="cabinet-case-detail">
+  <header class="cabinet-cases__header">
+    <div class="cabinet-cases__title">
+      <h1>{{case.title}}</h1>
+      <p class="muted">Private workspace. Client view will hide pricing and checkout.</p>
+    </div>
+    <div class="cabinet-cases__actions">
+      <a class="btn btn--ghost" href="/cabinet/cases">Back</a>
+    </div>
+  </header>
+
+  <form class="form form--compact" method="post" action="/cabinet/cases/{{case.id}}">
+    <div class="grid-2">
+      <label class="field">
+        <div class="field__label">Case name</div>
+        <input class="input" name="title" required maxlength="160" value="{{case.title}}" />
+      </label>
+
+      <label class="field">
+        <div class="field__label">Notes (optional)</div>
+        <textarea class="textarea" name="notes" rows="3" maxlength="4000" placeholder="Internal notes (not shown to the client).">{{case.notes}}</textarea>
+      </label>
+    </div>
+
+    <div class="form__actions">
+      <button class="btn" type="submit">Save</button>
+    </div>
+  </form>
+
+  <section class="panel">
+    <div class="panel__head">
+      <h2>Templates in this case</h2>
+      <p class="muted">MVP: add by template id (later: picker/search + “Add to case”).</p>
+    </div>
+
+    <form class="form form--inline" method="post" action="/cabinet/cases/{{case.id}}/templates">
+      <label class="field field--inline">
+        <span class="field__label">Template ID</span>
+        <input class="input" name="template_id" maxlength="200" placeholder="seed-001" />
+      </label>
+      <button class="btn" type="submit">Add</button>
+    </form>
+
+    {{#if templates.length}}
+      <div class="case-templates" role="list">
+        {{#each templates}}
+          <div class="case-template" role="listitem">
+            <div class="case-template__main">
+              <div class="case-template__title">{{template_id}}</div>
+              <div class="case-template__meta muted">position {{position}}</div>
+            </div>
+            <form method="post" action="/cabinet/cases/{{../case.id}}/templates/{{template_id}}/remove">
+              <button class="btn btn--danger btn--sm" type="submit">Remove</button>
+            </form>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <div class="empty-state empty-state--compact">
+        <div class="empty-state__title">No templates yet</div>
+        <div class="empty-state__hint">Add at least 1 template to present to your client.</div>
+      </div>
+    {{/if}}
+  </section>
+</section>

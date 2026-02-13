@@ -96,6 +96,9 @@ const downloadsMod = require('./modules/downloads/downloads.routes.cjs');
 const profilePagesMod = require('./modules/profile/profile.routes.cjs'); // pages (/profile/..)
 const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // api (/api/profile/..)
 
+// Cabinet pages router (CJS)
+const { createCabinetPagesRouter } = require('./web/routes/cabinet.pages.routes.cjs');
+
 // --------------------
 // helpers
 // --------------------
@@ -309,13 +312,11 @@ if (process.env.TEMPASI_SKIP_SSR) {
 } else {
   const webApp = createWebApp({ db });
 
-  // ✅ Protect Cabinet
-  webApp.get(
+  // ✅ Protect Cabinet (Overview + Cases) via ONE router mounted under /cabinet
+  webApp.use(
     '/cabinet',
     requireAuthWeb({ loginPath: '/login', defaultNext: '/cabinet' }),
-    (_req, res) => {
-      res.status(200).type('text').send('Cabinet OK (WIP)');
-    },
+    createCabinetPagesRouter({ db }),
   );
 
   // ✅ Protect Profile pages
