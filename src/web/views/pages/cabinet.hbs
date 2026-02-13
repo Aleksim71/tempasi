@@ -15,7 +15,41 @@
     <div class="cabinet-actions">
       <a class="btn" href="/cabinet/cases">Cases</a>
       <a class="btn btn--ghost" href="/cabinet/cases/new">Create case</a>
+      <a class="btn btn--ghost" href="/cabinet/finance">Finance</a>
     </div>
+
+    <section class="panel" aria-label="Finance">
+      <div class="panel__head">
+        <h2>Finance</h2>
+        <p class="muted">Orders and billing — quick access.</p>
+      </div>
+
+      <div class="cases-grid" role="list">
+        <article class="case-card" role="listitem">
+          <h3 class="case-card__title">
+            <a href="/cabinet/finance#orders">Orders</a>
+          </h3>
+          <div class="case-card__meta muted">
+            Purchases and rents, statuses, receipts (MVP next).
+          </div>
+          <div class="case-card__footer">
+            <a class="btn btn--ghost" href="/cabinet/finance#orders">Open</a>
+          </div>
+        </article>
+
+        <article class="case-card" role="listitem">
+          <h3 class="case-card__title">
+            <a href="/cabinet/finance#billing">Billing</a>
+          </h3>
+          <div class="case-card__meta muted">
+            Invoices, payment methods, VAT details (MVP next).
+          </div>
+          <div class="case-card__footer">
+            <a class="btn btn--ghost" href="/cabinet/finance#billing">Open</a>
+          </div>
+        </article>
+      </div>
+    </section>
 
     <section class="panel" aria-label="Recent cases">
       <div class="panel__head">
@@ -63,7 +97,7 @@
       <div class="panel__head">
         <h2>Coming soon</h2>
         <p class="muted">
-          Favorites, Orders, Downloads, Templates, Billing, Settings.
+          Favorites, Downloads, Templates, Settings.
         </p>
       </div>
     </section>

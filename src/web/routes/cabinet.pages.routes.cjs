@@ -2,10 +2,6 @@
 
 // src/web/routes/cabinet.pages.routes.cjs
 // Full Cabinet router mounted under /cabinet
-//
-// Usage in src/app.js:
-//   const { createCabinetPagesRouter } = require('./web/routes/cabinet.pages.routes.cjs');
-//   webApp.use('/cabinet', requireAuthWeb(...), createCabinetPagesRouter({ db }));
 
 const express = require('express');
 const {
@@ -59,6 +55,15 @@ function createCabinetPagesRouter({ db }) {
     } catch (err) {
       return next(err);
     }
+  });
+
+  // ========================================
+  // FINANCE  ->  /cabinet/finance
+  // ========================================
+  router.get('/finance', async (_req, res) => {
+    return res.status(200).render('pages/cabinet/finance', {
+      title: 'Finance',
+    });
   });
 
   // ========================================
