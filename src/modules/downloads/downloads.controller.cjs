@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { hasEntitlement } = require('../entitlements/entitlements.repo.cjs');
+const { assertCanDownload } = require('./downloads.service.cjs');
 
 /**
  * Resolve userId from auth/session.
@@ -45,7 +45,10 @@ function resolveDownloadFile(templateSlug) {
  * GET /downloads/:templateSlug
  * Requirements:
  * - must be logged in (tests send sid cookie)
- * - must have entitlement for templateSlug (BUY by default)
+ * - must have a valid entitlement for templateSlug
+ *
+ * NOTE (Stage 0.5):
+ * Entitlement checks MUST be canonical and live in downloads.service (single source of truth).
  *
  * Behavior:
  * - If real zip exists -> send it.
@@ -69,8 +72,10 @@ async function downloadTemplate(req, res, next) {
       return res.status(500).json({ error: { code: 'DOWNLOAD_FAILED', message: 'DB not wired' } });
     }
 
-    const ok = await hasEntitlement({ db, userId, templateSlug, dealType: 'BUY' });
-    if (!ok) {
+    // Canonical gating (BUY vs RENT logic lives inside the service/repo)
+    try {
+      await assertCanDownload({ db, userId, templateSlug });
+    } catch (_e) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No entitlement' } });
     }
 
