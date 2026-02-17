@@ -5,8 +5,6 @@
 const express = require('express');
 const { pool } = require('../../config/db.cjs');
 
-const { grantEntitlement } = require('../entitlements/entitlements.repo.cjs');
-
 const router = express.Router();
 
 /**
@@ -44,6 +42,11 @@ function buyFailed(res, err) {
  * IMPORTANT:
  * - We MUST parse JSON here (app.js does not have global express.json()).
  * - Otherwise req.body is empty and license becomes NULL -> NOT NULL violation.
+ *
+ * NOTE (Stage 0.5):
+ * This route MUST NOT grant entitlements directly.
+ * Money pipeline should be:
+ * order (pending) -> checkout -> webhook -> mark paid -> ensure entitlement -> download.
  */
 router.post('/:templateSlug/buy', express.json(), async (req, res) => {
   const userId = getUserId(req);
@@ -79,16 +82,6 @@ router.post('/:templateSlug/buy', express.json(), async (req, res) => {
 
     const orderId = orderRes.rows[0] && orderRes.rows[0].id;
     if (!orderId) throw new Error('Order insert failed (no id)');
-
-    // Grant entitlement (kind must match CHECK: 'buy' | 'rent')
-    await grantEntitlement({
-      db: client,
-      userId,
-      templateSlug,
-      kind: 'buy',
-      orderId,
-      dealType,
-    });
 
     await client.query('COMMIT');
 

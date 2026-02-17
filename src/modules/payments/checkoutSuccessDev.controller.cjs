@@ -1,4 +1,8 @@
+// src/modules/payments/checkoutSuccessDev.controller.cjs
 'use strict';
+
+const OrdersRepo = require('../orders/orders.repo.cjs');
+const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
 
 function toStr(v) {
   if (v === null || v === undefined) return '';
@@ -14,61 +18,17 @@ function escapeHtml(s) {
     .replaceAll("'", '&#39;');
 }
 
-function upper(v) {
-  return toStr(v).trim().toUpperCase();
-}
-
-// Cache across requests (dev is single process)
-let _cachedAllowedKinds = null;
-
-async function loadAllowedKinds(client) {
-  if (Array.isArray(_cachedAllowedKinds) && _cachedAllowedKinds.length) return _cachedAllowedKinds;
-
-  // Try to read CHECK constraint definition
-  const r = await client.query(
-    `
-    SELECT pg_get_constraintdef(c.oid) AS def
-      FROM pg_constraint c
-     WHERE c.conrelid = 'public.entitlements'::regclass
-       AND c.contype = 'c'
-       AND c.conname = 'entitlements_kind_check'
-     LIMIT 1
-    `
-  );
-
-  const def = r.rows[0]?.def ? String(r.rows[0].def) : '';
-
-  // Typical forms:
-  // CHECK ((kind = ANY (ARRAY['BUY'::text, 'RENT'::text])))
-  // CHECK ((kind = ANY (ARRAY['purchase'::text])))
-  // We'll extract all single-quoted tokens before ::text
-  const tokens = [];
-  const re = /'([^']+)'::text/g;
-  let m;
-  while ((m = re.exec(def))) tokens.push(m[1]);
-
-  _cachedAllowedKinds = tokens.length ? tokens : [];
-  return _cachedAllowedKinds;
-}
-
-function chooseKindFromAllowed(orderDealType, allowed) {
-  const dt = upper(orderDealType);
-
-  // Prefer exact match (BUY/RENT etc.)
-  if (allowed.includes(dt)) return dt;
-
-  // Common alternative schemas:
-  // 'purchase', 'rent', 'buy', 'active', etc.
-  const preferred = ['purchase', 'buy', 'rent', 'active'];
-  for (const p of preferred) {
-    if (allowed.includes(p)) return p;
-    if (allowed.includes(p.toUpperCase())) return p.toUpperCase();
-  }
-
-  // Fallback to first allowed, else safe default (won't pass constraint though)
-  return allowed[0] ?? dt ?? 'BUY';
-}
-
+/**
+ * Dev-only success handler.
+ *
+ * Stage 0.5 rule:
+ * - MUST NOT directly INSERT entitlements here.
+ * - MUST reuse canonical pipeline: markOrderPaid -> ensureEntitlementForOrder
+ *
+ * Accepts:
+ * - ?order_id=123 (preferred)
+ * - ?session_id=... (fallback)
+ */
 async function handleCheckoutSuccessDev(req, res) {
   const sessionId = toStr(req.query.session_id).trim();
   const orderIdRaw = toStr(req.query.order_id).trim();
@@ -80,6 +40,7 @@ async function handleCheckoutSuccessDev(req, res) {
     throw err;
   }
 
+  // We intentionally use db pool through repositories to match webhook behavior.
   const { pool } = require('../../config/db.cjs');
   const client = await pool.connect();
 
@@ -106,42 +67,27 @@ async function handleCheckoutSuccessDev(req, res) {
       throw err;
     }
 
-    // 2) mark order paid (idempotent)
-    await client.query(
-      `
-      UPDATE public.orders
-         SET status = 'paid',
-             updated_at = now()
-       WHERE id = $1
-      `,
-      [order.id]
-    );
+    // 2) mark order paid (idempotent) using the same repo method as webhook
+    // IMPORTANT: OrdersRepo currently uses its own db/pool internally.
+    // We still wrap in a transaction here for the "find order" read, but the repo
+    // update is idempotent, and entitlement creation is also idempotent.
+    const paid = await OrdersRepo.markOrderPaid({
+      orderId: order.id,
+      providerPaymentIntentId: order.provider_payment_intent_id || 'pi_dev',
+    });
 
-    // 3) upsert entitlement (KIND chosen from DB constraint)
-    const allowedKinds = await loadAllowedKinds(client);
-    const kind = chooseKindFromAllowed(order.deal_type, allowedKinds);
-
-    await client.query(
-      `
-      INSERT INTO public.entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at, created_at)
-      VALUES ($1, $2, $3, $4, now(), NULL, now())
-      ON CONFLICT (user_id, template_slug)
-      DO UPDATE SET
-        kind = EXCLUDED.kind,
-        order_id = EXCLUDED.order_id,
-        starts_at = EXCLUDED.starts_at,
-        ends_at = EXCLUDED.ends_at
-      `,
-      [order.user_id, order.template_slug, kind, order.id]
-    );
+    // If markOrderPaid returns something truthy, ensure entitlement
+    if (paid) {
+      await EntitlementsRepo.ensureEntitlementForOrder(paid);
+    }
 
     await client.query('COMMIT');
 
-    // 4) success HTML + CTA
+    // 3) success HTML + CTA
     const slug = encodeURIComponent(order.template_slug);
     const downloadUrl = `/download/${slug}`;
 
-    res.type('html').send(`<!doctype html>
+    return res.type('html').send(`<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8"/>

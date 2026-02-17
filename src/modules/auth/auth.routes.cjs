@@ -1,5 +1,7 @@
 'use strict';
 
+// src/modules/auth/auth.routes.cjs
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const {
@@ -7,6 +9,17 @@ const {
   setSessionCookie,
   clearSessionCookie,
 } = require('../../middlewares/auth.middleware.cjs');
+
+function wantsHtml(req) {
+  const accept = String(req.headers?.accept || '');
+  if (accept.includes('text/html')) return true;
+  if (accept.includes('application/xhtml+xml')) return true;
+
+  // Most browser form posts include */* as well; treat non-json as html
+  if (!accept) return true;
+  if (accept.includes('application/json') || accept.includes('+json')) return false;
+  return true;
+}
 
 function authRouter() {
   const router = express.Router();
@@ -97,7 +110,7 @@ function authRouter() {
   });
 
   // ----------------------------
-  // LOGOUT (API)
+  // LOGOUT (API + HTML form)
   // ----------------------------
   router.post('/logout', async (req, res) => {
     try {
@@ -110,8 +123,23 @@ function authRouter() {
 
       clearSessionCookie(req, res);
 
+      // ✅ HTML form submission -> redirect to templates
+      if (wantsHtml(req)) {
+        return res.redirect(302, '/templates');
+      }
+
+      // ✅ API/fetch -> JSON
       return res.status(200).json({ ok: true });
     } catch {
+      // Be safe: still clear cookie, then respond/redirect
+      try {
+        clearSessionCookie(req, res);
+      } catch {}
+
+      if (wantsHtml(req)) {
+        return res.redirect(302, '/templates');
+      }
+
       return res.status(200).json({ ok: true });
     }
   });

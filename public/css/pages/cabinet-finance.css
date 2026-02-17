@@ -1,0 +1,48 @@
+/* public/css/pages/cabinet-finance.css */
+
+.cabinet-finance {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 14px 28px;
+}
+
+.finance-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.finance-kpi {
+  grid-column: span 4;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.finance-kpi__label {
+  font-size: 13px;
+}
+
+.finance-kpi__value {
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.finance-kpi__hint {
+  font-size: 13px;
+}
+
+.finance-actions {
+  margin-top: 12px;
+}
+
+@media (max-width: 860px) {
+  .finance-kpi {
+    grid-column: span 12;
+  }
+}
