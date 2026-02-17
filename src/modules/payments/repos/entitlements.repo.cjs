@@ -8,26 +8,22 @@ const { pool } = require('../../../config/db.cjs');
  * For BUY: ends_at = NULL
  * For RENT: for MVP we set 7 days (can be changed later)
  *
- * Idempotency:
- * - We first attempt insert-if-missing by order_id.
- * - Then we always return the row (inserted or existing).
- * This reduces flakiness even if concurrent calls happen.
+ * Hard idempotency:
+ * - relies on UNIQUE index: entitlements(order_id) WHERE order_id IS NOT NULL
+ * - uses INSERT ... ON CONFLICT ... DO NOTHING
+ * - always returns inserted row OR existing row
  */
 async function ensureEntitlementForOrder(order) {
   const kind = order.deal_type === 'RENT' ? 'rent' : 'buy';
-
-  // For RENT: 7 days, else NULL
   const endsAtSql = kind === 'rent' ? `now() + interval '7 days'` : 'NULL';
 
-  // 1) Try insert if not exists (best effort)
+  // Insert (atomic). If already exists -> DO NOTHING.
+  // The WHERE predicate matches our partial unique index.
   const insertSql = `
     INSERT INTO entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at)
-    SELECT $1, $2, $3, $4, now(), ${endsAtSql}
-    WHERE NOT EXISTS (
-      SELECT 1
-        FROM entitlements
-       WHERE order_id = $4
-    )
+    VALUES ($1, $2, $3, $4, now(), ${endsAtSql})
+    ON CONFLICT (order_id) WHERE order_id IS NOT NULL
+    DO NOTHING
     RETURNING *
   `;
   const inserted = await pool.query(insertSql, [
@@ -39,7 +35,7 @@ async function ensureEntitlementForOrder(order) {
 
   if (inserted.rows[0]) return inserted.rows[0];
 
-  // 2) Return existing row (idempotent behavior)
+  // Return existing row (idempotent behavior)
   const selectSql = `
     SELECT *
       FROM entitlements
