@@ -16,7 +16,6 @@ const EntitlementsRepo = require('../src/modules/payments/repos/entitlements.rep
 
 async function createPaidOrderViaDb(db, { userId, templateSlug, dealType }) {
   // orders.license is NOT NULL in your schema, so we must provide it.
-  // Use any valid license for BUY flows (matches your API validation list).
   const license = 'PU';
   const amountCents = 0;
   const currency = 'EUR';
@@ -33,12 +32,11 @@ async function createPaidOrderViaDb(db, { userId, templateSlug, dealType }) {
 
   const order = ins.rows[0];
 
-  // Mark paid (idempotency on order status is tested elsewhere; here we just need paid order)
+  // Mark paid (keep schema-minimal: some DBs don't have provider_payment_intent_id column)
   const upd = await db.query(
     `
     UPDATE public.orders
        SET status = 'paid',
-           provider_payment_intent_id = COALESCE(provider_payment_intent_id, 'pi_test'),
            updated_at = now()
      WHERE id = $1
      RETURNING *
@@ -108,7 +106,7 @@ describe('entitlements.repo (canonical)', () => {
       expect(ent1.order_id).toBe(paid.id);
       expect(ent2.order_id).toBe(paid.id);
 
-      // Assert single row in DB for this order_id (unique index + ON CONFLICT path)
+      // Assert single row in DB for this order_id (unique index + idempotent logic)
       const r = await db.query(`SELECT COUNT(*)::int AS n FROM entitlements WHERE order_id = $1`, [paid.id]);
       expect(r.rows[0].n).toBe(1);
     });
