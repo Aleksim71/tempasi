@@ -1,3 +1,4 @@
+// src/modules/orders/orders.service.cjs
 'use strict';
 
 const ordersRepo = require('./orders.repo.cjs');
@@ -28,12 +29,27 @@ function normalizeBuyPayload(payload = {}) {
 }
 
 async function createPendingOrder({ userId, templateSlug, payload }) {
+  if (!userId) {
+    const err = new Error('UNAUTHORIZED');
+    err.status = 401;
+    err.code = 'UNAUTHORIZED';
+    throw err;
+  }
+  if (!templateSlug) {
+    const err = new Error('BAD_REQUEST');
+    err.status = 400;
+    err.code = 'BAD_REQUEST';
+    throw err;
+  }
+
   const p = normalizeBuyPayload(payload);
 
+  // IMPORTANT: repo should accept license; if it doesn't, we'll adjust repo next.
   const order = await ordersRepo.createOrder({
     userId,
     templateSlug,
     dealType: p.dealType,
+    license: p.license,
     amountCents: p.amountCents,
     currency: p.currency,
     provider: 'fake',

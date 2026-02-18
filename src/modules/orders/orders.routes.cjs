@@ -3,7 +3,7 @@
 'use strict';
 
 const express = require('express');
-const { pool } = require('../../config/db.cjs');
+const ordersService = require('./orders.service.cjs');
 
 const router = express.Router();
 
@@ -22,15 +22,18 @@ function getUserId(req) {
 }
 
 function isValidLicense(x) {
-  // keep strict but small; extend later if you add more
   return typeof x === 'string' && ['PU', 'CU', 'EL', 'ML', 'EX'].includes(x);
 }
 
 function buyFailed(res, err) {
-  return res.status(500).json({
+  const status = (err && err.status) || 500;
+  const code = (err && err.code) || 'BUY_FAILED';
+  const msg = err && err.message ? String(err.message) : 'BUY_FAILED';
+
+  return res.status(status).json({
     error: {
-      code: 'BUY_FAILED',
-      message: err && err.message ? String(err.message) : 'BUY_FAILED',
+      code,
+      message: msg,
     },
   });
 }
@@ -41,7 +44,6 @@ function buyFailed(res, err) {
  *
  * IMPORTANT:
  * - We MUST parse JSON here (app.js does not have global express.json()).
- * - Otherwise req.body is empty and license becomes NULL -> NOT NULL violation.
  *
  * NOTE (Stage 0.5):
  * This route MUST NOT grant entitlements directly.
@@ -62,39 +64,19 @@ router.post('/:templateSlug/buy', express.json(), async (req, res) => {
     });
   }
 
-  // Minimal pricing stub for now (tests only need 201 + order_id).
-  // Keep schema-safe: we set all columns that were failing earlier (deal_type, amount_cents, currency, license).
-  const dealType = 'BUY';
-  const amountCents = 0;
-  const currency = 'EUR';
-
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    const order = await ordersService.createPendingOrder({
+      userId,
+      templateSlug,
+      payload: { license },
+    });
 
-    const qOrder = `
-      INSERT INTO orders (user_id, template_slug, deal_type, license, amount_cents, currency)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id
-    `;
-    const pOrder = [userId, templateSlug, dealType, license, amountCents, currency];
-    const orderRes = await client.query(qOrder, pOrder);
-
-    const orderId = orderRes.rows[0] && orderRes.rows[0].id;
+    const orderId = order && (order.id || order.order_id);
     if (!orderId) throw new Error('Order insert failed (no id)');
 
-    await client.query('COMMIT');
-
-    return res.status(201).json({ order_id: orderId });
+    return res.status(201).json({ order_id: String(orderId) });
   } catch (err) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (_e) {
-      // ignore
-    }
     return buyFailed(res, err);
-  } finally {
-    client.release();
   }
 });
 
