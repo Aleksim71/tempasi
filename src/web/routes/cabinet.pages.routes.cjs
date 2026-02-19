@@ -4,15 +4,7 @@
 // Full Cabinet router mounted under /cabinet
 
 const express = require('express');
-const {
-  listCasesByUser,
-  createCase,
-  getCaseByIdForUser,
-  updateCase,
-  listCaseTemplates,
-  addTemplateToCase,
-  removeTemplateFromCase,
-} = require('../../modules/cases/cases.repo.cjs');
+const CasesService = require('../../modules/cases/cases.service.cjs');
 
 function getUserId(req, res) {
   return (
@@ -43,7 +35,9 @@ function createCabinetPagesRouter({ db }) {
     try {
       const userId = getUserId(req, res);
 
-      const recentCases = await listCasesByUser(db, userId, {
+      const recentCases = await CasesService.listMyCases({
+        db,
+        userId,
         limit: 3,
         offset: 0,
       });
@@ -73,7 +67,9 @@ function createCabinetPagesRouter({ db }) {
     try {
       const userId = getUserId(req, res);
 
-      const items = await listCasesByUser(db, userId, {
+      const items = await CasesService.listMyCases({
+        db,
+        userId,
         limit: 50,
         offset: 0,
       });
@@ -119,7 +115,13 @@ function createCabinetPagesRouter({ db }) {
           });
         }
 
-        const created = await createCase(db, userId, { title, notes });
+        const created = await CasesService.createMyCase({
+          db,
+          userId,
+          title,
+          notes,
+        });
+
         return res.redirect(`/cabinet/cases/${created.id}`);
       } catch (err) {
         return next(err);
@@ -135,12 +137,12 @@ function createCabinetPagesRouter({ db }) {
       const userId = getUserId(req, res);
       const caseId = req.params.id;
 
-      const c = await getCaseByIdForUser(db, userId, caseId);
+      const c = await CasesService.getMyCase({ db, userId, caseId });
       if (!c) {
         return res.status(404).render('pages/404', { title: 'Not found' });
       }
 
-      const templates = await listCaseTemplates(db, userId, caseId);
+      const templates = await CasesService.listMyCaseTemplates({ db, userId, caseId });
 
       return res.status(200).render('pages/cabinet/cases/detail', {
         title: c.title,
@@ -164,7 +166,10 @@ function createCabinetPagesRouter({ db }) {
         const notesRaw = String(req.body?.notes || '').trim();
         const notes = notesRaw ? notesRaw.slice(0, 4000) : null;
 
-        const updated = await updateCase(db, userId, caseId, {
+        const updated = await CasesService.updateMyCase({
+          db,
+          userId,
+          caseId,
           title: title || null,
           notes,
         });
@@ -194,7 +199,7 @@ function createCabinetPagesRouter({ db }) {
 
         if (!templateId) return res.redirect(`/cabinet/cases/${caseId}`);
 
-        await addTemplateToCase(db, userId, caseId, templateId);
+        await CasesService.addTemplateToMyCase({ db, userId, caseId, templateId });
         return res.redirect(`/cabinet/cases/${caseId}`);
       } catch (err) {
         return next(err);
@@ -213,7 +218,7 @@ function createCabinetPagesRouter({ db }) {
         const caseId = req.params.id;
         const templateId = req.params.templateId;
 
-        await removeTemplateFromCase(db, userId, caseId, templateId);
+        await CasesService.removeTemplateFromMyCase({ db, userId, caseId, templateId });
         return res.redirect(`/cabinet/cases/${caseId}`);
       } catch (err) {
         return next(err);

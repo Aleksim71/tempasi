@@ -1,12 +1,15 @@
 // src/modules/profile/profile.controller.cjs
 'use strict';
 
-const EntitlementsRepo = require('../payments/repos/entitlements.repo.cjs');
+const EntitlementsService = require('../payments/entitlements.service.cjs');
 
 function mustGetDb(req) {
-  const db = req.app && req.app.locals && req.app.locals.db;
+  // Prefer req.db (used in tests/realServer helper), fallback to app.locals.db (prod app)
+  const db =
+    (req && req.db) || (req && req.app && req.app.locals && req.app.locals.db);
+
   if (!db || typeof db.query !== 'function') {
-    const err = new Error('[profile] DB is not attached to app.locals.db');
+    const err = new Error('[profile] DB is not attached (expected req.db or app.locals.db)');
     err.status = 500;
     err.code = 'DB_NOT_READY';
     throw err;
@@ -16,23 +19,17 @@ function mustGetDb(req) {
 
 /**
  * Returns list of downloadable templates for current user.
- * Canonical source: payments/repos/entitlements.repo.cjs
  *
  * Output contract (stable for UI/tests):
  * { items: [{ template_slug, deal_type, created_at }] }
  *
- * Note:
- * Canonical entitlements use `kind` ('buy'|'rent') and ends_at, not `deal_type`.
- * We map `kind` -> `deal_type` for backwards compatibility.
+ * Previous behavior: downloads list == BUY items only.
  */
 async function getMyDownloadsJson(req, res) {
-  // сюда мы попадаем уже после requireAuth (в routes)
   const userId = req.user.id;
-
   const db = mustGetDb(req);
 
-  // Canonical list (includes buy + rent; we map to deal_type)
-  const rows = await EntitlementsRepo.listUserEntitlements({ db, userId });
+  const rows = await EntitlementsService.listUserEntitlements({ db, userId });
 
   const items = (rows || [])
     .map((r) => ({
@@ -40,7 +37,6 @@ async function getMyDownloadsJson(req, res) {
       deal_type: r.kind === 'rent' ? 'RENT' : 'BUY',
       created_at: r.created_at,
     }))
-    // keep previous behavior: downloads list == BUY items
     .filter((x) => x.deal_type === 'BUY');
 
   return res.json({ items });

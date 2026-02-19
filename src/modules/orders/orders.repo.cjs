@@ -1,3 +1,4 @@
+// src/modules/orders/orders.repo.cjs
 'use strict';
 
 const { pool } = require('../../config/db.cjs');
@@ -6,19 +7,28 @@ async function createOrder({
   userId,
   templateSlug,
   dealType,
+  license,
   amountCents,
   currency,
   provider,
 }) {
+  if (!license) {
+    const err = new Error('LICENSE_REQUIRED');
+    err.status = 400;
+    err.code = 'LICENSE_REQUIRED';
+    throw err;
+  }
+
   const sql = `
-    INSERT INTO orders (user_id, template_slug, deal_type, amount_cents, currency, provider, status)
-    VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+    INSERT INTO orders (user_id, template_slug, deal_type, license, amount_cents, currency, provider, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
     RETURNING *
   `;
   const { rows } = await pool.query(sql, [
     userId,
     templateSlug,
     dealType,
+    license,
     amountCents,
     currency,
     provider,
