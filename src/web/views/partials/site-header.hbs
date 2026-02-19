@@ -1,59 +1,62 @@
+<header class="site-header">
+  <div class="l-container">
+    <div class="site-header__inner">
 
-  <div class="site-header__inner">
-
-    <!-- LEFT -->
-    <div class="site-header__left">
-      <a href="/templates" class="site-header__brand" aria-label="Tempasi home">
-        <img
-          class="site-header__brand-logo"
-          src="/img/logo-tempasi.png"
-          alt="Tempasi"
-          width="22"
-          height="22"
-          loading="eager"
-          decoding="async"
-        />
-        <span class="site-header__title">TEMPASI</span>
-      </a>
-    </div>
-
-    <!-- CENTER -->
-    <nav class="site-header__nav" aria-label="Main navigation">
-      <a href="/templates" class="nav-link">Templates</a>
-
-      {{#if isAuthed}}
-        <a href="/cabinet" class="nav-link">Cabinet</a>
-      {{/if}}
-    </nav>
-
-    <!-- RIGHT -->
-    <div class="site-header__actions">
-
-      {{#if isAuthed}}
-
-        <!-- cart -->
-        <a href="/cart" class="header-icon" aria-label="Cart">
-          {{> icon-cart}}
+      <!-- LEFT -->
+      <div class="site-header__left">
+        <a href="/templates" class="site-header__brand" aria-label="Tempasi home">
+          <img
+            class="site-header__brand-logo"
+            src="/img/logo-tempasi.png"
+            alt="Tempasi"
+            width="22"
+            height="22"
+            loading="eager"
+            decoding="async"
+          />
+          <span class="site-header__title">TEMPASI</span>
         </a>
+      </div>
 
-        <!-- logout -->
-        <form method="post" action="/api/auth/logout" class="header-icon">
-          <button type="submit" aria-label="Logout">
-            {{> icon-logout}}
-          </button>
-        </form>
+      <!-- CENTER -->
+      <nav class="site-header__nav" aria-label="Main navigation">
+        <a href="/templates" class="nav-link">Templates</a>
 
-      {{else}}
+        {{#if isAuthed}}
+          <a href="/cabinet" class="nav-link">Cabinet</a>
+        {{/if}}
+      </nav>
 
-        <!-- login -->
-        <a href="/login" class="header-icon" aria-label="Login">
-          {{> icon-login}}
-        </a>
+      <!-- RIGHT -->
+      <div class="site-header__actions">
 
-        <!-- placeholder (keeps width) -->
-        <span class="header-icon header-icon--placeholder" aria-hidden="true"></span>
+        {{#if isAuthed}}
 
-      {{/if}}
+          <!-- cart -->
+          <a href="/cart" class="header-icon" aria-label="Cart">
+            {{> icon-cart}}
+          </a>
+
+          <!-- logout -->
+          <form method="post" action="/api/auth/logout" class="header-icon">
+            <button type="submit" aria-label="Logout">
+              {{> icon-logout}}
+            </button>
+          </form>
+
+        {{else}}
+
+          <!-- login -->
+          <a href="/login" class="header-icon" aria-label="Login">
+            {{> icon-login}}
+          </a>
+
+          <!-- placeholder (keeps width) -->
+          <span class="header-icon header-icon--placeholder" aria-hidden="true"></span>
+
+        {{/if}}
+
+      </div>
 
     </div>
   </div>
