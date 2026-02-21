@@ -21,6 +21,15 @@ function safeStr(s, max = 160) {
   return v.length > max ? v.slice(0, max) : v;
 }
 
+// Cabinet base view locals (prevents "auth" bodyClass leak + ensures css)
+function baseView(extra = {}) {
+  return {
+    bodyClass: 'cabinet',
+    styles: ['/css/pages/cabinet.css'],
+    ...extra,
+  };
+}
+
 function createCabinetPagesRouter({ db }) {
   if (!db || typeof db.query !== 'function') {
     throw new Error('CABINET_ROUTER_DB_REQUIRED');
@@ -42,10 +51,15 @@ function createCabinetPagesRouter({ db }) {
         offset: 0,
       });
 
-      return res.status(200).render('pages/cabinet', {
-        title: 'Cabinet',
-        recentCases,
-      });
+      // NOTE: your page file is pages/cabinet/index.hbs
+      return res.status(200).render(
+        'pages/cabinet/index',
+        baseView({
+          title: 'Cabinet',
+          activeSpace: 'overview',
+          recentCases,
+        }),
+      );
     } catch (err) {
       return next(err);
     }
@@ -55,9 +69,13 @@ function createCabinetPagesRouter({ db }) {
   // FINANCE  ->  /cabinet/finance
   // ========================================
   router.get('/finance', async (_req, res) => {
-    return res.status(200).render('pages/cabinet/finance', {
-      title: 'Finance',
-    });
+    return res.status(200).render(
+      'pages/cabinet/finance',
+      baseView({
+        title: 'Finance',
+        activeSpace: 'finance',
+      }),
+    );
   });
 
   // ========================================
@@ -74,10 +92,14 @@ function createCabinetPagesRouter({ db }) {
         offset: 0,
       });
 
-      return res.status(200).render('pages/cabinet/cases/index', {
-        title: 'Cases',
-        cases: items,
-      });
+      return res.status(200).render(
+        'pages/cabinet/cases/index',
+        baseView({
+          title: 'Cases',
+          activeSpace: 'cases',
+          cases: items,
+        }),
+      );
     } catch (err) {
       return next(err);
     }
@@ -87,10 +109,14 @@ function createCabinetPagesRouter({ db }) {
   // NEW CASE  ->  /cabinet/cases/new
   // ========================================
   router.get('/cases/new', (_req, res) => {
-    return res.status(200).render('pages/cabinet/cases/new', {
-      title: 'Create Case',
-      form: { title: '', notes: '' },
-    });
+    return res.status(200).render(
+      'pages/cabinet/cases/new',
+      baseView({
+        title: 'Create Case',
+        activeSpace: 'cases',
+        form: { title: '', notes: '' },
+      }),
+    );
   });
 
   router.post(
@@ -105,14 +131,18 @@ function createCabinetPagesRouter({ db }) {
         const notes = notesRaw ? notesRaw.slice(0, 4000) : null;
 
         if (!title) {
-          return res.status(400).render('pages/cabinet/cases/new', {
-            title: 'Create Case',
-            error: 'Case name is required.',
-            form: {
-              title: req.body?.title || '',
-              notes: req.body?.notes || '',
-            },
-          });
+          return res.status(400).render(
+            'pages/cabinet/cases/new',
+            baseView({
+              title: 'Create Case',
+              activeSpace: 'cases',
+              error: 'Case name is required.',
+              form: {
+                title: req.body?.title || '',
+                notes: req.body?.notes || '',
+              },
+            }),
+          );
         }
 
         const created = await CasesService.createMyCase({
@@ -139,16 +169,26 @@ function createCabinetPagesRouter({ db }) {
 
       const c = await CasesService.getMyCase({ db, userId, caseId });
       if (!c) {
-        return res.status(404).render('pages/404', { title: 'Not found' });
+        return res
+          .status(404)
+          .render('pages/404', baseView({ title: 'Not found' }));
       }
 
-      const templates = await CasesService.listMyCaseTemplates({ db, userId, caseId });
-
-      return res.status(200).render('pages/cabinet/cases/detail', {
-        title: c.title,
-        case: c,
-        templates,
+      const templates = await CasesService.listMyCaseTemplates({
+        db,
+        userId,
+        caseId,
       });
+
+      return res.status(200).render(
+        'pages/cabinet/cases/detail',
+        baseView({
+          title: c.title,
+          activeSpace: 'cases',
+          case: c,
+          templates,
+        }),
+      );
     } catch (err) {
       return next(err);
     }
@@ -175,7 +215,9 @@ function createCabinetPagesRouter({ db }) {
         });
 
         if (!updated) {
-          return res.status(404).render('pages/404', { title: 'Not found' });
+          return res
+            .status(404)
+            .render('pages/404', baseView({ title: 'Not found' }));
         }
 
         return res.redirect(`/cabinet/cases/${caseId}`);
@@ -199,7 +241,13 @@ function createCabinetPagesRouter({ db }) {
 
         if (!templateId) return res.redirect(`/cabinet/cases/${caseId}`);
 
-        await CasesService.addTemplateToMyCase({ db, userId, caseId, templateId });
+        await CasesService.addTemplateToMyCase({
+          db,
+          userId,
+          caseId,
+          templateId,
+        });
+
         return res.redirect(`/cabinet/cases/${caseId}`);
       } catch (err) {
         return next(err);
@@ -210,21 +258,24 @@ function createCabinetPagesRouter({ db }) {
   // ========================================
   // REMOVE TEMPLATE FROM CASE
   // ========================================
-  router.post(
-    '/cases/:id/templates/:templateId/remove',
-    async (req, res, next) => {
-      try {
-        const userId = getUserId(req, res);
-        const caseId = req.params.id;
-        const templateId = req.params.templateId;
+  router.post('/cases/:id/templates/:templateId/remove', async (req, res, next) => {
+    try {
+      const userId = getUserId(req, res);
+      const caseId = req.params.id;
+      const templateId = req.params.templateId;
 
-        await CasesService.removeTemplateFromMyCase({ db, userId, caseId, templateId });
-        return res.redirect(`/cabinet/cases/${caseId}`);
-      } catch (err) {
-        return next(err);
-      }
-    },
-  );
+      await CasesService.removeTemplateFromMyCase({
+        db,
+        userId,
+        caseId,
+        templateId,
+      });
+
+      return res.redirect(`/cabinet/cases/${caseId}`);
+    } catch (err) {
+      return next(err);
+    }
+  });
 
   return router;
 }
