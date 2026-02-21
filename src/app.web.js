@@ -58,6 +58,9 @@ export function createWebApp({ db }) {
   const pIconLogin = path.join(partialsRoot, 'icon-login.hbs');
   const pIconLogout = path.join(partialsRoot, 'icon-logout.hbs');
 
+  // ✅ Template card v2 (explicit registration; hbs may not resolve "template-card.v2" automatically)
+  const pTemplateCardV2 = path.join(partialsRoot, 'template-card.v2.hbs');
+
   const iconsDash = safeRead(pIconsDash);
   const iconsUnd = safeRead(pIconsUnd);
   const header = safeRead(pHeader);
@@ -67,6 +70,8 @@ export function createWebApp({ db }) {
   const iconCart = safeRead(pIconCart);
   const iconLogin = safeRead(pIconLogin);
   const iconLogout = safeRead(pIconLogout);
+
+  const templateCardV2 = safeRead(pTemplateCardV2);
 
   // sprite (both names supported)
   if (iconsDash) registerPartialSafe('icons-sprite', iconsDash);
@@ -87,6 +92,9 @@ export function createWebApp({ db }) {
   registerPartialSafe('icon_cart', iconCart);
   registerPartialSafe('icon_login', iconLogin);
   registerPartialSafe('icon_logout', iconLogout);
+
+  // ✅ Explicit v2 partial name (with dot)
+  registerPartialSafe('template-card.v2', templateCardV2);
 
   // Helpers
   hbs.registerHelper('eq', (a, b) => a === b);

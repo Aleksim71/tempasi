@@ -1,6 +1,8 @@
 /* public/css/pages/templates.css */
 /* Templates catalog page: layout + MINI/MAXI (cards only). NO sidebar chips here. */
 
+@import url('/css/components/template-card.v2.css');
+
 .templates-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);

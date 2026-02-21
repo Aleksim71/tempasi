@@ -131,72 +131,7 @@
         aria-label="Templates"
       >
         {{#each templates}}
-          <article class="template-card" data-template-slug="{{this.slug}}">
-            <div class="template-card__preview">
-              <div class="template-card__no-preview" style="display:none;">Preview not available</div>
-
-              <img
-                class="template-card__img"
-                src="{{#if this.previewUrl}}{{this.previewUrl}}{{else}}/t/{{this.slug}}/preview.png{{/if}}"
-                alt="Preview {{this.slug}}"
-                loading="lazy"
-                onerror="try{const box=this.closest('.template-card__preview'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"
-              />
-            </div>
-
-            <div class="template-card__body">
-              <div class="template-card__head">
-                <h3 class="template-card__title">{{this.title}}</h3>
-
-                {{!-- Prices (best-effort; keep backward compatible with existing this.price) --}}
-                <div class="template-card__prices" aria-label="Prices">
-                  {{#if this.rentPrice}}
-                    <span class="template-card__price">Rent: {{this.rentPrice}}€</span>
-                  {{/if}}
-
-                  {{#if this.rent_price}}
-                    <span class="template-card__price">Rent: {{this.rent_price}}€</span>
-                  {{/if}}
-
-                  {{#if this.price}}
-                    <span class="template-card__price">Buy: {{this.price}}€</span>
-                  {{/if}}
-
-                  {{#if this.buyPrice}}
-                    <span class="template-card__price">Buy: {{this.buyPrice}}€</span>
-                  {{/if}}
-                </div>
-              </div>
-
-              {{!-- MAXI extra --}}
-              <div class="template-card__extra">
-                {{#if this.author}}
-                  <div class="template-card__author">{{this.author}}</div>
-                {{/if}}
-
-                {{#if this.tech}}
-                  <div class="template-card__tech">
-                    {{#each this.tech}}
-                      <span class="tech-item">{{this}}</span>
-                    {{/each}}
-                  </div>
-                {{/if}}
-
-                {{#if this.excerpt}}
-                  <div class="template-card__excerpt">{{this.excerpt}}</div>
-                {{else}}
-                  {{#if this.description}}
-                    <div class="template-card__excerpt">{{this.description}}</div>
-                  {{/if}}
-                {{/if}}
-              </div>
-
-              <div class="template-card__actions" aria-label="Template actions">
-                <a class="template-card__link" href="/templates/{{this.slug}}">Details</a>
-                <a class="template-card__link" href="/preview/{{this.slug}}" target="_blank" rel="noopener">Demo</a>
-              </div>
-            </div>
-          </article>
+          {{> template-card.v2 t=this }}
         {{/each}}
       </section>
     </div>
@@ -219,15 +154,12 @@
   function setMode(mode) {
     const isMaxi = mode === 'maxi';
 
-    // classes (for existing CSS)
     view.classList.toggle('templates-grid--mini', !isMaxi);
     view.classList.toggle('templates-grid--maxi', isMaxi);
 
-    // attribute (for future CSS if needed)
     view.dataset.view = isMaxi ? 'maxi' : 'mini';
     document.documentElement.dataset.templatesView = isMaxi ? 'maxi' : 'mini';
 
-    // toolbar state
     miniBtn.classList.toggle('active', !isMaxi);
     maxiBtn.classList.toggle('active', isMaxi);
     setPressed(!isMaxi);
@@ -235,7 +167,6 @@
     try { localStorage.setItem('templatesView', isMaxi ? 'maxi' : 'mini'); } catch (e) {}
   }
 
-  // init
   let saved = null;
   try { saved = localStorage.getItem('templatesView'); } catch (e) {}
   setMode(saved === 'maxi' ? 'maxi' : 'mini');
