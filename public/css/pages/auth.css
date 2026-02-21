@@ -1,7 +1,12 @@
+/* public/css/pages/auth.css */
+
 /* =========================================================
    AUTH PAGES (Login / Register / Reset)
-   Compact layout:
-   Header + Content + Footer should fit in viewport if possible
+   Compact + safe:
+   - DO NOT touch global layout containers
+   - Fix header inner on auth
+   - Keep footer pinned
+   - Avoid scroll on typical laptop heights
    ========================================================= */
 
 /* ---------- Root knobs ---------- */
@@ -19,7 +24,7 @@
 }
 
 /* =========================================================
-   Layout override ONLY for auth pages
+   Layout (auth only)
    ========================================================= */
 
 body.auth {
@@ -28,34 +33,62 @@ body.auth {
   flex-direction: column;
 }
 
-/* Main middle zone becomes flexible */
+/* =========================================================
+   AUTH HEADER FIX
+   On auth pages header markup is "div.site-header__inner"
+   without wrapper/container — stretch it safely.
+   ========================================================= */
+
+body.auth .site-header__inner {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* =========================================================
+   Main area
+   ========================================================= */
+
 body.auth .l-page {
   flex: 1;
-  display: flex;
   min-height: 0;
 }
 
 body.auth .l-main {
   flex: 1;
+  min-height: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  /* Important: do NOT force min-height 100vh */
-  min-height: 0;
-
-  /* Modest padding to avoid pushing footer */
   padding: 14px 0;
 }
 
-/* Remove vertical stacking gaps that can cause overflow */
-body.auth .l-container {
+/* Remove vertical gaps only inside MAIN (not header) */
+body.auth .l-main .l-container {
   padding-top: 0;
   padding-bottom: 0;
 }
 
-body.auth .l-stack {
+body.auth .l-main .l-stack {
   gap: 0;
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+
+body.auth footer {
+  margin-top: auto;
+  padding-top: var(--auth-footer-padding-y);
+  padding-bottom: var(--auth-footer-padding-y);
+}
+
+body.auth footer,
+body.auth footer * {
+  font-size: var(--auth-footer-font-size);
 }
 
 /* =========================================================
@@ -204,20 +237,6 @@ body.auth .l-stack {
 }
 
 /* =========================================================
-   Footer compact mode (only on auth pages)
-   ========================================================= */
-
-body.auth footer {
-  padding-top: var(--auth-footer-padding-y);
-  padding-bottom: var(--auth-footer-padding-y);
-}
-
-body.auth footer,
-body.auth footer * {
-  font-size: var(--auth-footer-font-size);
-}
-
-/* =========================================================
    COMPACT HEIGHT MODES
    ========================================================= */
 
@@ -226,6 +245,8 @@ body.auth footer * {
     --auth-card-padding: 16px;
     --auth-input-height: 32px;
     --auth-gap: 10px;
+    --auth-footer-font-size: 10px;
+    --auth-footer-padding-y: 8px;
   }
 
   body.auth .l-main {
@@ -238,6 +259,8 @@ body.auth footer * {
     --auth-card-padding: 14px;
     --auth-input-height: 30px;
     --auth-gap: 8px;
+    --auth-footer-font-size: 10px;
+    --auth-footer-padding-y: 6px;
   }
 
   body.auth .l-main {
