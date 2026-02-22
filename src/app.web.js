@@ -25,6 +25,14 @@ function registerPartialSafe(name, content) {
   hbs.registerPartial(name, content);
 }
 
+function readFirstExisting(paths) {
+  for (const p of paths) {
+    const c = safeRead(p);
+    if (c) return c;
+  }
+  return null;
+}
+
 export function createWebApp({ db }) {
   const app = express();
 
@@ -41,15 +49,13 @@ export function createWebApp({ db }) {
 
   console.log('[web] createWebApp() boot', { views: viewsRoot, partials: partialsRoot });
 
-  // Register partials dir (plus explicit critical ones below)
+  // Register partials dir (may NOT recurse into subfolders depending on hbs version)
   hbs.registerPartials(partialsRoot);
 
   // Critical partials
   const pIconsDash = path.join(partialsRoot, 'icons-sprite.hbs');
   const pIconsUnd = path.join(partialsRoot, 'icons_sprite.hbs');
   const pHeader = path.join(partialsRoot, 'site-header.hbs');
-
-  // IMPORTANT: layout uses {{> footer}} and file is partials/footer.hbs
   const pFooter = path.join(partialsRoot, 'footer.hbs');
 
   // header icons
@@ -58,8 +64,39 @@ export function createWebApp({ db }) {
   const pIconLogin = path.join(partialsRoot, 'icon-login.hbs');
   const pIconLogout = path.join(partialsRoot, 'icon-logout.hbs');
 
-  // ✅ Template card v2 (explicit registration; hbs may not resolve "template-card.v2" automatically)
+  // Template card v2
   const pTemplateCardV2 = path.join(partialsRoot, 'template-card.v2.hbs');
+
+  // --- Cabinet space partials (with fallback to old root-level files) ---
+  // New preferred location:
+  //   partials/cabinet/space-*.hbs
+  // Old location you already have:
+  //   partials/space-*.hbs
+  const cabinetCases = readFirstExisting([
+    path.join(partialsRoot, 'cabinet', 'space-cases.hbs'),
+    path.join(partialsRoot, 'space-cases.hbs'),
+  ]);
+
+  const cabinetMyTemplates = readFirstExisting([
+    path.join(partialsRoot, 'cabinet', 'space-my-templates.hbs'),
+    path.join(partialsRoot, 'space-my-templates.hbs'),
+  ]);
+
+  const cabinetFinance = readFirstExisting([
+    path.join(partialsRoot, 'cabinet', 'space-finance.hbs'),
+    path.join(partialsRoot, 'space-finance.hbs'),
+  ]);
+
+  const cabinetProfileSecurity = readFirstExisting([
+    path.join(partialsRoot, 'cabinet', 'space-profile-security.hbs'),
+    // если у тебя пока нет отдельного файла — fallback не сработает, но мы хотя бы не сломаем cases/finance/etc.
+    path.join(partialsRoot, 'space-profile-security.hbs'),
+  ]);
+
+  const cabinetSupport = readFirstExisting([
+    path.join(partialsRoot, 'cabinet', 'space-support.hbs'),
+    path.join(partialsRoot, 'space-support.hbs'),
+  ]);
 
   const iconsDash = safeRead(pIconsDash);
   const iconsUnd = safeRead(pIconsUnd);
@@ -93,8 +130,34 @@ export function createWebApp({ db }) {
   registerPartialSafe('icon_login', iconLogin);
   registerPartialSafe('icon_logout', iconLogout);
 
-  // ✅ Explicit v2 partial name (with dot)
+  // v2 partial name (with dot)
   registerPartialSafe('template-card.v2', templateCardV2);
+
+  // ✅ Cabinet partial aliases (REGISTER BOTH styles)
+  // cases
+  registerPartialSafe('space-cases', cabinetCases);
+  registerPartialSafe('cabinet-space-cases', cabinetCases);
+  registerPartialSafe('cabinet/space-cases', cabinetCases);
+
+  // my-templates
+  registerPartialSafe('space-my-templates', cabinetMyTemplates);
+  registerPartialSafe('cabinet-space-my-templates', cabinetMyTemplates);
+  registerPartialSafe('cabinet/space-my-templates', cabinetMyTemplates);
+
+  // finance
+  registerPartialSafe('space-finance', cabinetFinance);
+  registerPartialSafe('cabinet-space-finance', cabinetFinance);
+  registerPartialSafe('cabinet/space-finance', cabinetFinance);
+
+  // profile-security
+  registerPartialSafe('space-profile-security', cabinetProfileSecurity);
+  registerPartialSafe('cabinet-space-profile-security', cabinetProfileSecurity);
+  registerPartialSafe('cabinet/space-profile-security', cabinetProfileSecurity);
+
+  // support
+  registerPartialSafe('space-support', cabinetSupport);
+  registerPartialSafe('cabinet-space-support', cabinetSupport);
+  registerPartialSafe('cabinet/space-support', cabinetSupport);
 
   // Helpers
   hbs.registerHelper('eq', (a, b) => a === b);

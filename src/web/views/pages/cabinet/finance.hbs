@@ -1,72 +1,45 @@
 {{!-- src/web/views/pages/cabinet/finance.hbs --}}
-<link rel="stylesheet" href="/css/pages/cabinet.css" />
-<link rel="stylesheet" href="/css/pages/cabinet-cases.css" />
-<link rel="stylesheet" href="/css/pages/cabinet-finance.css" />
-
-<section class="cabinet-finance" data-page="cabinet-finance">
-  <header class="cabinet-cases__header">
-    <div class="cabinet-cases__title">
-      <h1>Finance</h1>
-      <p class="muted">Orders and billing overview.</p>
-    </div>
-
-    <div class="cabinet-cases__actions">
-      <a class="btn btn--ghost" href="/cabinet">Back to Cabinet</a>
-    </div>
-  </header>
-
-  <section class="panel" id="orders" aria-label="Orders">
-    <div class="panel__head">
-      <h2>Orders</h2>
-      <p class="muted">
-        Here will be your purchases & rents, statuses, and receipts.
-      </p>
-    </div>
-
-    <div class="finance-grid" role="list">
-      <div class="finance-kpi" role="listitem">
-        <div class="finance-kpi__label muted">Total orders</div>
-        <div class="finance-kpi__value">—</div>
-        <div class="finance-kpi__hint muted">MVP: connect to orders table next</div>
+<section class="cabinet">
+  <div class="cabinet__layout">
+    <aside class="cabinet__sidebar">
+      <div class="cabinet__side-head">
+        <div class="cabinet__side-title">Spaces</div>
+        <div class="cabinet__side-subtitle">Your workspace</div>
       </div>
 
-      <div class="finance-kpi" role="listitem">
-        <div class="finance-kpi__label muted">Active rents</div>
-        <div class="finance-kpi__value">—</div>
-        <div class="finance-kpi__hint muted">MVP: show entitlements-based active rents</div>
+      <nav class="cabinet__nav" aria-label="Cabinet navigation">
+        <a class="cabinet__pill" href="/cabinet/cases"><span class="cabinet__pill-label">Cases</span></a>
+        <a class="cabinet__pill" href="/cabinet/my-templates"><span class="cabinet__pill-label">My Templates</span></a>
+        <a class="cabinet__pill" href="/cabinet/finance"><span class="cabinet__pill-label">Finance</span></a>
+        <a class="cabinet__pill" href="/cabinet/profile-security"><span class="cabinet__pill-label">Profile &amp; Security</span></a>
+        <a class="cabinet__pill" href="/cabinet/support"><span class="cabinet__pill-label">Support</span></a>
+      </nav>
+
+      <div class="cabinet__side-note">
+        <div class="cabinet__note-title">Finance</div>
+        <div class="cabinet__note-text">Orders and billing overview.</div>
       </div>
+    </aside>
 
-      <div class="finance-kpi" role="listitem">
-        <div class="finance-kpi__label muted">Paid amount</div>
-        <div class="finance-kpi__value">—</div>
-        <div class="finance-kpi__hint muted">MVP: sum by user</div>
-      </div>
-    </div>
+    <main class="cabinet__content">
+      <header class="cabinet__header">
+        <h1 class="cabinet__title">Finance</h1>
+        <p class="cabinet__subtitle">Orders and billing overview.</p>
+      </header>
 
-    <div class="form__actions finance-actions">
-      <a class="btn" href="/profile">Open profile</a>
-      <a class="btn btn--ghost" href="/templates">Browse templates</a>
-    </div>
-  </section>
+      <section class="cabinet__workspace">
+        <div class="cabinet__workspace-card">
+          <div class="cabinet__workspace-title">Orders</div>
+          <div class="cabinet__workspace-text">
+            Here will be your purchases &amp; rents, statuses, and receipts (MVP next).
+          </div>
 
-  <section class="panel" id="billing" aria-label="Billing">
-    <div class="panel__head">
-      <h2>Billing</h2>
-      <p class="muted">
-        Invoices, payment methods, VAT details — coming next.
-      </p>
-    </div>
-
-    <div class="empty-state empty-state--compact">
-      <div class="empty-state__title">Billing is not connected yet</div>
-      <div class="empty-state__hint">
-        Next step: add billing profile + invoice list and attach it to orders.
-      </div>
-    </div>
-
-    <div class="form__actions finance-actions">
-      <a class="btn btn--ghost" href="/cabinet/cases">Back to Cases</a>
-      <a class="btn" href="/cabinet">Back to Cabinet</a>
-    </div>
-  </section>
+          <div class="cabinet__workspace-actions">
+            <a class="cabinet__btn" href="/cabinet">Back to Cabinet</a>
+            <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 </section>

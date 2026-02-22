@@ -1,43 +1,45 @@
 {{!-- src/web/views/pages/cabinet/cases/index.hbs --}}
-<link rel="stylesheet" href="/css/pages/cabinet-cases.css" />
-
-<section class="cabinet-cases" data-page="cabinet-cases">
-  <header class="cabinet-cases__header">
-    <div class="cabinet-cases__title">
-      <h1>Cases</h1>
-      <p class="muted">Client shortlists (no pricing / checkout in client view).</p>
-    </div>
-    <div class="cabinet-cases__actions">
-      <a class="btn" href="/cabinet/cases/new">Create case</a>
-    </div>
-  </header>
-
-  {{#if cases.length}}
-    <div class="cases-grid" role="list">
-      {{#each cases}}
-        <article class="case-card" role="listitem">
-          <div class="case-card__head">
-            <h2 class="case-card__title">
-              <a href="/cabinet/cases/{{id}}">{{title}}</a>
-            </h2>
-            <div class="case-card__meta muted">
-              {{templates_count}} templates · updated {{updated_at}}
-            </div>
-          </div>
-
-          <div class="case-card__footer">
-            <a class="btn btn--ghost" href="/cabinet/cases/{{id}}">Open</a>
-          </div>
-        </article>
-      {{/each}}
-    </div>
-  {{else}}
-    <div class="empty-state">
-      <div class="empty-state__title">No cases yet</div>
-      <div class="empty-state__hint">Create a case for a client and add templates to present.</div>
-      <div class="empty-state__actions">
-        <a class="btn" href="/cabinet/cases/new">Create your first case</a>
+<section class="cabinet">
+  <div class="cabinet__layout">
+    <aside class="cabinet__sidebar">
+      <div class="cabinet__side-head">
+        <div class="cabinet__side-title">Spaces</div>
+        <div class="cabinet__side-subtitle">Your workspace</div>
       </div>
-    </div>
-  {{/if}}
+
+      <nav class="cabinet__nav" aria-label="Cabinet navigation">
+        <a class="cabinet__pill" href="/cabinet/cases"><span class="cabinet__pill-label">Cases</span></a>
+        <a class="cabinet__pill" href="/cabinet/my-templates"><span class="cabinet__pill-label">My Templates</span></a>
+        <a class="cabinet__pill" href="/cabinet/finance"><span class="cabinet__pill-label">Finance</span></a>
+        <a class="cabinet__pill" href="/cabinet/profile-security"><span class="cabinet__pill-label">Profile &amp; Security</span></a>
+        <a class="cabinet__pill" href="/cabinet/support"><span class="cabinet__pill-label">Support</span></a>
+      </nav>
+
+      <div class="cabinet__side-note">
+        <div class="cabinet__note-title">Cases</div>
+        <div class="cabinet__note-text">Client shortlists and presentations.</div>
+      </div>
+    </aside>
+
+    <main class="cabinet__content">
+      <header class="cabinet__header">
+        <h1 class="cabinet__title">Cases</h1>
+        <p class="cabinet__subtitle">Client shortlists and presentations.</p>
+      </header>
+
+      <section class="cabinet__workspace">
+        <div class="cabinet__workspace-card">
+          <div class="cabinet__workspace-title">Coming next</div>
+          <div class="cabinet__workspace-text">
+            Next step: list cases + create case + add templates to a case.
+          </div>
+
+          <div class="cabinet__workspace-actions">
+            <a class="cabinet__btn" href="/cabinet">Back to Cabinet</a>
+            <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 </section>
