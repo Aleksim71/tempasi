@@ -1,61 +1,15 @@
 {{!-- src/web/views/pages/cabinet/index.hbs --}}
 <section class="cabinet">
   <div class="cabinet__layout">
-    <aside class="cabinet__sidebar">
-      <div class="cabinet__side-head">
-        <div class="cabinet__side-title">Spaces</div>
-        <div class="cabinet__side-subtitle">Your workspace</div>
-      </div>
-
-      <nav class="cabinet__nav" aria-label="Cabinet navigation">
-        <a class="cabinet__pill {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
-          <span class="cabinet__pill-label">Cases</span>
-        </a>
-
-        <a class="cabinet__pill {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
-          <span class="cabinet__pill-label">My Templates</span>
-        </a>
-
-        <a class="cabinet__pill {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
-          <span class="cabinet__pill-label">Finance</span>
-        </a>
-
-        <a class="cabinet__pill {{#if (eq activeSpace 'profile-security')}}is-active{{/if}}" href="/cabinet/profile-security">
-          <span class="cabinet__pill-label">Profile &amp; Security</span>
-        </a>
-
-        <a class="cabinet__pill {{#if (eq activeSpace 'support')}}is-active{{/if}}" href="/cabinet/support">
-          <span class="cabinet__pill-label">Support</span>
-        </a>
-      </nav>
-
-      <div class="cabinet__side-note">
-        <div class="cabinet__note-title">Tip</div>
-        <div class="cabinet__note-text">Choose a space. Content opens on the right — like in Templates.</div>
-      </div>
-    </aside>
+    {{> cabinet/sidebar }}
 
     <main class="cabinet__content">
-      <header class="cabinet__header">
-        <h1 class="cabinet__title">Cabinet</h1>
-        <p class="cabinet__subtitle">Select a space on the left.</p>
-      </header>
-
       <section class="cabinet__workspace">
         <div class="cabinet__workspace-card">
-          {{!-- ✅ render selected space --}}
           {{#if workspacePartial}}
             {{> (lookup . "workspacePartial") }}
           {{else}}
             <div class="cabinet__workspace-title">Workspace</div>
-            <div class="cabinet__workspace-text">
-              This is the Cabinet shell. Each space renders in this area.
-            </div>
-
-            <div class="cabinet__workspace-actions">
-              <a class="cabinet__btn" href="/cabinet/cases">Open Cases</a>
-              <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-            </div>
           {{/if}}
         </div>
       </section>

@@ -1,43 +1,12 @@
 {{!-- src/web/views/pages/cabinet/cases/index.hbs --}}
 <section class="cabinet">
   <div class="cabinet__layout">
-    <aside class="cabinet__sidebar">
-      <div class="cabinet__side-head">
-        <div class="cabinet__side-title">Spaces</div>
-        <div class="cabinet__side-subtitle">Your workspace</div>
-      </div>
-
-      <nav class="cabinet__nav" aria-label="Cabinet navigation">
-        <a class="cabinet__pill" href="/cabinet/cases"><span class="cabinet__pill-label">Cases</span></a>
-        <a class="cabinet__pill" href="/cabinet/my-templates"><span class="cabinet__pill-label">My Templates</span></a>
-        <a class="cabinet__pill" href="/cabinet/finance"><span class="cabinet__pill-label">Finance</span></a>
-        <a class="cabinet__pill" href="/cabinet/profile-security"><span class="cabinet__pill-label">Profile &amp; Security</span></a>
-        <a class="cabinet__pill" href="/cabinet/support"><span class="cabinet__pill-label">Support</span></a>
-      </nav>
-
-      <div class="cabinet__side-note">
-        <div class="cabinet__note-title">Cases</div>
-        <div class="cabinet__note-text">Client shortlists and presentations.</div>
-      </div>
-    </aside>
+    {{> cabinet/sidebar activeSpace="cases" }}
 
     <main class="cabinet__content">
-      <header class="cabinet__header">
-        <h1 class="cabinet__title">Cases</h1>
-        <p class="cabinet__subtitle">Client shortlists and presentations.</p>
-      </header>
-
       <section class="cabinet__workspace">
         <div class="cabinet__workspace-card">
-          <div class="cabinet__workspace-title">Coming next</div>
-          <div class="cabinet__workspace-text">
-            Next step: list cases + create case + add templates to a case.
-          </div>
-
-          <div class="cabinet__workspace-actions">
-            <a class="cabinet__btn" href="/cabinet">Back to Cabinet</a>
-            <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-          </div>
+          <div class="cabinet__workspace-title">Cases</div>
         </div>
       </section>
     </main>

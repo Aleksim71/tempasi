@@ -1,25 +1,10 @@
 {{!-- src/web/views/pages/cabinet/finance.hbs --}}
 <section class="cabinet">
   <div class="cabinet__layout">
-    <aside class="cabinet__sidebar">
-      <div class="cabinet__side-head">
-        <div class="cabinet__side-title">Spaces</div>
-        <div class="cabinet__side-subtitle">Your workspace</div>
-      </div>
-
-      <nav class="cabinet__nav" aria-label="Cabinet navigation">
-        <a class="cabinet__pill" href="/cabinet/cases"><span class="cabinet__pill-label">Cases</span></a>
-        <a class="cabinet__pill" href="/cabinet/my-templates"><span class="cabinet__pill-label">My Templates</span></a>
-        <a class="cabinet__pill" href="/cabinet/finance"><span class="cabinet__pill-label">Finance</span></a>
-        <a class="cabinet__pill" href="/cabinet/profile-security"><span class="cabinet__pill-label">Profile &amp; Security</span></a>
-        <a class="cabinet__pill" href="/cabinet/support"><span class="cabinet__pill-label">Support</span></a>
-      </nav>
-
-      <div class="cabinet__side-note">
-        <div class="cabinet__note-title">Finance</div>
-        <div class="cabinet__note-text">Orders and billing overview.</div>
-      </div>
-    </aside>
+    {{> cabinet/sidebar
+      sideNoteTitle="Finance"
+      sideNoteText="Orders and billing overview."
+    }}
 
     <main class="cabinet__content">
       <header class="cabinet__header">

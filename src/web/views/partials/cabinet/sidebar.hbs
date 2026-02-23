@@ -1,0 +1,24 @@
+{{!-- src/web/views/partials/cabinet/sidebar.hbs --}}
+<aside class="cabinet__sidebar">
+  <nav class="cabinet__nav" aria-label="Cabinet navigation">
+    <a class="cabinet__pill {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
+      Cases
+    </a>
+
+    <a class="cabinet__pill {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
+      My Templates
+    </a>
+
+    <a class="cabinet__pill {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
+      Finance
+    </a>
+
+    <a class="cabinet__pill {{#if (eq activeSpace 'profile-security')}}is-active{{/if}}" href="/cabinet/profile-security">
+      Profile &amp; Security
+    </a>
+
+    <a class="cabinet__pill {{#if (eq activeSpace 'support')}}is-active{{/if}}" href="/cabinet/support">
+      Support
+    </a>
+  </nav>
+</aside>
