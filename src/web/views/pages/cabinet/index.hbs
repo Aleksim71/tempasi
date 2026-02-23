@@ -1,18 +1,12 @@
 {{!-- src/web/views/pages/cabinet/index.hbs --}}
 <section class="cabinet">
   <div class="cabinet__layout">
-    {{> cabinet/sidebar }}
+    {{> cabinet/sidebar activeSpace=activeSpace }}
 
     <main class="cabinet__content">
-      <section class="cabinet__workspace">
-        <div class="cabinet__workspace-card">
-          {{#if workspacePartial}}
-            {{> (lookup . "workspacePartial") }}
-          {{else}}
-            <div class="cabinet__workspace-title">Workspace</div>
-          {{/if}}
-        </div>
-      </section>
+      {{#if workspacePartial}}
+        {{> (lookup . "workspacePartial") }}
+      {{/if}}
     </main>
   </div>
 </section>

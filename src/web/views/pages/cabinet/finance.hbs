@@ -1,30 +1,15 @@
 {{!-- src/web/views/pages/cabinet/finance.hbs --}}
 <section class="cabinet">
   <div class="cabinet__layout">
-    {{> cabinet/sidebar
-      sideNoteTitle="Finance"
-      sideNoteText="Orders and billing overview."
-    }}
+    {{> cabinet/sidebar activeSpace="finance" }}
 
     <main class="cabinet__content">
-      <header class="cabinet__header">
-        <h1 class="cabinet__title">Finance</h1>
-        <p class="cabinet__subtitle">Orders and billing overview.</p>
-      </header>
+      <div class="cabinet__workspace-title">Orders</div>
 
-      <section class="cabinet__workspace">
-        <div class="cabinet__workspace-card">
-          <div class="cabinet__workspace-title">Orders</div>
-          <div class="cabinet__workspace-text">
-            Here will be your purchases &amp; rents, statuses, and receipts (MVP next).
-          </div>
-
-          <div class="cabinet__workspace-actions">
-            <a class="cabinet__btn" href="/cabinet">Back to Cabinet</a>
-            <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-          </div>
-        </div>
-      </section>
+      <div class="cabinet__workspace-actions">
+        <a class="cabinet__btn" href="/cabinet">Back</a>
+        <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Templates</a>
+      </div>
     </main>
   </div>
 </section>
