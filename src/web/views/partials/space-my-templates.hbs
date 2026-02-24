@@ -1,26 +1,45 @@
-<!-- src/web/views/partials/space-my-templates.hbs -->
 <section class="cabinet-workspace">
 
   <nav class="mt-tabs" aria-label="My Templates">
     <a class="mt-tab {{#if isMyTemplatesAdd}}is-active{{/if}}" href="/cabinet/my-templates/add">
       Add Template
     </a>
-
     <a class="mt-tab {{#if isMyTemplatesLibrary}}is-active{{/if}}" href="/cabinet/my-templates">
       My Templates
     </a>
-
     <a class="mt-tab {{#if isMyTemplatesAnalytics}}is-active{{/if}}" href="/cabinet/my-templates/analytics">
       Analytics
     </a>
   </nav>
 
-  <div class="mt-workspace">
-    {{#if workspaceError}}
-      <div class="badge badge--danger">
-        Error: {{workspaceError.message}}
-      </div>
-    {{/if}}
+  {{#if workspaceError}}
+    <div class="badge badge--danger">
+      Error: {{workspaceError.message}}
+    </div>
+  {{/if}}
+
+  {{!-- ADD --}}
+  {{#if isMyTemplatesAdd}}
+    <div class="cabinet__panel">
+      <div class="cabinet__panelTitle">Add Template</div>
+      <p class="cabinet__panelText">
+        Upload flow will be wired later (MVP). For now this is a placeholder tab.
+      </p>
+    </div>
+  {{/if}}
+
+  {{!-- ANALYTICS --}}
+  {{#if isMyTemplatesAnalytics}}
+    <div class="cabinet__panel">
+      <div class="cabinet__panelTitle">Analytics</div>
+      <p class="cabinet__panelText">
+        Sales / rentals analytics will be wired later (MVP). For now this is a placeholder tab.
+      </p>
+    </div>
+  {{/if}}
+
+  {{!-- LIBRARY --}}
+  {{#if isMyTemplatesLibrary}}
 
     {{#if workspaceData.items.length}}
 
@@ -31,9 +50,13 @@
               <h3>{{template_title}}</h3>
 
               <div class="badges">
-                <span class="badge badge--kind">
-                  {{entitlement_kind}}
-                </span>
+                {{#if entitlement_kind}}
+                  <span class="badge badge--kind">{{entitlement_kind}}</span>
+                {{/if}}
+
+                {{#if deal_type}}
+                  <span class="badge badge--muted">{{deal_type}}</span>
+                {{/if}}
 
                 {{#if is_active}}
                   <span class="badge badge--success">Active</span>
@@ -68,5 +91,6 @@
         </a>
       </div>
     {{/if}}
-  </div>
+
+  {{/if}}
 </section>
