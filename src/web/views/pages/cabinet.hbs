@@ -4,17 +4,33 @@
     <div class="cabinet__layout">
 
       <aside class="cabinet__sidebar side">
+
+        {{!-- KPI: always visible in cabinet --}}
+        <div class="side__metrics" aria-label="Today metrics">
+          <div class="side__metricsTitle">Today</div>
+
+          <div class="side__metric">
+            <span>Revenue</span>
+            <strong>€{{metrics.today.revenue}}</strong>
+          </div>
+
+          <div class="side__metric">
+            <span>Invested</span>
+            <strong>€{{metrics.today.invested}}</strong>
+          </div>
+        </div>
+
         <div class="side__title">Cabinet</div>
 
         <nav class="side__nav" aria-label="Cabinet navigation">
-          <a class="side__link {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
-            <span>Cases</span>
-            <span class="side__meta">Work</span>
-          </a>
-
           <a class="side__link {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
             <span>My Templates</span>
             <span class="side__meta">Library</span>
+          </a>
+
+          <a class="side__link {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
+            <span>Cases</span>
+            <span class="side__meta">Work</span>
           </a>
 
           <a class="side__link {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
@@ -32,6 +48,7 @@
             <span class="side__meta">Help</span>
           </a>
         </nav>
+
       </aside>
 
       <main class="cabinet__workspace">
