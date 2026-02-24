@@ -1,110 +1,116 @@
-// src/modules/payments/entitlements.service.cjs
 'use strict';
 
+const { getPool } = require('../../../scripts/db.pool.cjs');
+
 /**
- * Public facade for entitlements.
+ * Canonical entitlements service (used by downloads/profile).
  *
- * Goal:
- * - Other modules MUST NOT import payments/repos/* directly.
- * - Service provides a stable API and can fallback to SQL with injected db (tests).
+ * IMPORTANT:
+ * - This service must NOT depend on catalog tables like `templates`.
+ *   Tests and core access control should work even if templates catalog is not migrated
+ *   in DATABASE_URL_TEST.
+ *
+ * Schema used here:
+ *   entitlements: user_id, template_slug, kind, order_id, starts_at, ends_at, created_at, deal_type
  */
 
-const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
-
-function mustUserId(userId) {
-  if (!userId) {
-    const err = new Error('ENTITLEMENTS_USER_REQUIRED');
-    err.status = 400;
-    err.code = 'ENTITLEMENTS_USER_REQUIRED';
-    throw err;
+function normalizeUserId(userIdOrUser) {
+  if (userIdOrUser == null) {
+    throw new Error('ENTITLEMENTS_INVALID_USER_ID: got null/undefined');
   }
-}
 
-function mustArgs({ userId, templateSlug }) {
-  mustUserId(userId);
-  if (!templateSlug) {
-    const err = new Error('ENTITLEMENTS_TEMPLATE_REQUIRED');
-    err.status = 400;
-    err.code = 'ENTITLEMENTS_TEMPLATE_REQUIRED';
-    throw err;
+  if (typeof userIdOrUser === 'number' || typeof userIdOrUser === 'string') {
+    return userIdOrUser;
   }
-}
 
-async function listUserEntitlementsSql({ db, userId }) {
-  const sql = `
-    SELECT template_slug, kind, order_id, created_at, starts_at, ends_at
-      FROM public.entitlements
-     WHERE user_id = $1
-       AND (ends_at IS NULL OR ends_at > now())
-     ORDER BY created_at DESC
-  `;
-  const r = await db.query(sql, [userId]);
-  return r.rows || [];
-}
+  if (typeof userIdOrUser === 'object') {
+    if (userIdOrUser.id != null) return userIdOrUser.id;
+    if (userIdOrUser.user_id != null) return userIdOrUser.user_id;
+    if (userIdOrUser.userId != null) return userIdOrUser.userId;
 
-async function hasValidEntitlementSql({ db, userId, templateSlug }) {
-  const q = `
-    SELECT 1
-      FROM public.entitlements
-     WHERE user_id = $1
-       AND template_slug = $2
-       AND (
-         (kind = 'buy')
-         OR (kind = 'rent' AND ends_at IS NOT NULL AND ends_at > now())
-       )
-     LIMIT 1
-  `;
-  const r = await db.query(q, [userId, templateSlug]);
-  return r.rowCount > 0;
+    throw new Error(
+      'ENTITLEMENTS_INVALID_USER_ID: expected number/string or object with {id|user_id|userId}'
+    );
+  }
+
+  throw new Error(
+    `ENTITLEMENTS_INVALID_USER_ID: unsupported type ${typeof userIdOrUser}`
+  );
 }
 
 /**
- * Canonical list of active entitlements for user.
- * - Prefer injected db (tests / app.locals.db)
- * - Fallback to repo (prod path; repo may use pool internally)
+ * Kept name for backwards-compatibility.
+ * Returns entitlement rows (no JOIN templates).
  */
-async function listUserEntitlements({ db, userId }) {
-  mustUserId(userId);
+async function listUserEntitlementsWithTemplates(userIdOrUser) {
+  const userId = normalizeUserId(userIdOrUser);
+  const pool = getPool();
 
-  // 1) Prefer db if available (stable for tests)
-  if (db && typeof db.query === 'function') {
-    return await listUserEntitlementsSql({ db, userId });
-  }
+  const { rows } = await pool.query(
+    `
+    SELECT
+      template_slug,
+      kind,
+      deal_type,
+      order_id,
+      created_at,
+      starts_at,
+      ends_at,
+      (ends_at IS NULL OR ends_at > NOW()) AS is_active
+    FROM entitlements
+    WHERE user_id = $1
+    ORDER BY created_at DESC
+    `,
+    [userId]
+  );
 
-  // 2) Repo fallback
-  if (EntitlementsRepo && typeof EntitlementsRepo.listUserEntitlements === 'function') {
-    return await EntitlementsRepo.listUserEntitlements({ userId });
-  }
-
-  return [];
+  return rows;
 }
 
 /**
- * Stable check: download allowed if BUY OR active RENT.
- * - Prefer injected db (tests)
- * - Fallback to repo
+ * Backward-compatible API expected by profile layer:
+ * profile.controller.cjs calls EntitlementsService.listUserEntitlements(...)
+ *
+ * Expected minimal shape:
+ *   { template_slug, deal_type, created_at }
  */
-async function hasValidEntitlement({ db, userId, templateSlug }) {
-  mustArgs({ userId, templateSlug });
+async function listUserEntitlements(userIdOrUser) {
+  const rows = await listUserEntitlementsWithTemplates(userIdOrUser);
 
-  if (db && typeof db.query === 'function') {
-    return await hasValidEntitlementSql({ db, userId, templateSlug });
-  }
+  return rows.map((r) => ({
+    ...r,
+    template_slug: r.template_slug,
+    deal_type: r.deal_type,
+    created_at: r.created_at,
+  }));
+}
 
-  if (EntitlementsRepo && typeof EntitlementsRepo.findActiveEntitlement === 'function') {
-    const row = await EntitlementsRepo.findActiveEntitlement({ userId, slug: templateSlug });
-    return Boolean(row);
-  }
+/**
+ * Access control helper for downloads.
+ */
+async function hasActiveEntitlement(userIdOrUser, templateSlug) {
+  const userId = normalizeUserId(userIdOrUser);
+  const pool = getPool();
 
-  if (EntitlementsRepo && typeof EntitlementsRepo.hasEntitlement === 'function') {
-    // keep compatibility if repo exposes only boolean check
-    return await EntitlementsRepo.hasEntitlement({ userId, templateSlug });
-  }
+  const { rows } = await pool.query(
+    `
+    SELECT
+      EXISTS(
+        SELECT 1
+        FROM entitlements
+        WHERE user_id = $1
+          AND template_slug = $2
+          AND (ends_at IS NULL OR ends_at > NOW())
+      ) AS ok
+    `,
+    [userId, templateSlug]
+  );
 
-  return false;
+  return Boolean(rows[0] && rows[0].ok);
 }
 
 module.exports = {
+  listUserEntitlementsWithTemplates,
   listUserEntitlements,
-  hasValidEntitlement,
+  hasActiveEntitlement,
 };

@@ -1,43 +1,10 @@
 {{!-- src/web/views/pages/cabinet/cases/index.hbs --}}
-<link rel="stylesheet" href="/css/pages/cabinet-cases.css" />
+<section class="cabinet">
+  <div class="cabinet__layout">
+    {{> cabinet/sidebar activeSpace="cases" }}
 
-<section class="cabinet-cases" data-page="cabinet-cases">
-  <header class="cabinet-cases__header">
-    <div class="cabinet-cases__title">
-      <h1>Cases</h1>
-      <p class="muted">Client shortlists (no pricing / checkout in client view).</p>
-    </div>
-    <div class="cabinet-cases__actions">
-      <a class="btn" href="/cabinet/cases/new">Create case</a>
-    </div>
-  </header>
-
-  {{#if cases.length}}
-    <div class="cases-grid" role="list">
-      {{#each cases}}
-        <article class="case-card" role="listitem">
-          <div class="case-card__head">
-            <h2 class="case-card__title">
-              <a href="/cabinet/cases/{{id}}">{{title}}</a>
-            </h2>
-            <div class="case-card__meta muted">
-              {{templates_count}} templates · updated {{updated_at}}
-            </div>
-          </div>
-
-          <div class="case-card__footer">
-            <a class="btn btn--ghost" href="/cabinet/cases/{{id}}">Open</a>
-          </div>
-        </article>
-      {{/each}}
-    </div>
-  {{else}}
-    <div class="empty-state">
-      <div class="empty-state__title">No cases yet</div>
-      <div class="empty-state__hint">Create a case for a client and add templates to present.</div>
-      <div class="empty-state__actions">
-        <a class="btn" href="/cabinet/cases/new">Create your first case</a>
-      </div>
-    </div>
-  {{/if}}
+    <main class="cabinet__content">
+      <div class="cabinet__workspace-title">Cases</div>
+    </main>
+  </div>
 </section>

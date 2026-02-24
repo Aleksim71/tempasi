@@ -1,22 +1,26 @@
 /* public/css/pages/auth.css */
+/* =========================================================
+   AUTH PAGES (Login / Register / Reset)
+   Works with layouts/main.hbs (header + l-page + footer ON)
+   ========================================================= */
 
-/*
-  Auth pages (login/register/forgot/reset):
-  Goal:
-  - Header stays at the top
-  - Footer stays at the bottom of the viewport
-  - Auth card sits between them (centered) without forcing scroll on typical screens
+/* ---------- Root knobs ---------- */
 
-  IMPORTANT:
-  This file must not affect other pages.
-  Everything is scoped to body.auth.
-*/
+:root {
+  --auth-card-width: 460px;
+  --auth-card-padding: 18px;
+  --auth-gap: 12px;
 
-/* Make full-height layout work reliably */
-html,
-body {
-  height: 100%;
+  --auth-input-height: 34px;
+  --auth-radius: 14px;
+
+  --auth-footer-padding-y: 10px;
+  --auth-footer-font-size: 11px;
 }
+
+/* =========================================================
+   Layout override ONLY for auth pages
+   ========================================================= */
 
 body.auth {
   min-height: 100vh;
@@ -24,159 +28,254 @@ body.auth {
   flex-direction: column;
 }
 
-/* ✅ Key fix: push footer to the bottom on auth pages */
-body.auth footer {
-  margin-top: auto;
-}
-
-/*
-  Global layout uses .l-page { min-height: 100vh; } which plus footer can create
-  awkward vertical behavior. On auth pages we let .l-page be flexible.
-*/
+/* main layout skeleton */
 body.auth .l-page {
-  min-height: 0 !important;
-  flex: 1 0 auto;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
-/* Main area stretches between header and footer */
 body.auth .l-main {
   flex: 1;
   display: flex;
-  padding-block: 0; /* keep compact to avoid accidental scroll */
+  min-height: 0;
 }
 
-/* Center the auth card in the available space */
-body.auth .l-container {
+/* IMPORTANT:
+   On non-cabinet pages, main.hbs wraps body into:
+   <div class="l-container l-stack"> ... </div>
+   We turn that wrapper into a centering flex box.
+*/
+body.auth .l-container.l-stack {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
+  justify-content: center; /* vertical */
+  align-items: center; /* horizontal */
+  gap: 0; /* cancel stack gaps */
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-/* If your layout uses .l-stack spacing, keep it neutral for single-card pages */
-body.auth .l-stack {
-  --stack-gap: 0px;
-}
-
-/* ------------------------------
-   Auth UI blocks
------------------------------- */
-
-:root {
-  --auth-card-max: 520px;
-  --auth-card-pad: 26px;
-  --auth-radius: 16px;
-  --auth-tabs-gap: 22px;
-}
-
-.auth-shell {
+/* Auth shell should not fight wrapper centering */
+body.auth .auth-shell {
   width: 100%;
   display: flex;
   justify-content: center;
 }
+
+/* =========================================================
+   Auth card
+   ========================================================= */
 
 .auth-card {
-  width: 100%;
-  max-width: var(--auth-card-max);
-  padding: var(--auth-card-pad);
+  width: min(var(--auth-card-width), calc(100vw - 32px));
   border-radius: var(--auth-radius);
-  background: var(--panel-bg, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
-  box-shadow: var(--panel-shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
+  padding: var(--auth-card-padding);
+
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Tabs (Sign in / Register) */
+/* =========================================================
+   Tabs
+   ========================================================= */
+
 .auth-tabs {
   display: flex;
-  justify-content: center;
-  gap: var(--auth-tabs-gap);
-  margin: 0 0 18px 0;
-  padding: 0;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.auth-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
+.auth-tabs a {
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
+  font-size: 12px;
   font-weight: 600;
-  opacity: 0.78;
+  padding: 6px 2px;
   border-bottom: 2px solid transparent;
 }
 
-.auth-tab:hover {
-  opacity: 1;
+.auth-tabs a.is-active {
+  color: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(255, 215, 128, 0.55);
 }
 
-.auth-tab.is-active {
-  opacity: 1;
-  border-bottom-color: var(--accent, #c9a74a);
-}
+/* =========================================================
+   Form
+   ========================================================= */
 
-/* Form */
 .auth-form {
   display: grid;
-  gap: 12px;
+  gap: var(--auth-gap);
+  margin-top: 6px;
 }
 
-.auth-field {
-  display: grid;
-  gap: 6px;
+.auth-field label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 6px;
 }
+
+.auth-field input {
+  width: 100%;
+  height: var(--auth-input-height);
+  padding: 0 10px;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+}
+
+.auth-field input:focus {
+  border-color: rgba(255, 215, 128, 0.35);
+  box-shadow: 0 0 0 3px rgba(255, 215, 128, 0.1);
+}
+
+/* =========================================================
+   Row (Remember / Forgot)
+   ========================================================= */
 
 .auth-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 4px;
 }
 
-.auth-remember {
+.auth-row .auth-remember {
   display: inline-flex;
-  gap: 8px;
   align-items: center;
-  user-select: none;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
 }
 
-.auth-forgot {
+.auth-row .auth-remember input {
+  width: 14px;
+  height: 14px;
+}
+
+.auth-row a {
+  font-size: 12px;
+  color: rgba(255, 215, 128, 0.85);
   text-decoration: none;
-  font-weight: 600;
-  opacity: 0.9;
 }
 
-.auth-forgot:hover {
-  opacity: 1;
+.auth-row a:hover {
   text-decoration: underline;
 }
 
-/* Error box */
+/* =========================================================
+   Banners
+   ========================================================= */
+
+.auth-note,
 .auth-error {
-  margin: 0 0 12px 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 80, 80, 0.1);
-  border: 1px solid rgba(255, 80, 80, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
-.auth-error ul {
-  margin: 0;
-  padding-left: 18px;
+.auth-note {
+  background: rgba(0, 160, 120, 0.12);
+  border: 1px solid rgba(0, 160, 120, 0.35);
 }
 
-/* Small screens */
-@media (max-width: 480px) {
+.auth-error {
+  background: rgba(255, 90, 90, 0.12);
+  border: 1px solid rgba(255, 90, 90, 0.35);
+}
+
+/* =========================================================
+   COMPACT footer mode (auth only)
+   We don't assume footer is <footer>.
+   ========================================================= */
+
+body.auth footer,
+body.auth .footer,
+body.auth .site-footer,
+body.auth #footer {
+  padding-top: var(--auth-footer-padding-y) !important;
+  padding-bottom: var(--auth-footer-padding-y) !important;
+}
+
+body.auth footer,
+body.auth footer *,
+body.auth .footer,
+body.auth .footer *,
+body.auth .site-footer,
+body.auth .site-footer *,
+body.auth #footer,
+body.auth #footer * {
+  font-size: var(--auth-footer-font-size) !important;
+  line-height: 1.2 !important;
+}
+
+/* Kill typical big margins/paddings inside footer blocks */
+body.auth footer h1,
+body.auth footer h2,
+body.auth footer h3,
+body.auth footer p,
+body.auth footer ul,
+body.auth footer ol,
+body.auth .footer h1,
+body.auth .footer h2,
+body.auth .footer h3,
+body.auth .footer p,
+body.auth .footer ul,
+body.auth .footer ol,
+body.auth .site-footer h1,
+body.auth .site-footer h2,
+body.auth .site-footer h3,
+body.auth .site-footer p,
+body.auth .site-footer ul,
+body.auth .site-footer ol {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* If footer uses grid/columns, tighten gaps */
+body.auth footer .l-container,
+body.auth .footer .l-container,
+body.auth .site-footer .l-container,
+body.auth #footer .l-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* =========================================================
+   COMPACT HEIGHT MODES
+   ========================================================= */
+
+@media (max-height: 820px) {
   :root {
-    --auth-card-pad: 18px;
-    --auth-tabs-gap: 18px;
+    --auth-card-padding: 16px;
+    --auth-input-height: 32px;
+    --auth-gap: 10px;
+  }
+}
+
+@media (max-height: 720px) {
+  :root {
+    --auth-card-padding: 14px;
+    --auth-input-height: 30px;
+    --auth-gap: 8px;
   }
 
-  .auth-row {
-    flex-direction: column;
-    align-items: flex-start;
+  /* On short screens, align higher to prevent clipping */
+  body.auth .l-container.l-stack {
+    justify-content: flex-start;
+    padding-top: 10px;
   }
 }

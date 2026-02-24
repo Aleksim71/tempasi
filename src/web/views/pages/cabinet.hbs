@@ -1,106 +1,86 @@
 {{!-- src/web/views/pages/cabinet.hbs --}}
-<link rel="stylesheet" href="/css/pages/cabinet.css" />
-<link rel="stylesheet" href="/css/pages/cabinet-cases.css" />
+<section class="cabinet">
+  <div class="l-container">
+    <div class="cabinet__layout">
 
-<section class="cabinet-page" data-page="cabinet">
-  <header class="cabinet-hero">
-    <h1 class="cabinet-title">Cabinet</h1>
-    <p class="cabinet-subtitle">
-      Workspace for your client shortlists and ongoing projects.
-    </p>
-  </header>
+      <aside class="cabinet__sidebar side">
 
-  <div class="cabinet-panel" role="region" aria-label="Cabinet">
+        {{!-- KPI: always visible in cabinet --}}
+        <div class="side__metrics" aria-label="Today metrics">
+          <div class="side__metricsTitle">Today</div>
 
-    <div class="cabinet-actions">
-      <a class="btn" href="/cabinet/cases">Cases</a>
-      <a class="btn btn--ghost" href="/cabinet/cases/new">Create case</a>
-      <a class="btn btn--ghost" href="/cabinet/finance">Finance</a>
+          <div class="side__metric">
+            <span>Revenue</span>
+            <strong>€{{metrics.today.revenue}}</strong>
+          </div>
+
+          <div class="side__metric">
+            <span>Invested</span>
+            <strong>€{{metrics.today.invested}}</strong>
+          </div>
+        </div>
+
+        <div class="side__title">Cabinet</div>
+
+        <nav class="side__nav" aria-label="Cabinet navigation">
+          <a class="side__link {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
+            <span>My Templates</span>
+            <span class="side__meta">Library</span>
+          </a>
+
+          <a class="side__link {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
+            <span>Cases</span>
+            <span class="side__meta">Work</span>
+          </a>
+
+          <a class="side__link {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
+            <span>Finance</span>
+            <span class="side__meta">Orders</span>
+          </a>
+
+          <a class="side__link {{#if (eq activeSpace 'profile')}}is-active{{/if}}" href="/cabinet/profile">
+            <span>Profile &amp; Security</span>
+            <span class="side__meta">Account</span>
+          </a>
+
+          <a class="side__link {{#if (eq activeSpace 'support')}}is-active{{/if}}" href="/cabinet/support">
+            <span>Support</span>
+            <span class="side__meta">Help</span>
+          </a>
+        </nav>
+
+      </aside>
+
+      <main class="cabinet__workspace">
+
+        {{!-- Title/subtitle are hidden for My Templates workspace (tabs own the top area) --}}
+        {{#unless (eq activeSpace 'my-templates')}}
+          <h1 class="cabinet__title">{{pageTitle}}</h1>
+          <p class="cabinet__subtitle">{{pageSubtitle}}</p>
+        {{/unless}}
+
+        {{!-- Active space content --}}
+        {{#if (eq activeSpace 'my-templates')}}
+          {{> space-my-templates}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'cases')}}
+          {{> space-cases}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'finance')}}
+          {{> space-finance}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'profile')}}
+          {{> space-profile-security}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'support')}}
+          {{> space-support}}
+        {{/if}}
+      </main>
+
     </div>
-
-    <section class="panel" aria-label="Finance">
-      <div class="panel__head">
-        <h2>Finance</h2>
-        <p class="muted">Orders and billing — quick access.</p>
-      </div>
-
-      <div class="cases-grid" role="list">
-        <article class="case-card" role="listitem">
-          <h3 class="case-card__title">
-            <a href="/cabinet/finance#orders">Orders</a>
-          </h3>
-          <div class="case-card__meta muted">
-            Purchases and rents, statuses, receipts (MVP next).
-          </div>
-          <div class="case-card__footer">
-            <a class="btn btn--ghost" href="/cabinet/finance#orders">Open</a>
-          </div>
-        </article>
-
-        <article class="case-card" role="listitem">
-          <h3 class="case-card__title">
-            <a href="/cabinet/finance#billing">Billing</a>
-          </h3>
-          <div class="case-card__meta muted">
-            Invoices, payment methods, VAT details (MVP next).
-          </div>
-          <div class="case-card__footer">
-            <a class="btn btn--ghost" href="/cabinet/finance#billing">Open</a>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="panel" aria-label="Recent cases">
-      <div class="panel__head">
-        <h2>Recent cases</h2>
-        <p class="muted">
-          Continue working on your latest client shortlists.
-        </p>
-      </div>
-
-      {{#if recentCases.length}}
-        <div class="cases-grid" role="list">
-          {{#each recentCases}}
-            <article class="case-card" role="listitem">
-              <div class="case-card__head">
-                <h3 class="case-card__title">
-                  <a href="/cabinet/cases/{{id}}">{{title}}</a>
-                </h3>
-                <div class="case-card__meta muted">
-                  {{templates_count}} templates · updated {{updated_at}}
-                </div>
-              </div>
-
-              <div class="case-card__footer">
-                <a class="btn btn--ghost" href="/cabinet/cases/{{id}}">
-                  Open
-                </a>
-              </div>
-            </article>
-          {{/each}}
-        </div>
-      {{else}}
-        <div class="empty-state empty-state--compact">
-          <div class="empty-state__title">No cases yet</div>
-          <div class="empty-state__hint">
-            Create your first case for a client and add templates to present.
-          </div>
-          <div class="empty-state__actions">
-            <a class="btn" href="/cabinet/cases/new">Create case</a>
-          </div>
-        </div>
-      {{/if}}
-    </section>
-
-    <section class="panel" aria-label="Coming soon">
-      <div class="panel__head">
-        <h2>Coming soon</h2>
-        <p class="muted">
-          Favorites, Downloads, Templates, Settings.
-        </p>
-      </div>
-    </section>
-
   </div>
 </section>

@@ -11,11 +11,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-
-  height: 56px; /* было 64 */
-  padding: 0 20px; /* было 24 */
-  max-width: 1440px;
-  margin: 0 auto;
+  height: 56px;
 }
 
 /* LEFT */
@@ -27,11 +23,14 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-
   color: #fff;
   text-decoration: none;
   font-weight: 600;
   letter-spacing: 0.08em;
+}
+
+.site-header__brand-logo {
+  display: block;
 }
 
 .site-header__title {
@@ -43,13 +42,13 @@
 .site-header__nav {
   justify-self: center;
   display: flex;
-  gap: 22px; /* было 30 */
+  gap: 22px;
 }
 
 .nav-link {
   color: #d8d8d8;
   text-decoration: none;
-  font-size: 13px; /* было 14 */
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -64,12 +63,12 @@
   justify-self: end;
   display: flex;
   gap: 10px;
-  min-width: 120px; /* 3 icon slots */
+  min-width: 120px; /* keeps balance when icons differ */
 }
 
 .header-icon {
-  width: 28px; /* было 32 */
-  height: 28px; /* было 32 */
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -99,7 +98,7 @@
   visibility: hidden;
 }
 
-/* Optional: hide center nav on small screens */
+/* Responsive */
 @media (max-width: 860px) {
   .site-header__nav {
     display: none;

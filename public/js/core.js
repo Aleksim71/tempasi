@@ -290,11 +290,38 @@
   }
 
   // =============================
+  // Cabinet: Compact sidebar toggle (safe)
+  // =============================
+  function initCabinetCompactToggle() {
+    try {
+      const root = qs('.cabinet');
+      const toggle = qs('#cabinetCompactToggle');
+      if (!root || !toggle) return;
+
+      const KEY = 'tempasi:cabinet:compact';
+      const saved = localStorage.getItem(KEY);
+      const isOn = saved === '1';
+
+      toggle.checked = isOn;
+      root.classList.toggle('is-compact', isOn);
+
+      toggle.addEventListener('change', () => {
+        const v = toggle.checked;
+        root.classList.toggle('is-compact', v);
+        localStorage.setItem(KEY, v ? '1' : '0');
+      });
+    } catch {
+      // ✅ core never breaks the page
+    }
+  }
+
+  // =============================
   // Boot
   // =============================
   function boot() {
     try {
       initCheckout();
+      initCabinetCompactToggle();
     } catch {
       // ✅ core never breaks the page
     }

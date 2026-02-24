@@ -1,45 +1,82 @@
 /* public/css/pages/cabinet.css */
 
-.cabinet-page {
-  padding: 28px 0 48px;
+.cabinet {
+  padding: 28px 0 44px;
 }
 
-.cabinet-hero {
-  margin: 0 0 14px;
+.cabinet__layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
 }
 
-.cabinet-title {
-  margin: 0 0 6px;
-  font-size: 32px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+/* Sidebar */
+.cabinet__sidebar {
+  position: sticky;
+  top: 20px;
 }
 
-.cabinet-subtitle {
-  margin: 0;
-  opacity: 0.75;
+/* Workspace */
+.cabinet__workspace {
+  min-width: 0;
 }
 
-.cabinet-panel {
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--tp-surface, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--tp-line, rgba(255, 255, 255, 0.08));
+/* If you have very short pages in cabinet — keep it clean */
+.cabinet__workspace:empty {
+  min-height: 120px;
 }
 
-.cabinet-empty {
-  padding: 24px 18px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px dashed rgba(255, 255, 255, 0.14);
+/* Responsive: stack */
+@media (max-width: 980px) {
+  .cabinet {
+    padding: 18px 0 34px;
+  }
+
+  .cabinet__layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .cabinet__sidebar {
+    position: static;
+  }
+}
+/* My Templates: tabs + workspace */
+.mt-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
 }
 
-.cabinet-empty__title {
-  font-weight: 700;
-  margin: 0 0 6px;
+.mt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.85;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
 }
 
-.cabinet-empty__hint {
-  opacity: 0.75;
+.mt-tab:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mt-tab.is-active {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mt-workspace {
+  margin-top: 12px;
 }

@@ -1,77 +1,48 @@
 'use strict';
 
-/**
- * scripts/db.pool.cjs
- * Singleton pg Pool helper.
- *
- * ✅ IMPORTANT:
- * Many tests start a "real server" in a separate Node process (not under Jest),
- * so JEST_WORKER_ID/NODE_ENV=test may be missing there.
- *
- * Therefore priority is:
- * 1) DATABASE_URL_TEST (if provided)  <-- ALWAYS wins
- * 2) DATABASE_URL
- * 3) PG* env fallback
- */
+// scripts/db.pool.cjs
+// Root-level CJS helper used by legacy modules (e.g. auth.middleware.cjs).
+// Single source of truth for pool is src/config/db.cjs.
+//
+// IMPORTANT:
+// This file lives in /scripts (repo root), so paths must include /src.
 
-const pg = require('pg');
-const { Pool } = pg;
-
-let _pool = null;
-let _cfgKey = null;
-
-function buildConfig() {
-  // ✅ ALWAYS prefer DATABASE_URL_TEST when it exists
-  if (process.env.DATABASE_URL_TEST) {
-    return { connectionString: process.env.DATABASE_URL_TEST };
-  }
-
-  if (process.env.DATABASE_URL) {
-    return { connectionString: process.env.DATABASE_URL };
-  }
-
-  // PG* fallback
-  const host = process.env.PGHOST || '127.0.0.1';
-  const port = Number(process.env.PGPORT || 5432);
-  const user = process.env.PGUSER || 'postgres';
-  const database = process.env.PGDATABASE || 'postgres';
-  const password = process.env.PGPASSWORD || '';
-  const ssl = process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false;
-
-  return { host, port, user, database, password, ssl };
-}
-
-function configKey(cfg) {
-  if (cfg.connectionString) return `url:${cfg.connectionString}`;
-  return `pg:${cfg.host}:${cfg.port}:${cfg.user}:${cfg.database}:${Boolean(cfg.ssl)}`;
-}
+let _pool;
 
 function getPool() {
-  const cfg = buildConfig();
-  const key = configKey(cfg);
+  if (_pool) return _pool;
 
-  if (_pool && _cfgKey === key) return _pool;
+  // From /scripts -> /src/config/db.cjs
+  // This MUST be sync because many CJS modules expect getPool() synchronously.
+  // eslint-disable-next-line global-require
+  const db = require('../src/config/db.cjs');
 
-  // If config changed, recreate pool (useful for tests)
-  if (_pool) {
-    try {
-      _pool.end().catch(() => {});
-    } catch {
-      // ignore
-    }
-    _pool = null;
-    _cfgKey = null;
+  // Support common export shapes
+  // 1) module.exports = { pool }
+  if (db && db.pool) {
+    _pool = db.pool;
+    return _pool;
   }
 
-  _pool = new Pool({
-    ...cfg,
-    max: Number(process.env.PGPOOL_MAX || 10),
-    idleTimeoutMillis: Number(process.env.PGPOOL_IDLE_MS || 10_000),
-    connectionTimeoutMillis: Number(process.env.PGPOOL_CONN_TIMEOUT_MS || 2_000),
-  });
+  // 2) module.exports = { getPool }
+  if (typeof db.getPool === 'function') {
+    _pool = db.getPool();
+    return _pool;
+  }
 
-  _cfgKey = key;
-  return _pool;
+  // 3) module.exports = pool (rare)
+  if (db && typeof db.query === 'function') {
+    _pool = db;
+    return _pool;
+  }
+
+  throw new Error(
+    [
+      'DB_POOL_NOT_EXPORTED_FROM_SRC_CONFIG:',
+      'Expected ../src/config/db.cjs to export { pool } or getPool().',
+      'Got keys: ' + Object.keys(db || {}).join(', '),
+    ].join('\n')
+  );
 }
 
 module.exports = { getPool };

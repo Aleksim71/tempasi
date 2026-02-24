@@ -1,127 +1,88 @@
 /* public/css/components/footer.css */
 
-/*
-  Compact footer tuned for "no-scroll" pages and dense information layout.
-
-  Requirements (from UI polish):
-  - Reduce footer vertical & horizontal padding
-  - Column gap: 10px
-  - Row gap: 4px
-
-  Markup (partial):
-    <footer class="site-footer">
-      <div class="site-footer-inner">
-        <div class="site-footer-brand">...
-        <nav class="site-footer-nav">...
-      </div>
-      <div class="site-footer-bottom">
-        <div class="site-footer-bottom-inner">...
-      </div>
-    </footer>
-*/
-
-:root {
-  --footer-col-gap: 10px;
-  --footer-row-gap: 4px;
-}
-
 .site-footer {
-  padding: 10px 12px;
-  font-size: 12px;
-  line-height: 1.25;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 22px 0 18px;
+  background: transparent;
 }
 
-.site-footer-inner,
-.site-footer-bottom-inner {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0;
-}
-
-/* Top area: brand + columns */
+/* Теперь footer выравнивается контейнером (.l-container),
+   поэтому у inner НЕТ max-width / padding. */
 .site-footer-inner {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  column-gap: 16px;
-  row-gap: 10px;
+  grid-template-columns: 1fr auto; /* бренд слева, нав вправо */
+  gap: 56px;
   align-items: start;
 }
 
-.site-footer-brand {
-  min-width: 0;
-}
-
+/* LEFT (brand) */
 .site-footer-brand-row {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .site-footer-name {
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .site-footer-tagline {
-  margin: 2px 0 0 0;
-  opacity: 0.75;
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
 }
 
-/* Columns grid */
+/* RIGHT (nav columns) */
 .site-footer-nav {
+  justify-self: end; /* важно: прижим к правому краю контейнера */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  column-gap: var(--footer-col-gap);
-  row-gap: var(--footer-row-gap);
-  align-items: start;
-}
-
-.site-footer-col {
-  min-width: 0;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 64px;
 }
 
 .site-footer-title {
-  margin: 0 0 4px 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.62);
+  margin-bottom: 10px;
 }
 
 .site-footer-links {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: grid;
-  row-gap: var(--footer-row-gap);
+  gap: 8px;
 }
 
 .site-footer-link {
-  text-decoration: none;
-  opacity: 0.75;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
 }
 
-.site-footer-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+.site-footer-link:hover,
+.site-footer-link:focus-visible {
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
 }
 
-/* Bottom line */
+/* Bottom bar */
 .site-footer-bottom {
-  margin-top: 8px;
-  padding-top: 6px;
+  margin-top: 18px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .site-footer-bottom-inner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  opacity: 0.75;
-  font-size: 11px;
+  justify-content: space-between; /* левый/центр/правый якоря */
+  gap: 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .site-footer-lang {
@@ -131,21 +92,43 @@
 }
 
 .site-footer-lang-link {
-  text-decoration: none;
-  opacity: 0.8;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
 }
 
-.site-footer-lang-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+.site-footer-lang-link:hover,
+.site-footer-lang-link:focus-visible {
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
 }
 
-@media (max-width: 760px) {
+.site-footer-lang-sep {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 980px) {
   .site-footer-inner {
     grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .site-footer-nav {
+    justify-self: start;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    gap: 20px 48px;
   }
 
   .site-footer-bottom-inner {
+    flex-wrap: wrap;
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .site-footer-nav {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 }

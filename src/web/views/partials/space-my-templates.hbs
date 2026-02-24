@@ -1,0 +1,72 @@
+<!-- src/web/views/partials/space-my-templates.hbs -->
+<section class="cabinet-workspace">
+
+  <nav class="mt-tabs" aria-label="My Templates">
+    <a class="mt-tab {{#if isMyTemplatesAdd}}is-active{{/if}}" href="/cabinet/my-templates/add">
+      Add Template
+    </a>
+
+    <a class="mt-tab {{#if isMyTemplatesLibrary}}is-active{{/if}}" href="/cabinet/my-templates">
+      My Templates
+    </a>
+
+    <a class="mt-tab {{#if isMyTemplatesAnalytics}}is-active{{/if}}" href="/cabinet/my-templates/analytics">
+      Analytics
+    </a>
+  </nav>
+
+  <div class="mt-workspace">
+    {{#if workspaceError}}
+      <div class="badge badge--danger">
+        Error: {{workspaceError.message}}
+      </div>
+    {{/if}}
+
+    {{#if workspaceData.items.length}}
+
+      <div class="cabinet-grid">
+        {{#each workspaceData.items}}
+          <div class="template-card">
+            <div class="template-card__body">
+              <h3>{{template_title}}</h3>
+
+              <div class="badges">
+                <span class="badge badge--kind">
+                  {{entitlement_kind}}
+                </span>
+
+                {{#if is_active}}
+                  <span class="badge badge--success">Active</span>
+                {{else}}
+                  <span class="badge badge--muted">Expired</span>
+                {{/if}}
+              </div>
+
+              <div class="meta">
+                <div>Granted: {{entitlement_granted_at}}</div>
+                {{#if entitlement_ends_at}}
+                  <div>Ends: {{entitlement_ends_at}}</div>
+                {{/if}}
+              </div>
+
+              <div class="actions">
+                <a href="/download/{{template_slug}}" class="button button--primary">
+                  Download
+                </a>
+              </div>
+
+            </div>
+          </div>
+        {{/each}}
+      </div>
+
+    {{else}}
+      <div class="empty-state">
+        <p>You don’t have any templates yet.</p>
+        <a href="/templates" class="button button--primary">
+          Browse Templates
+        </a>
+      </div>
+    {{/if}}
+  </div>
+</section>

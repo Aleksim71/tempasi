@@ -15,6 +15,11 @@
     <link rel="stylesheet" href="/css/components/chips.css" />
     <link rel="stylesheet" href="/css/components/sidebar.css" />
 
+    {{!-- Cabinet page styles (always) --}}
+    {{#if isCabinet}}
+      <link rel="stylesheet" href="/css/pages/cabinet.css" />
+    {{/if}}
+
     {{!-- Page-specific styles --}}
     {{#if styles}}
       {{#each styles}}
@@ -25,7 +30,7 @@
 
   <body class="{{bodyClass}}">
     {{!-- SVG sprite: MUST be inside BODY --}}
-    {{> icons_sprite}}
+    {{> icons-sprite}}
 
     {{!-- GLOBAL HEADER (can be disabled per page) --}}
     {{#unless hideHeader}}
@@ -34,9 +39,14 @@
 
     <main class="l-page">
       <div class="l-main">
-        <div class="l-container l-stack">
+        {{!-- Cabinet should be wide (Templates-like): do NOT wrap with l-container --}}
+        {{#if isCabinet}}
           {{{body}}}
-        </div>
+        {{else}}
+          <div class="l-container l-stack">
+            {{{body}}}
+          </div>
+        {{/if}}
       </div>
     </main>
 

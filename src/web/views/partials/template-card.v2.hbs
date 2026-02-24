@@ -1,0 +1,117 @@
+{{!-- src/web/views/partials/template-card.v2.hbs --}}
+{{!-- TemplateCard v2 (compat)
+  Expected context:
+    t: template object (current DB/view model)
+  Notes:
+    - Compatible with multiple field names:
+      preview_url / previewUrl / preview / preview_image
+      author_name / author
+      rentPrice / rent_price
+      buyPrice / price
+    - Uses /preview/{{slug}} for Demo (matches current app)
+    - No eq helper required
+--}}
+
+<article class="tcard" data-template-slug="{{t.slug}}">
+  <div class="tcard__media">
+    <a class="tcard__thumb" href="/templates/{{t.slug}}" aria-label="Open template details">
+      <div class="template-card__no-preview" style="display:none;">Preview not available</div>
+
+      <img
+        class="tcard__img"
+        src="{{#if t.preview_url}}{{t.preview_url}}{{else if t.previewUrl}}{{t.previewUrl}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else}}/t/{{t.slug}}/preview.png{{/if}}"
+        alt="Preview {{t.slug}}"
+        loading="lazy"
+        onerror="try{const box=this.closest('.tcard__media'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"
+      />
+    </a>
+
+    <div class="tcard__badges" aria-label="Template badges">
+      {{#if t.is_new}}<span class="tbadge tbadge--new">NEW</span>{{/if}}
+      {{#if t.is_popular}}<span class="tbadge tbadge--popular">POPULAR</span>{{/if}}
+      {{#if t.is_exclusive}}<span class="tbadge tbadge--exclusive">EXCLUSIVE</span>{{/if}}
+      {{#if t.rented_until}}<span class="tbadge tbadge--rented">RENTED</span>{{/if}}
+    </div>
+  </div>
+
+  <div class="tcard__body">
+    <header class="tcard__head">
+      <div class="tcard__titles">
+        <h3 class="tcard__title">{{t.title}}</h3>
+
+        {{#if t.author_name}}
+          <div class="tcard__author">by {{t.author_name}}</div>
+        {{else if t.author}}
+          <div class="tcard__author">by {{t.author}}</div>
+        {{else}}
+          <div class="tcard__author tcard__author--muted">by Tempasi Studio</div>
+        {{/if}}
+      </div>
+
+      <div class="tcard__meta">
+        {{#if t.pages_count}}
+          <span class="tmeta">{{t.pages_count}} pages</span>
+        {{/if}}
+      </div>
+    </header>
+
+    {{#if t.short}}
+      <p class="tcard__desc">{{t.short}}</p>
+    {{else if t.excerpt}}
+      <p class="tcard__desc">{{t.excerpt}}</p>
+    {{else if t.description}}
+      <p class="tcard__desc">{{t.description}}</p>
+    {{else}}
+      <p class="tcard__desc tcard__desc--muted">Clean, modern template ready for client demo and fast delivery.</p>
+    {{/if}}
+
+    {{#if t.tech}}
+      <div class="tcard__tech" aria-label="Tech stack">
+        {{#each t.tech}}
+          <span class="tchip">{{this}}</span>
+        {{/each}}
+      </div>
+    {{else if t.tech_stack}}
+      <div class="tcard__tech" aria-label="Tech stack">
+        {{#each t.tech_stack}}
+          <span class="tchip">{{this}}</span>
+        {{/each}}
+      </div>
+    {{/if}}
+
+    <footer class="tcard__foot">
+      <div class="tcard__prices" aria-label="Pricing">
+        <div class="tprice">
+          <span class="tprice__label">Rent</span>
+          {{#if t.rentPrice}}
+            <span class="tprice__value">{{t.rentPrice}}€</span>
+          {{else if t.rent_price}}
+            <span class="tprice__value">{{t.rent_price}}€</span>
+          {{else}}
+            <span class="tprice__value tprice__value--muted">—</span>
+          {{/if}}
+        </div>
+
+        <div class="tprice">
+          <span class="tprice__label">Buy</span>
+          {{#if t.price}}
+            <span class="tprice__value">{{t.price}}€</span>
+          {{else if t.buyPrice}}
+            <span class="tprice__value">{{t.buyPrice}}€</span>
+          {{else}}
+            <span class="tprice__value tprice__value--muted">—</span>
+          {{/if}}
+        </div>
+
+        {{#if t.rented_until}}
+          <div class="tcard__renteduntil">until {{t.rented_until}}</div>
+        {{/if}}
+      </div>
+
+      <div class="tcard__actions" aria-label="Template actions">
+        <a class="tbtn tbtn--primary" href="/preview/{{t.slug}}" target="_blank" rel="noopener">Demo</a>
+        <a class="tbtn tbtn--ghost" href="/templates/{{t.slug}}">Details</a>
+      </div>
+    </footer>
+  </div>
+</article>

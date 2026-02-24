@@ -1,230 +1,124 @@
 'use strict';
 
-// src/web/routes/cabinet.pages.routes.cjs
-// Full Cabinet router mounted under /cabinet
-
 const express = require('express');
-const CasesService = require('../../modules/cases/cases.service.cjs');
 
-function getUserId(req, res) {
-  return (
-    req.user?.id ||
-    res.locals?.user?.id ||
-    res.locals?.session?.userId ||
-    null
-  );
-}
-
-function safeStr(s, max = 160) {
-  const v = String(s || '').trim();
-  if (!v) return '';
-  return v.length > max ? v.slice(0, max) : v;
-}
-
-function createCabinetPagesRouter({ db }) {
-  if (!db || typeof db.query !== 'function') {
-    throw new Error('CABINET_ROUTER_DB_REQUIRED');
-  }
+// src/web/routes/cabinet.pages.routes.cjs
+function createCabinetPagesRouter({ db } = {}) {
+  void db;
 
   const router = express.Router();
 
-  // ========================================
-  // OVERVIEW  ->  /cabinet
-  // ========================================
-  router.get('/', async (req, res, next) => {
-    try {
-      const userId = getUserId(req, res);
+  // Mark cabinet for layout + inject MVP metrics globally (so pages don't have to pass them)
+  router.use((req, res, next) => {
+    res.locals.isCabinet = true;
 
-      const recentCases = await CasesService.listMyCases({
-        db,
-        userId,
-        limit: 3,
-        offset: 0,
-      });
+    // Static KPI metrics (MVP)
+    res.locals.metrics = {
+      today: {
+        revenue: 0,
+        invested: 0
+      }
+    };
 
-      return res.status(200).render('pages/cabinet', {
-        title: 'Cabinet',
-        recentCases,
-      });
-    } catch (err) {
-      return next(err);
-    }
+    next();
   });
 
-  // ========================================
-  // FINANCE  ->  /cabinet/finance
-  // ========================================
-  router.get('/finance', async (_req, res) => {
-    return res.status(200).render('pages/cabinet/finance', {
-      title: 'Finance',
+  // Root -> seller-first workspace
+  router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
+
+  // =========================
+  // My Templates (with tabs)
+  // =========================
+
+  router.get('/my-templates', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      // Tab flags (no custom helpers needed)
+      isMyTemplatesLibrary: true,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: false,
+
+      pageTitle: 'My Templates',
+      pageSubtitle: 'Your purchased and rented templates.',
+      panelTitle: 'Library',
+      panelText: ''
     });
   });
 
-  // ========================================
-  // CASES LIST  ->  /cabinet/cases
-  // ========================================
-  router.get('/cases', async (req, res, next) => {
-    try {
-      const userId = getUserId(req, res);
+  router.get('/my-templates/add', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
 
-      const items = await CasesService.listMyCases({
-        db,
-        userId,
-        limit: 50,
-        offset: 0,
-      });
+      isMyTemplatesLibrary: false,
+      isMyTemplatesAdd: true,
+      isMyTemplatesAnalytics: false,
 
-      return res.status(200).render('pages/cabinet/cases/index', {
-        title: 'Cases',
-        cases: items,
-      });
-    } catch (err) {
-      return next(err);
-    }
-  });
-
-  // ========================================
-  // NEW CASE  ->  /cabinet/cases/new
-  // ========================================
-  router.get('/cases/new', (_req, res) => {
-    return res.status(200).render('pages/cabinet/cases/new', {
-      title: 'Create Case',
-      form: { title: '', notes: '' },
+      pageTitle: 'Add Template',
+      pageSubtitle: 'Upload and publish a template.',
+      panelTitle: 'Add Template',
+      panelText: ''
     });
   });
 
-  router.post(
-    '/cases',
-    express.urlencoded({ extended: false }),
-    async (req, res, next) => {
-      try {
-        const userId = getUserId(req, res);
+  router.get('/my-templates/analytics', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
 
-        const title = safeStr(req.body?.title);
-        const notesRaw = String(req.body?.notes || '').trim();
-        const notes = notesRaw ? notesRaw.slice(0, 4000) : null;
+      isMyTemplatesLibrary: false,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: true,
 
-        if (!title) {
-          return res.status(400).render('pages/cabinet/cases/new', {
-            title: 'Create Case',
-            error: 'Case name is required.',
-            form: {
-              title: req.body?.title || '',
-              notes: req.body?.notes || '',
-            },
-          });
-        }
-
-        const created = await CasesService.createMyCase({
-          db,
-          userId,
-          title,
-          notes,
-        });
-
-        return res.redirect(`/cabinet/cases/${created.id}`);
-      } catch (err) {
-        return next(err);
-      }
-    },
-  );
-
-  // ========================================
-  // CASE DETAIL  ->  /cabinet/cases/:id
-  // ========================================
-  router.get('/cases/:id', async (req, res, next) => {
-    try {
-      const userId = getUserId(req, res);
-      const caseId = req.params.id;
-
-      const c = await CasesService.getMyCase({ db, userId, caseId });
-      if (!c) {
-        return res.status(404).render('pages/404', { title: 'Not found' });
-      }
-
-      const templates = await CasesService.listMyCaseTemplates({ db, userId, caseId });
-
-      return res.status(200).render('pages/cabinet/cases/detail', {
-        title: c.title,
-        case: c,
-        templates,
-      });
-    } catch (err) {
-      return next(err);
-    }
+      pageTitle: 'Analytics',
+      pageSubtitle: 'Sales, rentals and performance.',
+      panelTitle: 'Analytics',
+      panelText: ''
+    });
   });
 
-  router.post(
-    '/cases/:id',
-    express.urlencoded({ extended: false }),
-    async (req, res, next) => {
-      try {
-        const userId = getUserId(req, res);
-        const caseId = req.params.id;
+  // =========================
+  // Other Cabinet Spaces
+  // =========================
 
-        const title = safeStr(req.body?.title);
-        const notesRaw = String(req.body?.notes || '').trim();
-        const notes = notesRaw ? notesRaw.slice(0, 4000) : null;
+  router.get('/cases', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: 'Cases',
+      pageSubtitle: 'Client shortlists and presentations.',
+      panelTitle: 'Cases',
+      panelText: ''
+    });
+  });
 
-        const updated = await CasesService.updateMyCase({
-          db,
-          userId,
-          caseId,
-          title: title || null,
-          notes,
-        });
+  router.get('/finance', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'finance',
+      pageTitle: 'Finance',
+      pageSubtitle: 'Orders and transactions overview.',
+      panelTitle: 'Finance',
+      panelText: ''
+    });
+  });
 
-        if (!updated) {
-          return res.status(404).render('pages/404', { title: 'Not found' });
-        }
+  router.get('/profile', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'profile',
+      pageTitle: 'Profile & Security',
+      pageSubtitle: 'Account settings.',
+      panelTitle: 'Profile',
+      panelText: ''
+    });
+  });
 
-        return res.redirect(`/cabinet/cases/${caseId}`);
-      } catch (err) {
-        return next(err);
-      }
-    },
-  );
-
-  // ========================================
-  // ADD TEMPLATE TO CASE
-  // ========================================
-  router.post(
-    '/cases/:id/templates',
-    express.urlencoded({ extended: false }),
-    async (req, res, next) => {
-      try {
-        const userId = getUserId(req, res);
-        const caseId = req.params.id;
-        const templateId = safeStr(req.body?.template_id, 200);
-
-        if (!templateId) return res.redirect(`/cabinet/cases/${caseId}`);
-
-        await CasesService.addTemplateToMyCase({ db, userId, caseId, templateId });
-        return res.redirect(`/cabinet/cases/${caseId}`);
-      } catch (err) {
-        return next(err);
-      }
-    },
-  );
-
-  // ========================================
-  // REMOVE TEMPLATE FROM CASE
-  // ========================================
-  router.post(
-    '/cases/:id/templates/:templateId/remove',
-    async (req, res, next) => {
-      try {
-        const userId = getUserId(req, res);
-        const caseId = req.params.id;
-        const templateId = req.params.templateId;
-
-        await CasesService.removeTemplateFromMyCase({ db, userId, caseId, templateId });
-        return res.redirect(`/cabinet/cases/${caseId}`);
-      } catch (err) {
-        return next(err);
-      }
-    },
-  );
+  router.get('/support', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'support',
+      pageTitle: 'Support',
+      pageSubtitle: 'Help and documentation.',
+      panelTitle: 'Support',
+      panelText: ''
+    });
+  });
 
   return router;
 }

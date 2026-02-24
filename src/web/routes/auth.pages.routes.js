@@ -64,7 +64,6 @@ function pickAuthError(req) {
 function pickAuthOk(req) {
   const ok = String(req.query?.ok || '').trim();
   if (ok !== '1') return null;
-  // Keep it generic; pages may override via note
   return { message: 'Done.' };
 }
 
@@ -91,7 +90,6 @@ function validatePassword(pw) {
 }
 
 function safeNext(value) {
-  // allow only relative paths, to prevent open redirects
   const s = String(value || '').trim();
   if (!s) return '';
   if (!s.startsWith('/')) return '';
@@ -186,17 +184,18 @@ function renderLogin(req, res, opts = {}) {
   const uiErr = pickAuthError(req);
   const uiOk = pickAuthOk(req);
 
-  // Prefer explicit opts errors (legacy) if provided; otherwise use new error banner
   const errors = opts.errors || (uiErr ? [uiErr.message] : null);
-
-  // Prefer explicit note (for ok messages); else take generic ok
   const note = opts.note || (uiOk ? uiOk.message : null);
 
   return res.status(200).render('pages/login', {
     title: 'Login',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
+
+    // ✅ Header stays ON (we fix CSS instead)
     hideHeader: false,
+    hideFooter: false,
+
     next,
     email: opts.email || '',
     remember: Boolean(opts.remember),
@@ -217,7 +216,11 @@ function renderRegister(req, res, opts = {}) {
     title: 'Create account',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
+
+    // ✅ Header stays ON
     hideHeader: false,
+    hideFooter: false,
+
     next,
     email: opts.email || '',
     note,
@@ -228,7 +231,6 @@ function renderRegister(req, res, opts = {}) {
 function renderForgotPassword(req, res, opts = {}) {
   const uiErr = pickAuthError(req);
 
-  // For forgot-password, use ok=1 to show the “check inbox” note by default
   const ok = String(req.query?.ok || '').trim() === '1';
   const defaultNote = ok
     ? 'Check your inbox. If the email exists, you’ll receive a link shortly.'
@@ -241,7 +243,11 @@ function renderForgotPassword(req, res, opts = {}) {
     title: 'Forgot password',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
+
+    // ✅ Header stays ON
     hideHeader: false,
+    hideFooter: false,
+
     email: opts.email || '',
     note,
     errors,
@@ -251,7 +257,6 @@ function renderForgotPassword(req, res, opts = {}) {
 function renderResetPassword(req, res, opts = {}) {
   const uiErr = pickAuthError(req);
 
-  // For reset-password, ok=1 means “password updated” (we can send to login instead too)
   const ok = String(req.query?.ok || '').trim() === '1';
   const defaultNote = ok ? 'Password updated. You can sign in.' : null;
 
@@ -264,15 +269,14 @@ function renderResetPassword(req, res, opts = {}) {
     title: 'Reset password',
     styles: ['/css/pages/auth.css'],
     bodyClass: 'auth',
+
+    // ✅ Header stays ON
     hideHeader: false,
+    hideFooter: false,
 
-    // If token is invalid/expired, don't keep token in the form (UX + safety)
     token: fatalTokenError ? '' : opts.token || '',
-
     note,
     errors,
-
-    // 👇 UX: hide form when token is invalid/expired
     showForm: !fatalTokenError,
   });
 }
@@ -280,10 +284,8 @@ function renderResetPassword(req, res, opts = {}) {
 export function createAuthPagesRouter() {
   const router = express.Router();
 
-  // Parse classic HTML forms for SSR handlers
   router.use(express.urlencoded({ extended: false }));
 
-  // --- GET pages ---
   router.get('/login', (req, res) => {
     if (req.userId) return res.redirect(safeNext(req.query?.next) || '/templates');
     return renderLogin(req, res);
@@ -294,21 +296,17 @@ export function createAuthPagesRouter() {
     return renderRegister(req, res);
   });
 
-  // ✅ GET /forgot-password (SSR page)
   router.get('/forgot-password', (req, res) => {
     if (req.userId) return res.redirect('/templates');
     return renderForgotPassword(req, res);
   });
 
-  // ✅ GET /reset-password?token=... (SSR page)
   router.get('/reset-password', (req, res) => {
     if (req.userId) return res.redirect('/templates');
     const token = String(req.query?.token || '').trim();
-    // We render even if token missing; POST will validate strictly.
     return renderResetPassword(req, res, { token });
   });
 
-  // --- POST /login (form) ---
   router.post('/login', async (req, res, next) => {
     try {
       const email = normalizeEmail(req.body?.email);
@@ -316,7 +314,6 @@ export function createAuthPagesRouter() {
       const remember = parseBool(req.body?.remember);
       const nextUrl = safeNext(req.body?.next) || '/templates';
 
-      // Validation
       if (!email || !password) {
         return redirectWithError(
           res,
@@ -327,7 +324,6 @@ export function createAuthPagesRouter() {
       }
 
       if (!getPool) {
-        // Keep message generic in UI
         return redirectWithError(res, '/login', 'AUTH_TIMEOUT', safeNext(req.body?.next) || '');
       }
 
@@ -344,7 +340,6 @@ export function createAuthPagesRouter() {
 
       const u = rows && rows[0];
 
-      // Do NOT reveal whether email exists
       if (!u || String(u.status) !== 'active') {
         return redirectWithError(
           res,
@@ -364,13 +359,11 @@ export function createAuthPagesRouter() {
         );
       }
 
-      // Session rotation (anti-fixation)
       await rotateSession(req);
 
       const maxAgeSeconds = remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
       const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
 
-      // IMPORTANT: cookie helper expects (req, res, sid, opts)
       setSessionCookie(req, res, sid, { maxAgeSeconds });
 
       return res.redirect(nextUrl);
@@ -379,7 +372,6 @@ export function createAuthPagesRouter() {
     }
   });
 
-  // --- POST /register (form) ---
   router.post('/register', async (req, res, next) => {
     try {
       const email = normalizeEmail(req.body?.email);
@@ -387,7 +379,6 @@ export function createAuthPagesRouter() {
       const password2 = String(req.body?.password2 || '');
       const nextUrl = safeNext(req.body?.next) || '/templates';
 
-      // Validation (redirect with error code, preserve next)
       if (!email) {
         return redirectWithError(
           res,
@@ -447,7 +438,6 @@ export function createAuthPagesRouter() {
         throw err;
       }
 
-      // Session rotation (anti-fixation)
       await rotateSession(req);
 
       const maxAgeSeconds = pickSessionTtlSeconds(req);
@@ -461,14 +451,6 @@ export function createAuthPagesRouter() {
     }
   });
 
-  // Mount password reset POST endpoints AFTER GET pages
-  // So GET /forgot-password and GET /reset-password are handled here (SSR render),
-  // while POST /forgot-password and POST /reset-password use the shared CJS router logic.
-  //
-  // IMPORTANT:
-  // passwordResetRouter should redirect back with ?ok=1 or ?e=AUTH_* for SSR UX.
-  // If it currently renders errors internally, it will still work because we pass
-  // errors/note through templates.
   if (typeof passwordResetRouter === 'function' && typeof passwordResetRouter.use === 'function') {
     router.use(passwordResetRouter);
   }

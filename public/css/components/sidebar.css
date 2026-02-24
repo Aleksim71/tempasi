@@ -120,3 +120,146 @@
     0 0 0 2px rgba(255, 215, 120, 0.28),
     0 10px 26px rgba(0, 0, 0, 0.55);
 }
+
+/* =========================================================
+   GENERIC SIDEBAR NAV (Cabinet + future)
+   "Checkbox marker" for active item (no real checkbox).
+   ========================================================= */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.side__title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.side__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side__link {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  width: 100%;
+  padding: 12px 14px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+
+  text-decoration: none;
+  user-select: none;
+
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.side__link:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+/* left marker (unchecked look) */
+.side__link::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.18);
+
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+
+  flex: 0 0 auto;
+  margin-right: 10px;
+
+  transition: all 140ms ease;
+}
+
+.side__link > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* active = "checked" */
+.side__link.is-active {
+  border-color: rgba(255, 215, 120, 0.6);
+  background:
+    radial-gradient(120% 140% at 10% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
+    rgba(0, 0, 0, 0.22);
+
+  box-shadow:
+    0 0 0 1px rgba(255, 215, 120, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.side__link.is-active::before {
+  border-color: rgba(255, 215, 120, 0.9);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 235, 180, 0.95),
+    rgba(255, 200, 80, 0.85)
+  );
+
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(255, 215, 120, 0.22);
+}
+
+.side__link:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 215, 120, 0.28),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.side__meta {
+  opacity: 0.7;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ================================
+   Cabinet KPI (Today metrics)
+   ================================ */
+
+.side__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.side__metricsTitle {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.side__metric {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.side__metric strong {
+  font-weight: 600;
+}
