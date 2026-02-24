@@ -1,47 +1,33 @@
-/* public/css/components/sidebar.css */
-/* Templates sidebar — single custom checkbox (works with: label > input + span) */
+/* =========================================================
+   GENERIC SIDEBAR NAV (Cabinet + future)
+   Same "vibe" as chips, but for links (no real checkbox).
+   ========================================================= */
 
-.templates-side {
+.side {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
-/* Section */
-.templates-side__section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.templates-side__title {
+.side__title {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.6;
 }
 
-/* Chip wrapper (label) */
-.chip {
-  position: relative;
-  display: block;
-  margin: 0;
-}
-
-/* Hide native checkbox completely (no duplicate UI) */
-.chip-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
-}
-
-/* Pill */
-.chip-label {
+.side__nav {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
+}
+
+.side__link {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 
   width: 100%;
   padding: 12px 14px;
@@ -50,7 +36,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.18);
 
-  cursor: pointer;
+  text-decoration: none;
   user-select: none;
 
   transition:
@@ -60,20 +46,13 @@
     transform 140ms ease;
 }
 
-/* Small chips (licenses grid) */
-.chip--small .chip-label {
-  justify-content: center;
-  padding: 10px 12px;
-}
-
-/* Hover */
-.chip-label:hover {
+.side__link:hover {
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(0, 0, 0, 0.26);
 }
 
-/* Custom checkbox square (the ONLY visible checkbox) */
-.chip-label::before {
+/* "checkbox square" marker like chips (left) */
+.side__link::before {
   content: '';
   width: 18px;
   height: 18px;
@@ -85,11 +64,20 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 
   flex: 0 0 auto;
+  margin-right: 10px;
+
   transition: all 140ms ease;
 }
 
-/* Checked state */
-.chip-input:checked + .chip-label {
+/* Make room for the marker */
+.side__link > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Active = "checked" */
+.side__link.is-active {
   border-color: rgba(255, 215, 120, 0.6);
   background:
     radial-gradient(120% 140% at 10% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
@@ -100,7 +88,7 @@
     0 10px 26px rgba(0, 0, 0, 0.55);
 }
 
-.chip-input:checked + .chip-label::before {
+.side__link.is-active::before {
   border-color: rgba(255, 215, 120, 0.9);
   background: radial-gradient(
     circle at 30% 30%,
@@ -113,10 +101,21 @@
     0 0 0 3px rgba(255, 215, 120, 0.22);
 }
 
-/* Keyboard focus */
-.chip-input:focus-visible + .chip-label {
+.side__link:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px rgba(255, 215, 120, 0.28),
     0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.side__meta {
+  opacity: 0.7;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.side__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
