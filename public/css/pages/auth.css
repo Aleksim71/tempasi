@@ -1,7 +1,7 @@
+/* public/css/pages/auth.css */
 /* =========================================================
    AUTH PAGES (Login / Register / Reset)
-   Compact layout:
-   Header + Content + Footer should fit in viewport if possible
+   Works with layouts/main.hbs (header + l-page + footer ON)
    ========================================================= */
 
 /* ---------- Root knobs ---------- */
@@ -28,34 +28,41 @@ body.auth {
   flex-direction: column;
 }
 
-/* Main middle zone becomes flexible */
+/* main layout skeleton */
 body.auth .l-page {
   flex: 1;
   display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 body.auth .l-main {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-
-  /* Important: do NOT force min-height 100vh */
   min-height: 0;
-
-  /* Modest padding to avoid pushing footer */
-  padding: 14px 0;
 }
 
-/* Remove vertical stacking gaps that can cause overflow */
-body.auth .l-container {
+/* IMPORTANT:
+   On non-cabinet pages, main.hbs wraps body into:
+   <div class="l-container l-stack"> ... </div>
+   We turn that wrapper into a centering flex box.
+*/
+body.auth .l-container.l-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* vertical */
+  align-items: center; /* horizontal */
+  gap: 0; /* cancel stack gaps */
   padding-top: 0;
   padding-bottom: 0;
 }
 
-body.auth .l-stack {
-  gap: 0;
+/* Auth shell should not fight wrapper centering */
+body.auth .auth-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 /* =========================================================
@@ -145,7 +152,7 @@ body.auth .l-stack {
   gap: 12px;
 }
 
-.auth-row .remember {
+.auth-row .auth-remember {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -153,7 +160,7 @@ body.auth .l-stack {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.auth-row .remember input {
+.auth-row .auth-remember input {
   width: 14px;
   height: 14px;
 }
@@ -166,19 +173,6 @@ body.auth .l-stack {
 
 .auth-row a:hover {
   text-decoration: underline;
-}
-
-/* =========================================================
-   Actions
-   ========================================================= */
-
-.auth-actions {
-  margin-top: 4px;
-}
-
-.auth-actions button,
-.auth-actions .btn {
-  width: 100%;
 }
 
 /* =========================================================
@@ -204,17 +198,60 @@ body.auth .l-stack {
 }
 
 /* =========================================================
-   Footer compact mode (only on auth pages)
+   COMPACT footer mode (auth only)
+   We don't assume footer is <footer>.
    ========================================================= */
 
-body.auth footer {
-  padding-top: var(--auth-footer-padding-y);
-  padding-bottom: var(--auth-footer-padding-y);
+body.auth footer,
+body.auth .footer,
+body.auth .site-footer,
+body.auth #footer {
+  padding-top: var(--auth-footer-padding-y) !important;
+  padding-bottom: var(--auth-footer-padding-y) !important;
 }
 
 body.auth footer,
-body.auth footer * {
-  font-size: var(--auth-footer-font-size);
+body.auth footer *,
+body.auth .footer,
+body.auth .footer *,
+body.auth .site-footer,
+body.auth .site-footer *,
+body.auth #footer,
+body.auth #footer * {
+  font-size: var(--auth-footer-font-size) !important;
+  line-height: 1.2 !important;
+}
+
+/* Kill typical big margins/paddings inside footer blocks */
+body.auth footer h1,
+body.auth footer h2,
+body.auth footer h3,
+body.auth footer p,
+body.auth footer ul,
+body.auth footer ol,
+body.auth .footer h1,
+body.auth .footer h2,
+body.auth .footer h3,
+body.auth .footer p,
+body.auth .footer ul,
+body.auth .footer ol,
+body.auth .site-footer h1,
+body.auth .site-footer h2,
+body.auth .site-footer h3,
+body.auth .site-footer p,
+body.auth .site-footer ul,
+body.auth .site-footer ol {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* If footer uses grid/columns, tighten gaps */
+body.auth footer .l-container,
+body.auth .footer .l-container,
+body.auth .site-footer .l-container,
+body.auth #footer .l-container {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 /* =========================================================
@@ -227,10 +264,6 @@ body.auth footer * {
     --auth-input-height: 32px;
     --auth-gap: 10px;
   }
-
-  body.auth .l-main {
-    padding: 10px 0;
-  }
 }
 
 @media (max-height: 720px) {
@@ -240,8 +273,9 @@ body.auth footer * {
     --auth-gap: 8px;
   }
 
-  body.auth .l-main {
-    padding: 6px 0;
-    align-items: flex-start;
+  /* On short screens, align higher to prevent clipping */
+  body.auth .l-container.l-stack {
+    justify-content: flex-start;
+    padding-top: 10px;
   }
 }
