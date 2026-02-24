@@ -42,3 +42,41 @@
     position: static;
   }
 }
+/* My Templates: tabs + workspace */
+.mt-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+}
+
+.mt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.85;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+
+.mt-tab:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mt-tab.is-active {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mt-workspace {
+  margin-top: 12px;
+}

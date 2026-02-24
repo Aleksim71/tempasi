@@ -52,13 +52,33 @@
       </aside>
 
       <main class="cabinet__workspace">
-        <h1 class="cabinet__title">{{pageTitle}}</h1>
-        <p class="cabinet__subtitle">{{pageSubtitle}}</p>
 
-        <div class="cabinet__panel">
-          <div class="cabinet__panelTitle">{{panelTitle}}</div>
-          <p class="cabinet__panelText">{{panelText}}</p>
-        </div>
+        {{!-- Title/subtitle are hidden for My Templates workspace (tabs own the top area) --}}
+        {{#unless (eq activeSpace 'my-templates')}}
+          <h1 class="cabinet__title">{{pageTitle}}</h1>
+          <p class="cabinet__subtitle">{{pageSubtitle}}</p>
+        {{/unless}}
+
+        {{!-- Active space content --}}
+        {{#if (eq activeSpace 'my-templates')}}
+          {{> space-my-templates}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'cases')}}
+          {{> space-cases}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'finance')}}
+          {{> space-finance}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'profile')}}
+          {{> space-profile-security}}
+        {{/if}}
+
+        {{#if (eq activeSpace 'support')}}
+          {{> space-support}}
+        {{/if}}
       </main>
 
     </div>

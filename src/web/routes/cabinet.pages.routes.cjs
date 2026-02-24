@@ -26,15 +26,59 @@ function createCabinetPagesRouter({ db } = {}) {
   // Root -> seller-first workspace
   router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
 
+  // =========================
+  // My Templates (with tabs)
+  // =========================
+
   router.get('/my-templates', (req, res) => {
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
+
+      // Tab flags (no custom helpers needed)
+      isMyTemplatesLibrary: true,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: false,
+
       pageTitle: 'My Templates',
       pageSubtitle: 'Your purchased and rented templates.',
       panelTitle: 'Library',
       panelText: ''
     });
   });
+
+  router.get('/my-templates/add', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesLibrary: false,
+      isMyTemplatesAdd: true,
+      isMyTemplatesAnalytics: false,
+
+      pageTitle: 'Add Template',
+      pageSubtitle: 'Upload and publish a template.',
+      panelTitle: 'Add Template',
+      panelText: ''
+    });
+  });
+
+  router.get('/my-templates/analytics', (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesLibrary: false,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: true,
+
+      pageTitle: 'Analytics',
+      pageSubtitle: 'Sales, rentals and performance.',
+      panelTitle: 'Analytics',
+      panelText: ''
+    });
+  });
+
+  // =========================
+  // Other Cabinet Spaces
+  // =========================
 
   router.get('/cases', (req, res) => {
     res.render('pages/cabinet', {
