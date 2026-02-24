@@ -1,63 +1,41 @@
 /* public/css/layout.css */
-/* Layout primitives: page shell / container / stack / grid */
 
-/* ==============================
-   Page shell
-   ============================== */
+/* =========================================================
+   Sticky footer baseline (Cabinet + all pages)
+   Goal: no empty scroll, footer sticks to viewport bottom
+   when content is short.
+   ========================================================= */
 
-.l-page {
+html,
+body {
+  height: 100%;
+}
+
+body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Main wrapper */
+.l-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .l-main {
   flex: 1;
-  padding-block: var(--space-10, 32px);
 }
 
-/* ==============================
-   Container
-   ============================== */
+/* =========================================================
+   UNIFIED CONTAINER
+   ========================================================= */
 
 .l-container {
-  max-width: 1120px;
-  margin-inline: auto;
-  padding-inline: 16px;
-}
-
-/* ==============================
-   Vertical rhythm
-   ============================== */
-
-.l-stack {
-  --stack-gap: var(--space-8, 24px);
-}
-
-.l-stack > * + * {
-  margin-top: var(--stack-gap);
-}
-
-/* ==============================
-   Grid helper
-   ============================== */
-
-.l-grid {
-  display: grid;
-  gap: var(--space-6, 16px);
-}
-
-/* ==============================
-   Responsive
-   ============================== */
-
-@media (max-width: 640px) {
-  .l-main {
-    padding-block: var(--space-8, 24px);
-  }
-
-  .l-container {
-    padding-inline: 12px;
-  }
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
 }

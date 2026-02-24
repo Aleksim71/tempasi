@@ -1,197 +1,44 @@
 /* public/css/pages/cabinet.css */
 
 .cabinet {
-  padding: 34px 0 60px;
+  padding: 28px 0 44px;
 }
 
 .cabinet__layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 34px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 40px;
   align-items: start;
 }
 
-/* Sidebar card */
+/* Sidebar */
 .cabinet__sidebar {
   position: sticky;
-  top: 18px;
-
-  padding: 18px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-}
-
-.cabinet__side-head {
-  margin-bottom: 14px;
-}
-
-.cabinet__side-title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.cabinet__side-subtitle {
-  margin-top: 6px;
-  font-size: 13px;
-  opacity: 0.65;
-}
-
-.cabinet__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-/* Pills */
-.cabinet__pill {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  padding: 12px 14px;
-  border-radius: 999px;
-
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.84);
-
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
-
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-/* Checkbox base */
-.cabinet__pill::before {
-  content: '';
-  width: 16px;
-  height: 16px;
-  border-radius: 6px;
-  flex: 0 0 16px;
-
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
-
-  transition: all 0.18s ease;
-}
-
-.cabinet__pill:hover {
-  background: rgba(0, 0, 0, 0.34);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: rgba(255, 255, 255, 0.92);
-}
-
-/* Active pill */
-.cabinet__pill.is-active {
-  border-color: rgba(213, 159, 40, 0.85);
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 0 0 1px rgba(213, 159, 40, 0.22);
-}
-
-/* ✅ GOLD CHECKBOX */
-.cabinet__pill.is-active::before {
-  border-color: #d59f28;
-
-  background: linear-gradient(
-    180deg,
-    rgba(230, 183, 66, 1) 0%,
-    rgba(213, 159, 40, 1) 50%,
-    rgba(180, 128, 18, 1) 100%
-  );
-
-  box-shadow:
-    0 0 6px rgba(213, 159, 40, 0.6),
-    inset 0 0 4px rgba(0, 0, 0, 0.45);
-}
-
-/* Tip */
-.cabinet__side-note {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.18);
-}
-
-.cabinet__note-title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.72;
-  margin-bottom: 8px;
-}
-
-.cabinet__note-text {
-  font-size: 13px;
-  opacity: 0.7;
-  line-height: 1.4;
-}
-
-/* Content */
-.cabinet__header {
-  margin-bottom: 18px;
-}
-
-.cabinet__title {
-  font-size: 34px;
-  margin: 0 0 6px 0;
-}
-
-.cabinet__subtitle {
-  margin: 0;
-  opacity: 0.65;
+  top: 20px;
 }
 
 /* Workspace */
-.cabinet__workspace-card {
-  padding: 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-  max-width: 760px;
+.cabinet__workspace {
+  min-width: 0;
 }
 
-.cabinet__workspace-title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.72;
-  margin-bottom: 8px;
+/* If you have very short pages in cabinet — keep it clean */
+.cabinet__workspace:empty {
+  min-height: 120px;
 }
 
-.cabinet__workspace-text {
-  font-size: 14px;
-  opacity: 0.72;
-  line-height: 1.45;
-  margin-bottom: 14px;
-}
+/* Responsive: stack */
+@media (max-width: 980px) {
+  .cabinet {
+    padding: 18px 0 34px;
+  }
 
-.cabinet__workspace-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-/* Cabinet: compact sidebar mode */
-.cabinet.is-compact .cabinet__layout {
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 24px;
-}
+  .cabinet__layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
 
-.cabinet.is-compact .side__meta {
-  display: none;
+  .cabinet__sidebar {
+    position: static;
+  }
 }
