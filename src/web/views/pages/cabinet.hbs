@@ -1,35 +1,35 @@
 {{!-- src/web/views/pages/cabinet.hbs --}}
 <section class="cabinet">
-  <div class="container">
+  <div class="l-container">
     <div class="cabinet__layout">
 
-      <aside class="cabinet__sidebar">
-        <div class="cabinet__sidebarTitle">Cabinet</div>
+      <aside class="cabinet__sidebar side">
+        <div class="side__title">Cabinet</div>
 
-        <nav class="cabinet__nav" aria-label="Cabinet navigation">
-          <a class="cabinet__navItem {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
+        <nav class="side__nav" aria-label="Cabinet navigation">
+          <a class="side__link {{#if (eq activeSpace 'cases')}}is-active{{/if}}" href="/cabinet/cases">
             <span>Cases</span>
-            <span class="cabinet__navMeta">Work</span>
+            <span class="side__meta">Work</span>
           </a>
 
-          <a class="cabinet__navItem {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
+          <a class="side__link {{#if (eq activeSpace 'my-templates')}}is-active{{/if}}" href="/cabinet/my-templates">
             <span>My Templates</span>
-            <span class="cabinet__navMeta">Library</span>
+            <span class="side__meta">Library</span>
           </a>
 
-          <a class="cabinet__navItem {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
+          <a class="side__link {{#if (eq activeSpace 'finance')}}is-active{{/if}}" href="/cabinet/finance">
             <span>Finance</span>
-            <span class="cabinet__navMeta">Orders</span>
+            <span class="side__meta">Orders</span>
           </a>
 
-          <a class="cabinet__navItem {{#if (eq activeSpace 'profile')}}is-active{{/if}}" href="/cabinet/profile">
+          <a class="side__link {{#if (eq activeSpace 'profile')}}is-active{{/if}}" href="/cabinet/profile">
             <span>Profile &amp; Security</span>
-            <span class="cabinet__navMeta">Account</span>
+            <span class="side__meta">Account</span>
           </a>
 
-          <a class="cabinet__navItem {{#if (eq activeSpace 'support')}}is-active{{/if}}" href="/cabinet/support">
+          <a class="side__link {{#if (eq activeSpace 'support')}}is-active{{/if}}" href="/cabinet/support">
             <span>Support</span>
-            <span class="cabinet__navMeta">Help</span>
+            <span class="side__meta">Help</span>
           </a>
         </nav>
       </aside>

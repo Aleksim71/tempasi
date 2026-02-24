@@ -186,3 +186,12 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+/* Cabinet: compact sidebar mode */
+.cabinet.is-compact .cabinet__layout {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.cabinet.is-compact .side__meta {
+  display: none;
+}

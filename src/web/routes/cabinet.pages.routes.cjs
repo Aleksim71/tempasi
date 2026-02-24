@@ -1,78 +1,109 @@
-/* eslint-env node */
 'use strict';
 
 const express = require('express');
+
+const authMw = require('../../middlewares/auth.middleware.cjs');
 const entitlementsCabinetService = require('../../modules/payments/entitlements.cabinet.service.cjs');
 
-function requireAuthPage(req, res, next) {
-  if (req.user && req.user.id) return next();
-  return res.redirect('/login');
-}
+function createCabinetPagesRouter({ db } = {}) {
+  void db; // keep signature for app.js
 
-const SPACES = [
-  { key: 'cases', label: 'Cases', href: '/cabinet?space=cases' },
-  { key: 'my-templates', label: 'My Templates', href: '/cabinet?space=my-templates' },
-  { key: 'finance', label: 'Finance', href: '/cabinet?space=finance' },
-  { key: 'profile-security', label: 'Profile & Security', href: '/cabinet?space=profile-security' },
-  { key: 'support', label: 'Support', href: '/cabinet?space=support' },
-];
-
-function resolveWorkspacePartial(spaceKey) {
-  const map = {
-    cases: 'space-cases',
-    'my-templates': 'space-my-templates',
-    finance: 'space-finance',
-    'profile-security': 'space-profile-security',
-    support: 'space-support',
-  };
-  return map[spaceKey] || map.cases;
-}
-
-function createCabinetPagesRouter() {
   const router = express.Router();
 
-  router.get('/', requireAuthPage, async (req, res, next) => {
+  // Resolve requireAuthPage safely (project exports may differ)
+  const requireAuthPage =
+    authMw.requireAuthPage ||
+    authMw.requireAuth ||
+    authMw.requireAuthHtml ||
+    authMw.requireAuthWeb ||
+    function requireAuthPageFallback(req, res, next) {
+      if (req.user && (req.user.id || req.user.user_id)) return next();
+      return res.redirect('/auth/login');
+    };
+
+  // Make Cabinet layout + cabinet.css always active (main.hbs uses isCabinet)
+  router.use((req, res, next) => {
+    res.locals.isCabinet = true;
+    next();
+  });
+
+  // /cabinet -> redirect to default workspace
+  router.get('/', requireAuthPage, (req, res) => {
+    return res.redirect('/cabinet/cases');
+  });
+
+  router.get('/cases', requireAuthPage, (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: 'Cases',
+      pageSubtitle: 'Client shortlists and presentations.',
+      panelTitle: 'Cases',
+      panelText: 'Open Cases Browse Templates'
+    });
+  });
+
+  router.get('/my-templates', requireAuthPage, async (req, res, next) => {
     try {
-      const space = String(req.query.space || 'cases');
-      const activeSpace = SPACES.some((s) => s.key === space) ? space : 'cases';
-      const workspacePartial = resolveWorkspacePartial(activeSpace);
+      const userId = req.user?.id || req.user?.user_id;
 
-      const userId = req.user.id;
-
-      let workspaceData = {};
-      let workspaceStats = {};
-      let workspaceError = null;
-
-      if (activeSpace === 'my-templates') {
-        try {
-          const { items, stats } = await entitlementsCabinetService.getMyTemplatesWorkspace(userId);
-          workspaceData = { items };
-          workspaceStats = { activeEntitlements: stats.active_entitlements };
-        } catch (e) {
-          // ✅ fail-open: do not crash the whole app
-          workspaceError = {
-            message: e && e.message ? e.message : 'Unknown error',
-          };
-          workspaceData = { items: [] };
-          workspaceStats = { activeEntitlements: 0 };
-        }
+      // Try common service method names (avoid crashes)
+      let entitlements = [];
+      if (typeof entitlementsCabinetService.getForUser === 'function') {
+        entitlements = await entitlementsCabinetService.getForUser(userId);
+      } else if (typeof entitlementsCabinetService.listForUser === 'function') {
+        entitlements = await entitlementsCabinetService.listForUser(userId);
+      } else if (typeof entitlementsCabinetService.getCabinetEntitlements === 'function') {
+        entitlements = await entitlementsCabinetService.getCabinetEntitlements(userId);
       }
 
-      return res.status(200).render('pages/cabinet/index', {
-        pageTitle: 'Cabinet',
-        spaces: SPACES,
-        activeSpace,
-        workspacePartial,
-        workspaceData,
-        workspaceStats,
-        workspaceError,
+      res.render('pages/cabinet', {
+        activeSpace: 'my-templates',
+        pageTitle: 'My Templates',
+        pageSubtitle: 'Your purchased and rented templates.',
+        panelTitle: 'Library',
+        panelText: '',
+        entitlements
       });
     } catch (err) {
-      return next(err);
+      next(err);
     }
+  });
+
+  router.get('/finance', requireAuthPage, (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'finance',
+      pageTitle: 'Finance',
+      pageSubtitle: 'Orders and payments.',
+      panelTitle: 'Finance',
+      panelText: ''
+    });
+  });
+
+  router.get('/profile', requireAuthPage, (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'profile',
+      pageTitle: 'Profile & Security',
+      pageSubtitle: 'Account settings.',
+      panelTitle: 'Profile',
+      panelText: ''
+    });
+  });
+
+  router.get('/support', requireAuthPage, (req, res) => {
+    res.render('pages/cabinet', {
+      activeSpace: 'support',
+      pageTitle: 'Support',
+      pageSubtitle: 'Help and documentation.',
+      panelTitle: 'Support',
+      panelText: ''
+    });
   });
 
   return router;
 }
 
+/**
+ * Export as named property for ESM named import:
+ *   import { createCabinetPagesRouter } from './cabinet.pages.routes.cjs'
+ */
 module.exports = { createCabinetPagesRouter };

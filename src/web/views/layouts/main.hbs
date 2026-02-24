@@ -15,6 +15,11 @@
     <link rel="stylesheet" href="/css/components/chips.css" />
     <link rel="stylesheet" href="/css/components/sidebar.css" />
 
+    {{!-- Cabinet page styles (always) --}}
+    {{#if isCabinet}}
+      <link rel="stylesheet" href="/css/pages/cabinet.css" />
+    {{/if}}
+
     {{!-- Page-specific styles --}}
     {{#if styles}}
       {{#each styles}}
