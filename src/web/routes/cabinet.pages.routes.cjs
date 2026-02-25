@@ -1,9 +1,22 @@
 'use strict';
 
 const express = require('express');
+const path = require('path');
+const multer = require('multer');
 
 // Canonical entitlements service (no templates JOIN)
 const entitlementsService = require('../../modules/payments/entitlements.service.cjs');
+
+// Add Template (new)
+const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
+
+// Canonical pool getter (NOTE: routes/ -> web/ -> src/ -> project root)
+const { getPool } = require('../../../scripts/db.pool.cjs');
+
+function requireAuthPage(req, res, next) {
+  if (req.user && (req.user.id || req.user.user_id || req.user.userId)) return next();
+  return res.redirect('/login');
+}
 
 function formatDateTimeShort(value) {
   if (!value) return '';
@@ -32,10 +45,38 @@ function mapEntitlementsToWorkspaceItems(rows) {
   }));
 }
 
-// src/web/routes/cabinet.pages.routes.cjs
-function createCabinetPagesRouter({ db } = {}) {
-  void db;
+// =========================
+// Upload (ZIP) — MVP
+// =========================
 
+const UPLOAD_DIR = path.join(__dirname, '../../../uploads/templates');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: function (req, file, cb) {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${unique}.zip`);
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: function (req, file, cb) {
+    const name = String(file.originalname || '').toLowerCase();
+    const isZipByName = name.endsWith('.zip');
+    const isZipByMime = file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed';
+
+    if (isZipByMime || isZipByName) return cb(null, true);
+    return cb(new Error('ONLY_ZIP_ALLOWED'));
+  },
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB
+  },
+});
+
+function createCabinetPagesRouter() {
   const router = express.Router();
 
   // Mark cabinet for layout + inject MVP metrics globally (so pages don't have to pass them)
@@ -53,6 +94,9 @@ function createCabinetPagesRouter({ db } = {}) {
     next();
   });
 
+  // Cabinet is protected
+  router.use(requireAuthPage);
+
   // Root -> seller-first workspace
   router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
 
@@ -65,7 +109,6 @@ function createCabinetPagesRouter({ db } = {}) {
     let items = [];
 
     try {
-      // requires req.user to exist (usually ensured by auth middleware earlier)
       const rows = await entitlementsService.listUserEntitlementsWithTemplates(req.user);
       items = mapEntitlementsToWorkspaceItems(rows);
     } catch (e) {
@@ -75,7 +118,7 @@ function createCabinetPagesRouter({ db } = {}) {
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
-      // Tab flags (no custom helpers needed)
+      // Tab flags
       isMyTemplatesLibrary: true,
       isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: false,
@@ -84,7 +127,6 @@ function createCabinetPagesRouter({ db } = {}) {
       workspaceData: { items },
       workspaceError,
 
-      // These are hidden in cabinet.hbs for my-templates, but keep them sane
       pageTitle: 'My Templates',
       pageSubtitle: 'Your purchased and rented templates.',
       panelTitle: 'Library',
@@ -100,12 +142,82 @@ function createCabinetPagesRouter({ db } = {}) {
       isMyTemplatesAdd: true,
       isMyTemplatesAnalytics: false,
 
-      // Keep shape stable for partial
       workspaceData: { items: [] },
       workspaceError: null,
 
+      // Form state
+      form: { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
+      formErrors: {},
+
       pageTitle: 'Add Template',
-      pageSubtitle: 'Upload and publish a template.',
+      pageSubtitle: 'Create a template record (MVP).',
+      panelTitle: 'Add Template',
+      panelText: '',
+    });
+  });
+
+  router.post('/my-templates/add', upload.single('templateZip'), async (req, res) => {
+    const form = {
+      title: String(req.body?.title || ''),
+      slug: String(req.body?.slug || ''),
+      shortDescription: String(req.body?.shortDescription || ''),
+      priceBuy: String(req.body?.priceBuy || ''),
+      priceRent: String(req.body?.priceRent || ''),
+      status: String(req.body?.status || 'draft'),
+    };
+
+    let workspaceError = null;
+    let formErrors = {};
+
+    try {
+      const file = req.file;
+      if (!file) {
+        formErrors.templateZip = 'ZIP file is required.';
+        throw new Error('ZIP_REQUIRED');
+      }
+
+      const pool = getPool();
+      await sellerTemplatesService.addSellerTemplate({
+        pool,
+        user: req.user,
+        body: req.body,
+        file,
+      });
+
+      // MVP: redirect to Library
+      return res.redirect('/cabinet/my-templates');
+    } catch (e) {
+      // Multer fileFilter / limits errors often arrive here as plain Error
+      if (e && e.message === 'ONLY_ZIP_ALLOWED') {
+        formErrors.templateZip = 'Only .zip files are allowed.';
+      } else if (e && (e.code === 'LIMIT_FILE_SIZE')) {
+        formErrors.templateZip = 'ZIP is too large (max 50MB).';
+      } else if (e && e.message === 'ZIP_REQUIRED') {
+        // already set
+      } else if (e && e.code === 'VALIDATION_FAILED' && e.details && e.details.errors) {
+        formErrors = { ...formErrors, ...e.details.errors };
+      } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
+        formErrors.slug = 'This slug is already used. Choose another one.';
+      } else {
+        workspaceError = e;
+      }
+    }
+
+    return res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesLibrary: false,
+      isMyTemplatesAdd: true,
+      isMyTemplatesAnalytics: false,
+
+      workspaceData: { items: [] },
+      workspaceError,
+
+      form,
+      formErrors,
+
+      pageTitle: 'Add Template',
+      pageSubtitle: 'Create a template record (MVP).',
       panelTitle: 'Add Template',
       panelText: '',
     });

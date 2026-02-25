@@ -23,8 +23,74 @@
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Add Template</div>
       <p class="cabinet__panelText">
-        Upload flow will be wired later (MVP). For now this is a placeholder tab.
+        MVP: create a template record and upload template ZIP.
       </p>
+
+      <form class="form" method="post" action="/cabinet/my-templates/add" enctype="multipart/form-data">
+        <div class="form__row">
+          <label class="form__label" for="title">Title *</label>
+          <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
+          {{#if formErrors.title}}
+            <div class="form__error">{{formErrors.title}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="slug">Slug *</label>
+          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
+          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
+          {{#if formErrors.slug}}
+            <div class="form__error">{{formErrors.slug}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="shortDescription">Short description</label>
+          <textarea class="textarea" id="shortDescription" name="shortDescription" rows="3">{{form.shortDescription}}</textarea>
+        </div>
+
+        <div class="form__grid">
+          <div class="form__row">
+            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
+            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            {{#if formErrors.priceBuy}}
+              <div class="form__error">{{formErrors.priceBuy}}</div>
+            {{/if}}
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="priceRent">Rent price (EUR)</label>
+            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+            {{#if formErrors.priceRent}}
+              <div class="form__error">{{formErrors.priceRent}}</div>
+            {{/if}}
+          </div>
+        </div>
+
+        {{!-- Upload ZIP --}}
+        <div class="form__row">
+          <label class="form__label" for="templateZip">Upload ZIP *</label>
+          <input class="input" id="templateZip" name="templateZip" type="file" accept=".zip" />
+          <div class="form__hint">Only .zip files allowed</div>
+          {{#if formErrors.templateZip}}
+            <div class="form__error">{{formErrors.templateZip}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="status">Status</label>
+          <select class="select" id="status" name="status">
+            <option value="draft">draft</option>
+            <option value="published">published</option>
+          </select>
+          <div class="form__hint">MVP default: draft.</div>
+        </div>
+
+        <div class="actions">
+          <button class="button button--primary" type="submit">Upload ZIP & Create</button>
+          <a class="button" href="/cabinet/my-templates">Cancel</a>
+        </div>
+      </form>
     </div>
   {{/if}}
 
