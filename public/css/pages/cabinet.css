@@ -80,3 +80,50 @@
 .mt-workspace {
   margin-top: 12px;
 }
+.seller-card {
+  display: flex;
+  gap: 32px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  margin-bottom: 28px;
+}
+
+.seller-card__preview {
+  width: 420px;
+  flex-shrink: 0;
+}
+
+.seller-card__preview img {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.seller-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.seller-card__title {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.seller-card__badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.seller-card__meta {
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+
+.seller-card__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

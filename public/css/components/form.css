@@ -1,0 +1,106 @@
+/* public/css/components/form.css */
+
+.form {
+  margin-top: 18px;
+  max-width: 620px;
+}
+
+.cabinet__panel .form {
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.form__row {
+  margin: 14px 0;
+}
+
+.form__label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.form__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.form__hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.form__error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ff6e6e;
+}
+
+.form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 760px) {
+  .form__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 12px;
+
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.05);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  outline: none;
+
+  transition: all 0.18s ease;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.4;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: rgba(212, 175, 55, 0.7);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.select {
+  appearance: none;
+  padding-right: 36px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* make primary button more visible in cabinet context */
+.actions .button--primary {
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+}
