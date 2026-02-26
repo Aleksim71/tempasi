@@ -4,7 +4,7 @@
     <a class="mt-tab {{#if isMyTemplatesAdd}}is-active{{/if}}" href="/cabinet/my-templates/add">
       Add
     </a>
-    <a class="mt-tab {{#if isMyTemplatesLibrary}}is-active{{/if}}" href="/cabinet/my-templates">
+    <a class="mt-tab {{#if isMyTemplatesList}}is-active{{/if}}" href="/cabinet/my-templates">
       List
     </a>
     <a class="mt-tab {{#if isMyTemplatesAnalytics}}is-active{{/if}}" href="/cabinet/my-templates/analytics">
@@ -18,12 +18,110 @@
     </div>
   {{/if}}
 
-  {{!-- ADD --}}
+  {{!-- =========================
+        LIST (Seller View)
+  ========================== --}}
+  {{#if isMyTemplatesList}}
+
+    {{#if workspaceData.items.length}}
+
+      <div class="seller-templates">
+
+        {{#each workspaceData.items}}
+          <div class="seller-card">
+
+            <div class="seller-card__preview">
+              <img src="/img/preview-placeholder.svg" alt="{{title}}">
+            </div>
+
+            <div class="seller-card__content">
+
+              <h3 class="seller-card__title">{{title}}</h3>
+
+              <div class="seller-card__badges">
+
+                {{#if is_published}}
+                  <span class="badge badge--success">PUBLISHED</span>
+                {{else}}
+                  <span class="badge badge--muted">DRAFT</span>
+                {{/if}}
+
+                {{#if is_rent_enabled}}
+                  <span class="badge badge--kind">SALE + RENT</span>
+                {{else}}
+                  <span class="badge badge--kind">SALE</span>
+                {{/if}}
+
+              </div>
+
+              <div class="seller-card__meta">
+                <div><strong>Slug:</strong> {{slug}}</div>
+
+                {{#if price_buy_eur}}
+                  <div><strong>Buy:</strong> €{{price_buy_eur}}</div>
+                {{/if}}
+
+                {{#if price_rent_eur}}
+                  <div><strong>Rent:</strong> €{{price_rent_eur}}</div>
+                {{/if}}
+              </div>
+
+              <div class="seller-card__actions">
+
+                <a href="/cabinet/my-templates/{{id}}/edit" class="button">
+                  Edit
+                </a>
+
+                {{#if is_published}}
+                  <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
+                    <input type="hidden" name="status" value="draft" />
+                    <button type="submit" class="button">
+                      Unpublish
+                    </button>
+                  </form>
+                {{else}}
+                  <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
+                    <input type="hidden" name="status" value="published" />
+                    <button type="submit" class="button button--primary">
+                      Publish
+                    </button>
+                  </form>
+                {{/if}}
+
+                <form method="post" action="/cabinet/my-templates/{{id}}/delete" style="display:inline;">
+                  <button type="submit" class="button button--danger">
+                    Delete
+                  </button>
+                </form>
+
+              </div>
+
+            </div>
+
+          </div>
+        {{/each}}
+
+      </div>
+
+    {{else}}
+      <div class="empty-state">
+        <p>You don’t have any templates yet.</p>
+        <a href="/cabinet/my-templates/add" class="button button--primary">
+          Add your first template
+        </a>
+      </div>
+    {{/if}}
+
+  {{/if}}
+
+  {{!-- =========================
+        ADD
+  ========================== --}}
   {{#if isMyTemplatesAdd}}
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Add Template</div>
       <p class="cabinet__panelText">
-        MVP: create a template record and upload template ZIP.
+        Create a draft and upload template ZIP (required).
       </p>
 
       <form class="form" method="post" action="/cabinet/my-templates/add" enctype="multipart/form-data">
@@ -67,7 +165,7 @@
           </div>
         </div>
 
-        {{!-- Upload ZIP --}}
+        {{!-- Upload ZIP (required) --}}
         <div class="form__row">
           <label class="form__label" for="templateZip">Upload ZIP *</label>
           <input class="input" id="templateZip" name="templateZip" type="file" accept=".zip" />
@@ -77,86 +175,89 @@
           {{/if}}
         </div>
 
-        <div class="form__row">
-          <label class="form__label" for="status">Status</label>
-          <select class="select" id="status" name="status">
-            <option value="draft">draft</option>
-            <option value="published">published</option>
-          </select>
-          <div class="form__hint">MVP default: draft.</div>
-        </div>
+        {{!-- Draft-only on create (publish via button in List) --}}
+        <input type="hidden" name="status" value="draft" />
 
         <div class="actions">
-          <button class="button button--primary" type="submit">Upload ZIP & Create</button>
+          <button class="button button--primary" type="submit">Upload ZIP & Create Draft</button>
           <a class="button" href="/cabinet/my-templates">Cancel</a>
         </div>
       </form>
     </div>
   {{/if}}
 
-  {{!-- ANALYTICS --}}
+  {{!-- =========================
+        EDIT
+  ========================== --}}
+  {{#if isMyTemplatesEdit}}
+    <div class="cabinet__panel">
+      <div class="cabinet__panelTitle">Edit Template</div>
+      <p class="cabinet__panelText">
+        Update fields. Publishing is done from the List (Publish button).
+      </p>
+
+      <form class="form" method="post" action="/cabinet/my-templates/{{form.id}}/edit">
+        <div class="form__row">
+          <label class="form__label" for="title">Title *</label>
+          <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
+          {{#if formErrors.title}}
+            <div class="form__error">{{formErrors.title}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="slug">Slug *</label>
+          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
+          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
+          {{#if formErrors.slug}}
+            <div class="form__error">{{formErrors.slug}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="shortDescription">Short description</label>
+          <textarea class="textarea" id="shortDescription" name="shortDescription" rows="3">{{form.shortDescription}}</textarea>
+        </div>
+
+        <div class="form__grid">
+          <div class="form__row">
+            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
+            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            {{#if formErrors.priceBuy}}
+              <div class="form__error">{{formErrors.priceBuy}}</div>
+            {{/if}}
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="priceRent">Rent price (EUR)</label>
+            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+            {{#if formErrors.priceRent}}
+              <div class="form__error">{{formErrors.priceRent}}</div>
+            {{/if}}
+          </div>
+        </div>
+
+        {{!-- status preserved server-side; publishing via button --}}
+        <input type="hidden" name="status" value="{{form.status}}" />
+
+        <div class="actions">
+          <button class="button button--primary" type="submit">Update</button>
+          <a class="button" href="/cabinet/my-templates">Back to List</a>
+        </div>
+      </form>
+    </div>
+  {{/if}}
+
+  {{!-- =========================
+        ANALYTICS
+  ========================== --}}
   {{#if isMyTemplatesAnalytics}}
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Analytics</div>
       <p class="cabinet__panelText">
-        Sales / rentals analytics will be wired later (MVP). For now this is a placeholder tab.
+        Sales / rentals analytics will be wired later (MVP).
       </p>
     </div>
   {{/if}}
 
-  {{!-- LIBRARY --}}
-  {{#if isMyTemplatesLibrary}}
-
-    {{#if workspaceData.items.length}}
-
-      <div class="cabinet-grid">
-        {{#each workspaceData.items}}
-          <div class="template-card">
-            <div class="template-card__body">
-              <h3>{{template_title}}</h3>
-
-              <div class="badges">
-                {{#if entitlement_kind}}
-                  <span class="badge badge--kind">{{entitlement_kind}}</span>
-                {{/if}}
-
-                {{#if deal_type}}
-                  <span class="badge badge--muted">{{deal_type}}</span>
-                {{/if}}
-
-                {{#if is_active}}
-                  <span class="badge badge--success">Active</span>
-                {{else}}
-                  <span class="badge badge--muted">Expired</span>
-                {{/if}}
-              </div>
-
-              <div class="meta">
-                <div>Granted: {{entitlement_granted_at}}</div>
-                {{#if entitlement_ends_at}}
-                  <div>Ends: {{entitlement_ends_at}}</div>
-                {{/if}}
-              </div>
-
-              <div class="actions">
-                <a href="/download/{{template_slug}}" class="button button--primary">
-                  Download
-                </a>
-              </div>
-
-            </div>
-          </div>
-        {{/each}}
-      </div>
-
-    {{else}}
-      <div class="empty-state">
-        <p>You don’t have any templates yet.</p>
-        <a href="/templates" class="button button--primary">
-          Browse Templates
-        </a>
-      </div>
-    {{/if}}
-
-  {{/if}}
 </section>

@@ -1,3 +1,4 @@
+// src/web/routes/cabinet.pages.routes.cjs
 'use strict';
 
 const express = require('express');
@@ -5,13 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
-// Canonical entitlements service (no templates JOIN)
-const entitlementsService = require('../../modules/payments/entitlements.service.cjs');
-
-// Add Template service
+// Seller templates service + repo
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
-
-// Repo (for owner download lookup)
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
 
 // Canonical pool getter (routes/ -> web/ -> src/ -> project root)
@@ -26,31 +22,11 @@ function getUserId(req) {
   return req?.user?.id || req?.user?.user_id || req?.user?.userId || null;
 }
 
-function formatDateTimeShort(value) {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  // YYYY-MM-DD HH:mm
-  const yyyy = String(d.getFullYear());
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-}
-
-function mapEntitlementsToWorkspaceItems(rows) {
-  const arr = Array.isArray(rows) ? rows : [];
-  return arr.map((r) => ({
-    template_slug: r.template_slug,
-    template_title: r.template_title || r.template_slug, // fallback: show slug
-    entitlement_kind: r.kind || r.entitlement_kind || '',
-    deal_type: r.deal_type || '',
-    entitlement_granted_at: formatDateTimeShort(r.created_at || r.entitlement_granted_at),
-    entitlement_ends_at: r.ends_at ? formatDateTimeShort(r.ends_at) : '',
-    is_active: Boolean(r.is_active),
-    order_id: r.order_id || null,
-  }));
+function formatMoneyEurFromCents(cents) {
+  if (cents === null || cents === undefined) return '';
+  const n = Number(cents);
+  if (!Number.isFinite(n)) return '';
+  return (n / 100).toFixed(2);
 }
 
 // =========================
@@ -85,7 +61,6 @@ if (configuredUploadDir) {
 }
 
 // Debug (MVP): always print effective upload directory at startup
-// Helps avoid "why are files still local?" situations.
 console.log('[UPLOAD] TEMPLATE_UPLOAD_DIR =', process.env.TEMPLATE_UPLOAD_DIR || '(not set)');
 console.log('[UPLOAD] Using UPLOAD_DIR =', UPLOAD_DIR);
 
@@ -104,7 +79,8 @@ const upload = multer({
   fileFilter: function (req, file, cb) {
     const name = String(file.originalname || '').toLowerCase();
     const isZipByName = name.endsWith('.zip');
-    const isZipByMime = file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed';
+    const isZipByMime =
+      file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed';
 
     if (isZipByMime || isZipByName) return cb(null, true);
     return cb(new Error('ONLY_ZIP_ALLOWED'));
@@ -117,7 +93,7 @@ const upload = multer({
 function createCabinetPagesRouter() {
   const router = express.Router();
 
-  // Mark cabinet for layout + inject MVP metrics globally (so pages don't have to pass them)
+  // Mark cabinet for layout + inject MVP metrics globally
   router.use((req, res, next) => {
     res.locals.isCabinet = true;
 
@@ -139,16 +115,34 @@ function createCabinetPagesRouter() {
   router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
 
   // =========================
-  // My Templates (with tabs)
+  // My Templates (seller workspace)
   // =========================
 
   router.get('/my-templates', async (req, res) => {
+    const pool = getPool();
     let workspaceError = null;
     let items = [];
 
     try {
-      const rows = await entitlementsService.listUserEntitlementsWithTemplates(req.user);
-      items = mapEntitlementsToWorkspaceItems(rows);
+      const rows = await sellerTemplatesService.listMyTemplates({ pool, user: req.user });
+
+      items = (Array.isArray(rows) ? rows : []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        slug: r.slug,
+        status: r.status,
+        is_published: r.status === 'published',
+        is_rent_enabled: r.price_rent_cents !== null && r.price_rent_cents !== undefined,
+        price_buy_eur:
+          r.price_buy_cents !== null && r.price_buy_cents !== undefined
+            ? formatMoneyEurFromCents(r.price_buy_cents)
+            : '',
+        price_rent_eur:
+          r.price_rent_cents !== null && r.price_rent_cents !== undefined
+            ? formatMoneyEurFromCents(r.price_rent_cents)
+            : '',
+        zip_ready: Boolean(r.zip_path),
+      }));
     } catch (e) {
       workspaceError = e;
     }
@@ -156,16 +150,17 @@ function createCabinetPagesRouter() {
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
-      isMyTemplatesLibrary: true,
+      isMyTemplatesList: true,
       isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: false,
 
       workspaceData: { items },
       workspaceError,
 
       pageTitle: 'My Templates',
-      pageSubtitle: 'Your purchased and rented templates.',
-      panelTitle: 'Library',
+      pageSubtitle: 'Your templates for sale and rent.',
+      panelTitle: 'My Templates',
       panelText: '',
     });
   });
@@ -174,9 +169,10 @@ function createCabinetPagesRouter() {
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
-      isMyTemplatesLibrary: false,
+      isMyTemplatesList: false,
       isMyTemplatesAdd: true,
       isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: false,
 
       workspaceData: { items: [] },
       workspaceError: null,
@@ -184,6 +180,8 @@ function createCabinetPagesRouter() {
       // Form state
       form: { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
       formErrors: {},
+      formIsDraft: true,
+      formIsPublished: false,
 
       pageTitle: 'Add Template',
       pageSubtitle: 'Create a template record (MVP).',
@@ -220,7 +218,7 @@ function createCabinetPagesRouter() {
         file,
       });
 
-      // MVP: redirect to Library
+      // ✅ after successful create -> go to list
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
       if (e && e.message === 'ONLY_ZIP_ALLOWED') {
@@ -238,18 +236,22 @@ function createCabinetPagesRouter() {
       }
     }
 
+    const status = String(req.body?.status || 'draft');
     return res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
-      isMyTemplatesLibrary: false,
+      isMyTemplatesList: false,
       isMyTemplatesAdd: true,
       isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: false,
 
       workspaceData: { items: [] },
       workspaceError,
 
       form,
       formErrors,
+      formIsDraft: status === 'draft',
+      formIsPublished: status === 'published',
 
       pageTitle: 'Add Template',
       pageSubtitle: 'Create a template record (MVP).',
@@ -259,7 +261,228 @@ function createCabinetPagesRouter() {
   });
 
   // =========================
-  // Owner download (internal, no UI button yet)
+  // Status toggle (Publish/Unpublish)
+  // =========================
+  router.post('/my-templates/:id/status', async (req, res) => {
+    const pool = getPool();
+    const ownerUserId = getUserId(req);
+    const id = String(req.params.id || '').trim();
+
+    if (!ownerUserId) return res.redirect('/login');
+    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
+
+    const nextStatus = String(req.body?.status || '').trim();
+
+    if (!['draft', 'published'].includes(nextStatus)) {
+      return res.status(400).send('Bad status');
+    }
+
+    try {
+      // Rule: publish allowed only when mandatory data is present.
+      if (nextStatus === 'published') {
+        const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
+          pool,
+          ownerUserId,
+          id: Number(id),
+        });
+
+        if (!row) return res.status(404).send('Not found');
+
+        const hasTitle = Boolean(String(row.title || '').trim());
+        const hasSlug = Boolean(String(row.slug || '').trim());
+        const hasZip = Boolean(row.zip_path);
+
+        // MVP mandatory: title + slug + zip
+        if (!hasTitle || !hasSlug || !hasZip) {
+          // per your flow: redirect to Edit if publish can't happen
+          return res.redirect(`/cabinet/my-templates/${Number(id)}/edit`);
+        }
+      }
+
+      await sellerTemplatesService.updateMyTemplateStatus({
+        pool,
+        user: req.user,
+        id: Number(id),
+        status: nextStatus,
+      });
+
+      return res.redirect('/cabinet/my-templates');
+    } catch (e) {
+      return res.status(500).send(`Status error: ${e.message}`);
+    }
+  });
+
+  // =========================
+  // Edit (MVP)
+  // =========================
+  router.get('/my-templates/:id/edit', async (req, res) => {
+    const pool = getPool();
+    const ownerUserId = getUserId(req);
+    const id = String(req.params.id || '').trim();
+
+    if (!ownerUserId) return res.redirect('/login');
+    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
+
+    let workspaceError = null;
+    let row = null;
+
+    try {
+      row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
+        pool,
+        ownerUserId,
+        id: Number(id),
+      });
+      if (!row) return res.status(404).send('Not found');
+    } catch (e) {
+      workspaceError = e;
+    }
+
+    const form = {
+      id: row ? row.id : id,
+      title: row ? row.title : '',
+      slug: row ? row.slug : '',
+      shortDescription: row ? row.short_description || '' : '',
+      priceBuy:
+        row && row.price_buy_cents !== null && row.price_buy_cents !== undefined
+          ? formatMoneyEurFromCents(row.price_buy_cents)
+          : '',
+      priceRent:
+        row && row.price_rent_cents !== null && row.price_rent_cents !== undefined
+          ? formatMoneyEurFromCents(row.price_rent_cents)
+          : '',
+      status: row ? row.status : 'draft',
+    };
+
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesList: false,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: true,
+
+      workspaceData: { items: [] },
+      workspaceError,
+
+      form,
+      formErrors: {},
+      formIsDraft: form.status === 'draft',
+      formIsPublished: form.status === 'published',
+
+      pageTitle: 'Edit Template',
+      pageSubtitle: 'Update your template.',
+      panelTitle: 'Edit Template',
+      panelText: '',
+    });
+  });
+
+  router.post('/my-templates/:id/edit', async (req, res) => {
+    const pool = getPool();
+    const ownerUserId = getUserId(req);
+    const id = String(req.params.id || '').trim();
+
+    if (!ownerUserId) return res.redirect('/login');
+    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
+
+    const form = {
+      id,
+      title: String(req.body?.title || '').trim(),
+      slug: String(req.body?.slug || '').trim(),
+      shortDescription: String(req.body?.shortDescription || '').trim(),
+      priceBuy: String(req.body?.priceBuy || '').trim(),
+      priceRent: String(req.body?.priceRent || '').trim(),
+      status: String(req.body?.status || 'draft').trim(),
+    };
+
+    let workspaceError = null;
+    let formErrors = {};
+
+    try {
+      // NOTE: keep your existing service call (если у тебя реализация уже есть)
+      await sellerTemplatesService.updateSellerTemplate({
+        pool,
+        user: req.user,
+        id: Number(id),
+        body: req.body,
+      });
+
+      return res.redirect('/cabinet/my-templates');
+    } catch (e) {
+      if (e && e.code === 'VALIDATION_FAILED' && e.details && e.details.errors) {
+        formErrors = { ...formErrors, ...e.details.errors };
+      } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
+        formErrors.slug = 'This slug is already used. Choose another one.';
+      } else {
+        workspaceError = e;
+      }
+    }
+
+    res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesList: false,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: true,
+
+      workspaceData: { items: [] },
+      workspaceError,
+
+      form,
+      formErrors,
+      formIsDraft: form.status === 'draft',
+      formIsPublished: form.status === 'published',
+
+      pageTitle: 'Edit Template',
+      pageSubtitle: 'Update your template.',
+      panelTitle: 'Edit Template',
+      panelText: '',
+    });
+  });
+
+  // =========================
+  // Delete (MVP soft delete)
+  // =========================
+  router.post('/my-templates/:id/delete', async (req, res) => {
+    const pool = getPool();
+    const ownerUserId = getUserId(req);
+    const id = String(req.params.id || '').trim();
+
+    if (!ownerUserId) return res.redirect('/login');
+    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
+
+    try {
+      const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
+        pool,
+        ownerUserId,
+        id: Number(id),
+      });
+      if (!row) return res.status(404).send('Not found');
+
+      // ✅ use service (soft delete)
+      await sellerTemplatesService.deleteMyTemplate({
+        pool,
+        user: req.user,
+        id: Number(id),
+      });
+
+      // Best effort: remove ZIP file from disk
+      if (row.zip_path && fs.existsSync(row.zip_path)) {
+        try {
+          fs.unlinkSync(row.zip_path);
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      return res.redirect('/cabinet/my-templates');
+    } catch (e) {
+      return res.status(500).send(`Delete error: ${e.message}`);
+    }
+  });
+
+  // =========================
+  // Owner download (internal)
   // =========================
   router.get('/my-templates/:id/download', async (req, res) => {
     const ownerUserId = getUserId(req);
@@ -296,9 +519,10 @@ function createCabinetPagesRouter() {
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
-      isMyTemplatesLibrary: false,
+      isMyTemplatesList: false,
       isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: true,
+      isMyTemplatesEdit: false,
 
       workspaceData: { items: [] },
       workspaceError: null,

@@ -3,7 +3,12 @@
 
 const repo = require('./sellerTemplates.repo.cjs');
 
-function validateAddTemplateForm(body = {}) {
+function getOwnerUserId(user) {
+  if (!user) return null;
+  return user.id || user.user_id || user.userId || null;
+}
+
+function validateAddOrEditTemplateForm(body = {}) {
   const errors = {};
   const data = {
     title: String(body.title || '').trim(),
@@ -38,19 +43,22 @@ function validateAddTemplateForm(body = {}) {
   return { ok: Object.keys(errors).length === 0, errors, data };
 }
 
-async function addSellerTemplate({ pool, user, body }) {
+async function addSellerTemplate({ pool, user, body, file }) {
   if (!user) throw new Error('AUTH_REQUIRED');
 
-  const ownerUserId = user.id || user.user_id || user.userId;
+  const ownerUserId = getOwnerUserId(user);
   if (!ownerUserId) throw new Error('USER_ID_MISSING');
 
-  const v = validateAddTemplateForm(body);
+  const v = validateAddOrEditTemplateForm(body);
   if (!v.ok) {
     const err = new Error('VALIDATION_FAILED');
     err.code = 'VALIDATION_FAILED';
     err.details = v;
     throw err;
   }
+
+  const zipPath = file && file.path ? String(file.path) : null;
+  const zipOriginalName = file && file.originalname ? String(file.originalname) : null;
 
   const created = await repo.insertSellerTemplate({
     pool,
@@ -61,12 +69,65 @@ async function addSellerTemplate({ pool, user, body }) {
     priceBuy: v.data.priceBuy || null,
     priceRent: v.data.priceRent || null,
     status: v.data.status || 'draft',
+    zipPath,
+    zipOriginalName,
   });
 
   return { created };
 }
 
+async function listMyTemplates({ pool, user }) {
+  if (!user) throw new Error('AUTH_REQUIRED');
+
+  const ownerUserId = getOwnerUserId(user);
+  if (!ownerUserId) throw new Error('USER_ID_MISSING');
+
+  return repo.listByOwner({ pool, ownerUserId });
+}
+
+async function getMyTemplateById({ pool, user, id }) {
+  if (!user) throw new Error('AUTH_REQUIRED');
+
+  const ownerUserId = getOwnerUserId(user);
+  if (!ownerUserId) throw new Error('USER_ID_MISSING');
+
+  return repo.getSellerTemplateForOwnerById({ pool, ownerUserId, id });
+}
+
+async function updateMyTemplateStatus({ pool, user, id, status }) {
+  if (!user) throw new Error('AUTH_REQUIRED');
+
+  const ownerUserId = getOwnerUserId(user);
+  if (!ownerUserId) throw new Error('USER_ID_MISSING');
+
+  const updated = await repo.updateStatusByOwner({ pool, ownerUserId, id, status });
+  if (!updated) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { updated };
+}
+
+async function deleteMyTemplate({ pool, user, id }) {
+  if (!user) throw new Error('AUTH_REQUIRED');
+
+  const ownerUserId = getOwnerUserId(user);
+  if (!ownerUserId) throw new Error('USER_ID_MISSING');
+
+  const deleted = await repo.softDeleteByOwner({ pool, ownerUserId, id });
+  if (!deleted) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { deleted };
+}
+
 module.exports = {
-  validateAddTemplateForm,
   addSellerTemplate,
+  listMyTemplates,
+  getMyTemplateById,
+  updateMyTemplateStatus,
+  deleteMyTemplate,
 };
