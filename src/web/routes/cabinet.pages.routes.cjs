@@ -292,8 +292,11 @@ function createCabinetPagesRouter() {
         const hasSlug = Boolean(String(row.slug || '').trim());
         const hasZip = Boolean(row.zip_path);
 
-        // MVP mandatory: title + slug + zip
-        if (!hasTitle || !hasSlug || !hasZip) {
+        // MVP mandatory: title + slug + zip + (buy or rent price > 0)
+        const hasBuy = Number.isFinite(row.price_buy_cents) && row.price_buy_cents > 0;
+        const hasRent = Number.isFinite(row.price_rent_cents) && row.price_rent_cents > 0;
+
+        if (!hasTitle || !hasSlug || !hasZip || (!hasBuy && !hasRent)) {
           // per your flow: redirect to Edit if publish can't happen
           return res.redirect(`/cabinet/my-templates/${Number(id)}/edit`);
         }

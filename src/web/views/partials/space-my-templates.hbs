@@ -19,7 +19,7 @@
   {{/if}}
 
   {{!-- =========================
-        LIST (Seller View)
+        LIST (Seller View) — minimal UI
   ========================== --}}
   {{#if isMyTemplatesList}}
 
@@ -37,22 +37,6 @@
             <div class="seller-card__content">
 
               <h3 class="seller-card__title">{{title}}</h3>
-
-              <div class="seller-card__badges">
-
-                {{#if is_published}}
-                  <span class="badge badge--success">PUBLISHED</span>
-                {{else}}
-                  <span class="badge badge--muted">DRAFT</span>
-                {{/if}}
-
-                {{#if is_rent_enabled}}
-                  <span class="badge badge--kind">SALE + RENT</span>
-                {{else}}
-                  <span class="badge badge--kind">SALE</span>
-                {{/if}}
-
-              </div>
 
               <div class="seller-card__meta">
                 <div><strong>Slug:</strong> {{slug}}</div>
@@ -119,12 +103,31 @@
   ========================== --}}
   {{#if isMyTemplatesAdd}}
     <div class="cabinet__panel">
-      <div class="cabinet__panelTitle">Add Template</div>
-      <p class="cabinet__panelText">
-        Create a draft and upload template ZIP (required).
-      </p>
 
       <form class="form" method="post" action="/cabinet/my-templates/add" enctype="multipart/form-data">
+
+        <div class="form__row">
+          <div class="form__label">Status *</div>
+
+          <label class="form__radio">
+            <input type="radio" name="status" value="draft" {{#if formIsDraft}}checked{{/if}}>
+            Draft
+          </label>
+
+          <label class="form__radio">
+            <input type="radio" name="status" value="published" {{#if formIsPublished}}checked{{/if}}>
+            Published
+          </label>
+
+          <div class="form__hint">
+            Draft is visible only to you. Published is visible in the public catalog.
+          </div>
+
+          {{#if formErrors.status}}
+            <div class="form__error">{{formErrors.status}}</div>
+          {{/if}}
+        </div>
+
         <div class="form__row">
           <label class="form__label" for="title">Title *</label>
           <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
@@ -175,11 +178,8 @@
           {{/if}}
         </div>
 
-        {{!-- Draft-only on create (publish via button in List) --}}
-        <input type="hidden" name="status" value="draft" />
-
         <div class="actions">
-          <button class="button button--primary" type="submit">Upload ZIP & Create Draft</button>
+          <button class="button button--primary" type="submit">Save</button>
           <a class="button" href="/cabinet/my-templates">Cancel</a>
         </div>
       </form>
@@ -192,9 +192,6 @@
   {{#if isMyTemplatesEdit}}
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Edit Template</div>
-      <p class="cabinet__panelText">
-        Update fields. Publishing is done from the List (Publish button).
-      </p>
 
       <form class="form" method="post" action="/cabinet/my-templates/{{form.id}}/edit">
         <div class="form__row">
@@ -237,7 +234,7 @@
           </div>
         </div>
 
-        {{!-- status preserved server-side; publishing via button --}}
+        {{!-- status preserved server-side; publishing via List (button) --}}
         <input type="hidden" name="status" value="{{form.status}}" />
 
         <div class="actions">

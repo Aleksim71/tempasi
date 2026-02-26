@@ -43,6 +43,42 @@ function validateAddOrEditTemplateForm(body = {}) {
   return { ok: Object.keys(errors).length === 0, errors, data };
 }
 
+function throwValidationFailed(details) {
+  const err = new Error('VALIDATION_FAILED');
+  err.code = 'VALIDATION_FAILED';
+  err.details = details;
+  throw err;
+}
+
+function validatePublishRequirements({ data, zipPath }) {
+  // Publishing must be enforced server-side (UI can be bypassed).
+  // MVP rules for "published":
+  // - ZIP is required
+  // - At least one of Buy/Rent price must be set AND > 0
+  const errors = {};
+
+  const hasZip = Boolean(zipPath);
+
+  const buyCents = repo.toCentsOrNull(data.priceBuy);
+  const rentCents = repo.toCentsOrNull(data.priceRent);
+
+  const hasBuy = Number.isFinite(buyCents) && buyCents > 0;
+  const hasRent = Number.isFinite(rentCents) && rentCents > 0;
+
+  if (!hasZip) {
+    errors.templateZip = 'ZIP file is required to publish.';
+  }
+
+  if (!hasBuy && !hasRent) {
+    // Put the same message on both fields so the UI can highlight either/both.
+    const msg = 'To publish, set Buy and/or Rent price (must be > 0).';
+    errors.priceBuy = msg;
+    errors.priceRent = msg;
+  }
+
+  return { ok: Object.keys(errors).length === 0, errors };
+}
+
 async function addSellerTemplate({ pool, user, body, file }) {
   if (!user) throw new Error('AUTH_REQUIRED');
 
@@ -51,14 +87,20 @@ async function addSellerTemplate({ pool, user, body, file }) {
 
   const v = validateAddOrEditTemplateForm(body);
   if (!v.ok) {
-    const err = new Error('VALIDATION_FAILED');
-    err.code = 'VALIDATION_FAILED';
-    err.details = v;
-    throw err;
+    throwValidationFailed(v);
   }
 
   const zipPath = file && file.path ? String(file.path) : null;
   const zipOriginalName = file && file.originalname ? String(file.originalname) : null;
+
+  // ✅ If user asked to publish immediately — enforce publish requirements.
+  if (v.data.status === 'published') {
+    const pv = validatePublishRequirements({ data: v.data, zipPath });
+    if (!pv.ok) {
+      const merged = { ...v, ok: false, errors: { ...v.errors, ...pv.errors } };
+      throwValidationFailed(merged);
+    }
+  }
 
   const created = await repo.insertSellerTemplate({
     pool,
