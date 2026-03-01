@@ -77,8 +77,18 @@ function toStr(v) {
   return v == null ? '' : String(v);
 }
 
+function toEpochMs(v) {
+  if (!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  const n = d.getTime();
+  return Number.isFinite(n) ? String(n) : '';
+}
+
 function normalizeTemplate(raw, slugFromUrl) {
   const meta = raw?.meta || raw?.metadata || raw?.data || raw || {};
+
+  // id can be numeric or string; keep string for URLs
+  const id = toStr(raw?.id || meta?.id).trim();
 
   const slug = toStr(raw?.slug || raw?.id || meta?.slug || slugFromUrl).trim();
   const title =
@@ -88,11 +98,23 @@ function normalizeTemplate(raw, slugFromUrl) {
     toStr(meta?.name).trim() ||
     slug;
 
-  // Preview
+  // ✅ Preview (MVP): deterministic local path
+  // Stored at: public/uploads/previews/<templateId>.png
+  // Served as: /uploads/previews/<templateId>.png
+  // Add cache-buster so after ZIP replace browser doesn't keep old image
+  const updatedAt =
+    raw?.updated_at || raw?.updatedAt || meta?.updated_at || meta?.updatedAt || null;
+  const v = toEpochMs(updatedAt);
+
+  const deterministicPreview = id
+    ? `/uploads/previews/${encodeURIComponent(id)}.png${v ? `?v=${v}` : ''}`
+    : '';
+
   const previewUrl =
     toStr(raw?.previewUrl).trim() ||
     toStr(meta?.previewUrl).trim() ||
     toStr(meta?.preview).trim() ||
+    deterministicPreview ||
     `/t/${slug}/preview.png`;
 
   // Demo: allow explicit demoUrl, fallback to internal live preview endpoint
@@ -156,6 +178,7 @@ function normalizeTemplate(raw, slugFromUrl) {
       : null;
 
   return {
+    id,
     slug,
     title,
     category,
@@ -192,7 +215,10 @@ export function createTemplatesRouter() {
       const db = req.app.locals?.db;
 
       // Some repo functions accept db; some don't.
-      const templates = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
+      const rawList = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
+
+      // ✅ normalize previewUrl + compat fields for cards
+      const templates = (rawList || []).map((t) => normalizeTemplate(t));
 
       res.render('pages/templates/index', {
         title: 'Templates — Tempasi',

@@ -19,7 +19,7 @@
   {{/if}}
 
   {{!-- =========================
-        LIST (Seller View) — minimal UI
+        LIST
   ========================== --}}
   {{#if isMyTemplatesList}}
 
@@ -31,11 +31,14 @@
           <div class="seller-card">
 
             <div class="seller-card__preview">
-              <img src="/img/preview-placeholder.svg" alt="{{title}}">
+              <img
+                src="/uploads/previews/{{id}}.png?t={{updated_ts}}"
+                alt="{{title}}"
+                onerror="this.onerror=null;this.src='/img/preview-placeholder.svg';"
+              >
             </div>
 
             <div class="seller-card__content">
-
               <h3 class="seller-card__title">{{title}}</h3>
 
               <div class="seller-card__meta">
@@ -103,29 +106,22 @@
   ========================== --}}
   {{#if isMyTemplatesAdd}}
     <div class="cabinet__panel">
+      <div class="cabinet__panelTitle">Add Template</div>
 
       <form class="form" method="post" action="/cabinet/my-templates/add" enctype="multipart/form-data">
-
         <div class="form__row">
-          <div class="form__label">Status *</div>
-
-          <label class="form__radio">
-            <input type="radio" name="status" value="draft" {{#if formIsDraft}}checked{{/if}}>
-            Draft
-          </label>
-
-          <label class="form__radio">
-            <input type="radio" name="status" value="published" {{#if formIsPublished}}checked{{/if}}>
-            Published
-          </label>
-
-          <div class="form__hint">
-            Draft is visible only to you. Published is visible in the public catalog.
+          <label class="form__label" for="status">Status *</label>
+          <div class="form__radios">
+            <label class="radio">
+              <input type="radio" name="status" value="draft" {{#if formIsDraft}}checked{{/if}}>
+              Draft
+            </label>
+            <label class="radio">
+              <input type="radio" name="status" value="published" {{#if formIsPublished}}checked{{/if}}>
+              Published
+            </label>
           </div>
-
-          {{#if formErrors.status}}
-            <div class="form__error">{{formErrors.status}}</div>
-          {{/if}}
+          <div class="form__hint">Draft is visible only to you. Published is visible in the public catalog.</div>
         </div>
 
         <div class="form__row">
@@ -168,18 +164,20 @@
           </div>
         </div>
 
-        {{!-- Upload ZIP (required) --}}
         <div class="form__row">
           <label class="form__label" for="templateZip">Upload ZIP *</label>
           <input class="input" id="templateZip" name="templateZip" type="file" accept=".zip" />
-          <div class="form__hint">Only .zip files allowed</div>
+          <div class="form__hint">
+            ZIP requirements (MVP): must include <code>preview/preview.png</code> (or <code>preview.png</code>) and entry page
+            <code>index.html</code> (or <code>src/index.html</code>).
+          </div>
           {{#if formErrors.templateZip}}
             <div class="form__error">{{formErrors.templateZip}}</div>
           {{/if}}
         </div>
 
         <div class="actions">
-          <button class="button button--primary" type="submit">Save</button>
+          <button class="button button--primary" type="submit">Add</button>
           <a class="button" href="/cabinet/my-templates">Cancel</a>
         </div>
       </form>
@@ -193,7 +191,7 @@
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Edit Template</div>
 
-      <form class="form" method="post" action="/cabinet/my-templates/{{form.id}}/edit">
+      <form class="form" method="post" action="/cabinet/my-templates/{{form.id}}/edit" enctype="multipart/form-data">
         <div class="form__row">
           <label class="form__label" for="title">Title *</label>
           <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
@@ -234,8 +232,21 @@
           </div>
         </div>
 
-        {{!-- status preserved server-side; publishing via List (button) --}}
-        <input type="hidden" name="status" value="{{form.status}}" />
+        <div class="form__row">
+          <div class="form__hint"><strong>Current ZIP:</strong> {{form.currentZipName}}</div>
+        </div>
+
+        <div class="form__row">
+          <label class="form__label" for="templateZip">Replace ZIP (optional)</label>
+          <input class="input" id="templateZip" name="templateZip" type="file" accept=".zip" />
+          <div class="form__hint">
+            ZIP requirements (MVP): must include <code>preview/preview.png</code> (or <code>preview.png</code>) and entry page
+            <code>index.html</code> (or <code>src/index.html</code>).
+          </div>
+          {{#if formErrors.templateZip}}
+            <div class="form__error">{{formErrors.templateZip}}</div>
+          {{/if}}
+        </div>
 
         <div class="actions">
           <button class="button button--primary" type="submit">Update</button>

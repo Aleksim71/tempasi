@@ -1,5 +1,4 @@
 // src/server/catalog/templates.repo.js
-import path from 'node:path';
 
 function toStr(v) {
   return v == null ? '' : String(v);
@@ -22,12 +21,6 @@ function normalizeDealType(row) {
   return '';
 }
 
-function buildPreviewUrl(slug) {
-  // Keep existing public preview convention: /t/<slug>/preview.png
-  // Later we can generate and store preview path in DB.
-  return `/t/${slug}/preview.png`;
-}
-
 function requireDb(db) {
   // Routes pass req.app.locals.db
   // We expect pg Pool-like object with .query(sql, params)
@@ -37,6 +30,14 @@ function requireDb(db) {
     );
   }
   return db;
+}
+
+function buildPreviewUrlById(id, updatedAt) {
+  // Public previews are stored locally in: public/uploads/previews/<id>.png
+  // Serve via: /uploads/previews/<id>.png
+  // Add cache-buster to avoid stale image in browser.
+  const v = updatedAt ? Date.parse(updatedAt) : Date.now();
+  return `/uploads/previews/${id}.png?t=${Number.isFinite(v) ? v : Date.now()}`;
 }
 
 /**
@@ -56,7 +57,8 @@ export async function selectTemplatesForCatalog(db) {
       price_rent_cents,
       status,
       zip_path,
-      created_at
+      created_at,
+      updated_at
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
@@ -69,15 +71,21 @@ export async function selectTemplatesForCatalog(db) {
     const buyAmount = centsToMoney(r.price_buy_cents);
     const rentAmount = centsToMoney(r.price_rent_cents);
 
+    const id = r.id; // IMPORTANT: keep numeric DB id for previews
+    const slug = toStr(r.slug || '').trim();
+
     return {
-      // routes normalizeTemplate understands slug/id/title/name/meta/prices/zipReady/hasZip
-      id: toStr(r.slug || r.id),
-      slug: toStr(r.slug || ''),
-      title: toStr(r.title || '').trim() || toStr(r.slug || ''),
-      name: toStr(r.title || '').trim() || toStr(r.slug || ''),
+      // ✅ real DB id
+      id,
+
+      slug,
+      title: toStr(r.title || '').trim() || slug,
+      name: toStr(r.title || '').trim() || slug,
 
       description: toStr(r.short_description || ''),
-      previewUrl: buildPreviewUrl(r.slug),
+
+      // ✅ preview by numeric id
+      previewUrl: buildPreviewUrlById(id, r.updated_at || r.created_at),
 
       // “zipReady/hasZip” flags
       zipReady: Boolean(r.zip_path),
@@ -118,7 +126,8 @@ export async function getTemplateBySlug(db, slug) {
       price_rent_cents,
       status,
       zip_path,
-      created_at
+      created_at,
+      updated_at
     FROM seller_templates
     WHERE slug = $1
       AND status = 'published'
@@ -133,14 +142,20 @@ export async function getTemplateBySlug(db, slug) {
   const buyAmount = centsToMoney(r.price_buy_cents);
   const rentAmount = centsToMoney(r.price_rent_cents);
 
+  const id = r.id;
+  const slugStr = toStr(r.slug || '').trim();
+
   return {
-    id: toStr(r.slug || r.id),
-    slug: toStr(r.slug || ''),
-    title: toStr(r.title || '').trim() || toStr(r.slug || ''),
-    name: toStr(r.title || '').trim() || toStr(r.slug || ''),
+    id, // ✅ real DB id
+    slug: slugStr,
+    title: toStr(r.title || '').trim() || slugStr,
+    name: toStr(r.title || '').trim() || slugStr,
 
     description: toStr(r.short_description || ''),
-    previewUrl: buildPreviewUrl(r.slug),
+
+    // ✅ preview by numeric id
+    previewUrl: buildPreviewUrlById(id, r.updated_at || r.created_at),
+
     demoUrl: '',
 
     zipReady: Boolean(r.zip_path),
