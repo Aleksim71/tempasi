@@ -58,6 +58,13 @@ export async function selectTemplatesForCatalog(db) {
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      )
     ORDER BY created_at DESC, id DESC
     LIMIT 200
   `;

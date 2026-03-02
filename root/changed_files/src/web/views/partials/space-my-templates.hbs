@@ -286,18 +286,18 @@
               </th>
               <th>
                 <a
-                  href="/cabinet/my-templates/analytics?sort=first_order_at&dir={{#if (and (eq workspaceData.analytics.sort 'first_order_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'first_order_at')}}is-active{{/if}}"
+                  href="/cabinet/my-templates/analytics?sort=created_at&dir={{#if (and (eq workspaceData.analytics.sort 'created_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'created_at')}}is-active{{/if}}"
                 >
                   First order
                 </a>
               </th>
               <th>
                 <a
-                  href="/cabinet/my-templates/analytics?sort=sold_at&dir={{#if (and (eq workspaceData.analytics.sort 'sold_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'sold_at')}}is-active{{/if}}"
+                  href="/cabinet/my-templates/analytics?sort=last_order_at&dir={{#if (and (eq workspaceData.analytics.sort 'last_order_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'last_order_at')}}is-active{{/if}}"
                 >
-                  Sold at
+                  Last order
                 </a>
               </th>
               <th>
@@ -341,10 +341,10 @@
                   <div class="mt-analytics__templateTitle">{{title}}</div>
                   <div class="mt-analytics__templateSlug">{{slug}}</div>
                 </td>
-                <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
+                <td>{{#if created_at}}{{created_at}}{{else}}—{{/if}}</td>
+                <td>{{#if deleted_at}}{{deleted_at}}{{else}}—{{/if}}</td>
+                <td>{{#if first_order_at}}{{first_order_at}}{{else}}—{{/if}}</td>
+                <td>{{#if last_order_at}}{{last_order_at}}{{else}}—{{/if}}</td>
                 <td>{{rent_count}}</td>
                 <td>{{rent_revenue_eur}}</td>
                 <td>{{buy_revenue_eur}}</td>

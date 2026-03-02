@@ -54,6 +54,19 @@ async function findOrderByProviderSessionId(providerSessionId) {
   return rows[0] || null;
 }
 
+async function hasPaidBuyByTemplateSlug(templateSlug) {
+  const sql = `
+    SELECT 1
+    FROM orders
+    WHERE template_slug = $1
+      AND deal_type = 'BUY'
+      AND status = 'paid'
+    LIMIT 1
+  `;
+  const { rows } = await pool.query(sql, [templateSlug]);
+  return Boolean(rows && rows[0]);
+}
+
 async function markOrderPaid({ orderId, providerPaymentIntentId = null }) {
   const sql = `
     UPDATE orders
@@ -63,8 +76,20 @@ async function markOrderPaid({ orderId, providerPaymentIntentId = null }) {
     WHERE id = $1 AND status <> 'paid'
     RETURNING *
   `;
-  const { rows } = await pool.query(sql, [orderId, providerPaymentIntentId]);
-  return rows[0] || null;
+  try {
+    const { rows } = await pool.query(sql, [orderId, providerPaymentIntentId]);
+    return rows[0] || null;
+  } catch (e) {
+    const isUniqueViolation = e && e.code === '23505';
+    const constraint = e && (e.constraint || e.detail || '');
+    if (isUniqueViolation && String(constraint).includes('orders_unique_paid_buy_per_template')) {
+      const err = new Error('Template already sold (exclusive sale).');
+      err.status = 409;
+      err.code = 'TEMPLATE_ALREADY_SOLD';
+      throw err;
+    }
+    throw e;
+  }
 }
 
 async function markOrderFailed({ orderId }) {
@@ -83,6 +108,7 @@ module.exports = {
   createOrder,
   attachProviderSession,
   findOrderByProviderSessionId,
+  hasPaidBuyByTemplateSlug,
   markOrderPaid,
   markOrderFailed,
 };

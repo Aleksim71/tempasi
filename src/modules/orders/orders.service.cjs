@@ -44,6 +44,16 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
 
   const p = normalizeBuyPayload(payload);
 
+  if (String(p.dealType).toUpperCase() === 'BUY') {
+    const alreadySold = await ordersRepo.hasPaidBuyByTemplateSlug(templateSlug);
+    if (alreadySold) {
+      const err = new Error('Template already sold (exclusive sale).');
+      err.status = 409;
+      err.code = 'TEMPLATE_ALREADY_SOLD';
+      throw err;
+    }
+  }
+
   // IMPORTANT: repo should accept license; if it doesn't, we'll adjust repo next.
   const order = await ordersRepo.createOrder({
     userId,

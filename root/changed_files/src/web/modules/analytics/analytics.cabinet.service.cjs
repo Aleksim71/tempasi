@@ -6,11 +6,9 @@ const { getPool } = require('../../../../scripts/db.pool.cjs');
 const SORT_WHITELIST = new Set([
   'created_at',
   'deleted_at',
-  'first_order_at',
   'rent_count',
   'rent_revenue',
   'buy_revenue',
-  'sold_at',
   'total_revenue',
   'last_order_at',
 ]);
@@ -34,16 +32,12 @@ function getOrderByClause(sort, dir) {
       return `st.created_at ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'deleted_at':
       return `st.deleted_at ${orderDir} NULLS LAST, st.id ${orderDir}`;
-    case 'first_order_at':
-      return `first_order_at ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'rent_count':
       return `rent_count ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'rent_revenue':
       return `rent_revenue_cents ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'buy_revenue':
       return `buy_revenue_cents ${orderDir} NULLS LAST, st.id ${orderDir}`;
-    case 'sold_at':
-      return `sold_at ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'last_order_at':
       return `last_order_at ${orderDir} NULLS LAST, st.id ${orderDir}`;
     case 'total_revenue':
@@ -57,13 +51,6 @@ function formatMoneyEurFromCents(cents) {
   const n = Number(cents);
   if (!Number.isFinite(n)) return '0.00';
   return (n / 100).toFixed(2);
-}
-
-function formatIsoDateYYYYMMDD(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
 }
 
 async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
@@ -86,7 +73,6 @@ async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
       COUNT(*) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'RENT') AS rent_count,
       COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'RENT'), 0) AS rent_revenue_cents,
       COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'BUY'), 0) AS buy_revenue_cents,
-      MAX(o.created_at) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'BUY') AS sold_at,
       COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid'), 0) AS total_revenue_cents
     FROM seller_templates st
     LEFT JOIN orders o
@@ -98,45 +84,24 @@ async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
 
   const { rows } = await pool.query(sql, [ownerUserId]);
 
-  return (rows || []).map((r) => {
-    const createdAt = r.created_at || null;
-    const deletedAt = r.deleted_at || null;
-    const firstOrderAt = r.first_order_at || null;
-    const lastOrderAt = r.last_order_at || null;
-    const soldAt = r.sold_at || null;
-
-    const rentRevenueCents = Number(r.rent_revenue_cents || 0);
-    const buyRevenueCents = Number(r.buy_revenue_cents || 0);
-    const totalRevenueCents = Number(r.total_revenue_cents || 0);
-
-    return {
-      title: r.title,
-      slug: r.slug,
-
-      created_at: createdAt,
-      deleted_at: deletedAt,
-      first_order_at: firstOrderAt,
-      last_order_at: lastOrderAt,
-      sold_at: soldAt,
-
-      created_at_str: formatIsoDateYYYYMMDD(createdAt),
-      deleted_at_str: formatIsoDateYYYYMMDD(deletedAt),
-      first_order_at_str: formatIsoDateYYYYMMDD(firstOrderAt),
-      last_order_at_str: formatIsoDateYYYYMMDD(lastOrderAt),
-      sold_at_str: formatIsoDateYYYYMMDD(soldAt),
-
-      rent_count: Number(r.rent_count || 0),
-      rent_revenue_cents: rentRevenueCents,
-      buy_revenue_cents: buyRevenueCents,
-      total_revenue_cents: totalRevenueCents,
-
-      rent_revenue_eur: formatMoneyEurFromCents(rentRevenueCents),
-      buy_revenue_eur: formatMoneyEurFromCents(buyRevenueCents),
-      total_revenue_eur: formatMoneyEurFromCents(totalRevenueCents),
-    };
-  });
+  return (rows || []).map((r) => ({
+    title: r.title,
+    slug: r.slug,
+    created_at: r.created_at || null,
+    deleted_at: r.deleted_at || null,
+    first_order_at: r.first_order_at || null,
+    last_order_at: r.last_order_at || null,
+    rent_count: Number(r.rent_count || 0),
+    rent_revenue_cents: Number(r.rent_revenue_cents || 0),
+    buy_revenue_cents: Number(r.buy_revenue_cents || 0),
+    total_revenue_cents: Number(r.total_revenue_cents || 0),
+    rent_revenue_eur: formatMoneyEurFromCents(r.rent_revenue_cents),
+    buy_revenue_eur: formatMoneyEurFromCents(r.buy_revenue_cents),
+    total_revenue_eur: formatMoneyEurFromCents(r.total_revenue_cents),
+  }));
 }
 
 module.exports = {
   getMyTemplatesAnalytics,
 };
+
