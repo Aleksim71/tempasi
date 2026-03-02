@@ -66,6 +66,95 @@ function formatIsoDateYYYYMMDD(value) {
   return d.toISOString().slice(0, 10);
 }
 
+async function getMyTemplatesKpis({ ownerUserId }) {
+  if (!ownerUserId) {
+    throw new Error('OWNER_USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+
+  const sql = `
+    SELECT
+      COUNT(*) FILTER (WHERE st.deleted_at IS NULL) AS active_templates,
+      COUNT(*) FILTER (
+        WHERE EXISTS (
+          SELECT 1
+          FROM orders o
+          WHERE o.template_slug = st.slug
+            AND o.deal_type = 'BUY'
+            AND o.status = 'paid'
+        )
+      ) AS sold_templates,
+      COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'RENT'), 0) AS rent_revenue_cents,
+      COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid'), 0) AS total_revenue_cents
+    FROM seller_templates st
+    LEFT JOIN orders o
+      ON o.template_slug = st.slug
+    WHERE st.owner_user_id = $1
+  `;
+
+  const { rows } = await pool.query(sql, [ownerUserId]);
+  const r = rows && rows[0] ? rows[0] : {};
+
+  const rentRevenueCents = Number(r.rent_revenue_cents || 0);
+  const totalRevenueCents = Number(r.total_revenue_cents || 0);
+
+  return {
+    activeTemplates: Number(r.active_templates || 0),
+    soldTemplates: Number(r.sold_templates || 0),
+    rentRevenueCents,
+    totalRevenueCents,
+    rentRevenueEur: formatMoneyEurFromCents(rentRevenueCents),
+    totalRevenueEur: formatMoneyEurFromCents(totalRevenueCents),
+  };
+}
+
+async function getMyTemplatesRevenueSeries30d({ ownerUserId }) {
+  if (!ownerUserId) {
+    throw new Error('OWNER_USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+
+  const sql = `
+    WITH days AS (
+      SELECT generate_series(
+        current_date - interval '29 days',
+        current_date,
+        interval '1 day'
+      )::date AS day
+    )
+    SELECT
+      d.day,
+      COALESCE(
+        SUM(o.amount_cents) FILTER (
+          WHERE o.status = 'paid' AND st.owner_user_id IS NOT NULL
+        ),
+        0
+      ) AS revenue_cents
+    FROM days d
+    LEFT JOIN orders o
+      ON o.created_at::date = d.day
+    LEFT JOIN seller_templates st
+      ON st.slug = o.template_slug
+      AND st.owner_user_id = $1
+    GROUP BY d.day
+    ORDER BY d.day ASC
+  `;
+
+  const { rows } = await pool.query(sql, [ownerUserId]);
+  return (rows || []).map((r) => {
+    const day = r.day ? formatIsoDateYYYYMMDD(r.day) : null;
+    const revenueCents = Number(r.revenue_cents || 0);
+    return {
+      day,
+      revenueCents,
+      revenueEurStr: formatMoneyEurFromCents(revenueCents),
+      label: day ? day.slice(5) : '',
+    };
+  });
+}
+
 async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
   if (!ownerUserId) {
     throw new Error('OWNER_USER_ID_REQUIRED');
@@ -139,4 +228,6 @@ async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
 
 module.exports = {
   getMyTemplatesAnalytics,
+  getMyTemplatesKpis,
+  getMyTemplatesRevenueSeries30d,
 };

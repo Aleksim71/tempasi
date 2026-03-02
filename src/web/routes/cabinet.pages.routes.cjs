@@ -478,14 +478,64 @@ function createCabinetPagesRouter() {
 
     const sort = String(req.query.sort || '').trim() || undefined;
     const dir = String(req.query.dir || '').trim() || undefined;
+    const tab = String(req.query.tab || '').trim() === 'table' ? 'table' : 'overview';
 
     let workspaceError = null;
     let rows = [];
+    let kpis = null;
+    let revenueSeries30d = [];
+    const sortNormalized = sort || 'total_revenue';
+    const dirNormalized = dir === 'asc' ? 'asc' : 'desc';
 
-    analyticsService
-      .getMyTemplatesAnalytics({ ownerUserId, sort, dir })
-      .then((result) => {
-        rows = Array.isArray(result) ? result : [];
+    const baseQuery = `sort=${encodeURIComponent(sortNormalized)}&dir=${encodeURIComponent(
+      dirNormalized,
+    )}`;
+    const tabs = [
+      {
+        key: 'overview',
+        label: 'Overview',
+        href: `/cabinet/my-templates/analytics?tab=overview&${baseQuery}`,
+        isActive: tab === 'overview',
+      },
+      {
+        key: 'table',
+        label: 'Table',
+        href: `/cabinet/my-templates/analytics?tab=table&${baseQuery}`,
+        isActive: tab === 'table',
+      },
+    ];
+
+    const columns = [
+      { key: 'template', label: 'Template', sortable: false },
+      { key: 'created_at', label: 'Created', sortable: true },
+      { key: 'deleted_at', label: 'Archived', sortable: true },
+      { key: 'first_order_at', label: 'First order', sortable: true },
+      { key: 'sold_at', label: 'Sold at', sortable: true },
+      { key: 'rent_count', label: 'Rent count', sortable: true },
+      { key: 'rent_revenue', label: 'Rent revenue', sortable: true },
+      { key: 'buy_revenue', label: 'Buy revenue', sortable: true },
+      { key: 'total_revenue', label: 'Total revenue', sortable: true },
+    ].map((c) => {
+      const isActive = c.sortable && sortNormalized === c.key;
+      const nextDir = isActive && dirNormalized === 'desc' ? 'asc' : 'desc';
+      const arrow = isActive ? (dirNormalized === 'asc' ? '↑' : '↓') : '';
+      const href = c.sortable
+        ? `/cabinet/my-templates/analytics?tab=table&sort=${encodeURIComponent(
+            c.key,
+          )}&dir=${encodeURIComponent(nextDir)}`
+        : '';
+      return { ...c, isActive, nextDir, arrow, href };
+    });
+
+    Promise.all([
+      analyticsService.getMyTemplatesAnalytics({ ownerUserId, sort, dir }),
+      analyticsService.getMyTemplatesKpis({ ownerUserId }),
+      analyticsService.getMyTemplatesRevenueSeries30d({ ownerUserId }),
+    ])
+      .then(([items, kpiResult, series]) => {
+        rows = Array.isArray(items) ? items : [];
+        kpis = kpiResult || null;
+        revenueSeries30d = Array.isArray(series) ? series : [];
       })
       .catch((e) => {
         workspaceError = e;
@@ -502,8 +552,19 @@ function createCabinetPagesRouter() {
           workspaceData: {
             analytics: {
               items: rows,
-              sort: sort || 'total_revenue',
-              dir: dir === 'asc' ? 'asc' : 'desc',
+              sort: sortNormalized,
+              dir: dirNormalized,
+              tab,
+              tabs,
+              columns,
+              kpis: kpis || {
+                activeTemplates: 0,
+                soldTemplates: 0,
+                rentRevenueEur: '0.00',
+                totalRevenueEur: '0.00',
+              },
+              revenueSeries30d,
+              revenueSeries30dJson: JSON.stringify(revenueSeries30d || []),
             },
           },
           workspaceError,

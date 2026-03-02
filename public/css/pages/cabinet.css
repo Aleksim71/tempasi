@@ -52,6 +52,10 @@
   overflow-x: auto;
 }
 
+.mt-tabs--sub {
+  margin-top: 10px;
+}
+
 .mt-tab {
   display: inline-flex;
   align-items: center;
@@ -142,6 +146,11 @@
   text-align: left;
 }
 
+.mt-analytics th.is-active {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .mt-analytics__sortLink {
   color: inherit;
   text-decoration: none;
@@ -160,4 +169,53 @@
 .mt-analytics__templateSlug {
   font-size: 12px;
   opacity: 0.8;
+}
+
+.mt-analytics__arrow {
+  margin-left: 4px;
+}
+
+.mt-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+
+.mt-kpi {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-kpi__label {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.mt-kpi__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .mt-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mt-chart {
+  margin: 12px 0 18px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-chart__title {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 8px;
 }

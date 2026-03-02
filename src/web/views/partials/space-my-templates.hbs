@@ -270,101 +270,165 @@
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Analytics</div>
 
-      {{#if workspaceData.analytics.items.length}}
-        <table class="mt-analytics">
-          <thead>
-            <tr>
-              <th>Template</th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=created_at&dir={{#if (and (eq workspaceData.analytics.sort 'created_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'created_at')}}is-active{{/if}}"
-                >
-                  Created
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=deleted_at&dir={{#if (and (eq workspaceData.analytics.sort 'deleted_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'deleted_at')}}is-active{{/if}}"
-                >
-                  Archived
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=first_order_at&dir={{#if (and (eq workspaceData.analytics.sort 'first_order_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'first_order_at')}}is-active{{/if}}"
-                >
-                  First order
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=sold_at&dir={{#if (and (eq workspaceData.analytics.sort 'sold_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'sold_at')}}is-active{{/if}}"
-                >
-                  Sold at
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=rent_count&dir={{#if (and (eq workspaceData.analytics.sort 'rent_count') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'rent_count')}}is-active{{/if}}"
-                >
-                  Rent count
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=rent_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'rent_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'rent_revenue')}}is-active{{/if}}"
-                >
-                  Rent revenue
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=buy_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'buy_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'buy_revenue')}}is-active{{/if}}"
-                >
-                  Buy revenue
-                </a>
-              </th>
-              <th>
-                <a
-                  href="/cabinet/my-templates/analytics?sort=total_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'total_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
-                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'total_revenue')}}is-active{{/if}}"
-                >
-                  Total revenue
-                </a>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {{#each workspaceData.analytics.items}}
+      <nav class="mt-tabs mt-tabs--sub" aria-label="Analytics tabs">
+        {{#each workspaceData.analytics.tabs}}
+          <a
+            class="mt-tab {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <div class="mt-kpis">
+        <div class="mt-kpi">
+          <div class="mt-kpi__label">Active templates</div>
+          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
+        </div>
+        <div class="mt-kpi">
+          <div class="mt-kpi__label">Sold templates</div>
+          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.soldTemplates}}</div>
+        </div>
+        <div class="mt-kpi">
+          <div class="mt-kpi__label">Rent revenue</div>
+          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.rentRevenueEur}}</div>
+        </div>
+        <div class="mt-kpi">
+          <div class="mt-kpi__label">Total revenue</div>
+          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.totalRevenueEur}}</div>
+        </div>
+      </div>
+
+      <div class="mt-chart">
+        <div class="mt-chart__title">Revenue (last 30 days)</div>
+        <canvas id="rev30dChart" width="720" height="220" aria-label="Revenue last 30 days"></canvas>
+        <script type="application/json" id="rev30dData">{{{workspaceData.analytics.revenueSeries30dJson}}}</script>
+      </div>
+
+      {{#if (eq workspaceData.analytics.tab "table")}}
+        {{#if workspaceData.analytics.items.length}}
+          <table class="mt-analytics">
+            <thead>
               <tr>
-                <td>
-                  <div class="mt-analytics__templateTitle">{{title}}</div>
-                  <div class="mt-analytics__templateSlug">{{slug}}</div>
-                </td>
-                <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
-                <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
-                <td>{{rent_count}}</td>
-                <td>{{rent_revenue_eur}}</td>
-                <td>{{buy_revenue_eur}}</td>
-                <td>{{total_revenue_eur}}</td>
+                {{#each workspaceData.analytics.columns}}
+                  <th class="{{#if isActive}}is-active{{/if}}">
+                    {{#if sortable}}
+                      <a
+                        href="{{href}}"
+                        class="mt-analytics__sortLink {{#if isActive}}is-active{{/if}}"
+                      >
+                        {{label}}{{#if arrow}}<span class="mt-analytics__arrow">{{arrow}}</span>{{/if}}
+                      </a>
+                    {{else}}
+                      {{label}}
+                    {{/if}}
+                  </th>
+                {{/each}}
               </tr>
-            {{/each}}
-          </tbody>
-        </table>
-      {{else}}
-        <p class="cabinet__panelText">
-          No data yet. When customers buy or rent your templates, analytics will appear here.
-        </p>
+            </thead>
+            <tbody>
+              {{#each workspaceData.analytics.items}}
+                <tr>
+                  <td>
+                    <div class="mt-analytics__templateTitle">{{title}}</div>
+                    <div class="mt-analytics__templateSlug">{{slug}}</div>
+                  </td>
+                  <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
+                  <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
+                  <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
+                  <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
+                  <td>{{rent_count}}</td>
+                  <td>{{rent_revenue_eur}}</td>
+                  <td>{{buy_revenue_eur}}</td>
+                  <td>{{total_revenue_eur}}</td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        {{else}}
+          <p class="cabinet__panelText">
+            No data yet. When customers buy or rent your templates, analytics will appear here.
+          </p>
+        {{/if}}
       {{/if}}
+
+      <script>
+        (function () {
+          const dataEl = document.getElementById('rev30dData');
+          const canvas = document.getElementById('rev30dChart');
+          if (!dataEl || !canvas) return;
+
+          let series = [];
+          try {
+            series = JSON.parse(dataEl.textContent || '[]');
+          } catch (e) {
+            return;
+          }
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          const w = canvas.width;
+          const h = canvas.height;
+          const padding = 24;
+
+          ctx.clearRect(0, 0, w, h);
+
+          const values = series.map((d) => Number(d.revenueCents || 0));
+          const max = values.length ? Math.max(...values) : 0;
+
+          // Axes baseline
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+          ctx.beginPath();
+          ctx.moveTo(padding, h - padding);
+          ctx.lineTo(w - padding, h - padding);
+          ctx.stroke();
+
+          if (max === 0) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '12px system-ui, sans-serif';
+            ctx.fillText('No revenue in last 30 days', padding, padding);
+            return;
+          }
+
+          const xStep = (w - padding * 2) / (series.length - 1 || 1);
+          const yScale = (h - padding * 2) / max;
+
+          ctx.strokeStyle = 'rgba(120, 200, 255, 0.9)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+
+          series.forEach((d, i) => {
+            const x = padding + i * xStep;
+            const y = h - padding - Number(d.revenueCents || 0) * yScale;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(120, 200, 255, 0.9)';
+          series.forEach((d, i) => {
+            const x = padding + i * xStep;
+            const y = h - padding - Number(d.revenueCents || 0) * yScale;
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // X labels (every ~6 points)
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.font = '10px system-ui, sans-serif';
+          const step = Math.max(1, Math.floor(series.length / 5));
+          series.forEach((d, i) => {
+            if (i % step !== 0 && i !== series.length - 1) return;
+            const x = padding + i * xStep;
+            const label = d.label || '';
+            ctx.fillText(label, x - 8, h - 8);
+          });
+        })();
+      </script>
     </div>
   {{/if}}
 

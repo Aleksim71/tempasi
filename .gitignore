@@ -67,3 +67,4 @@ seed-*.zip
 # public build artifacts
 public/icons/
 public/js/
+artifacts/

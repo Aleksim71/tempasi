@@ -190,6 +190,11 @@ fi
   echo "  - status: $SMOKE_STATUS"
   echo "  - log   : artifacts/tmp/url_smoke_check.txt (included in OUTBOX)"
   echo
+  if [[ -f "$TMP_ARTIFACTS_DIR/entitlements_test_fix_note.txt" ]]; then
+    echo "Notes:"
+    cat "$TMP_ARTIFACTS_DIR/entitlements_test_fix_note.txt"
+    echo
+  fi
   echo "Note:"
   echo "  - If tests fail due to missing env (e.g., DATABASE_URL_TEST),"
   echo "    configure the environment and re-run tests manually:"
@@ -233,6 +238,31 @@ fi
 EXCLUSIVE_SALE_UI_CHECK="$TMP_ARTIFACTS_DIR/exclusive_sale_ui_check.txt"
 if [[ -f "$EXCLUSIVE_SALE_UI_CHECK" ]]; then
   cp "$EXCLUSIVE_SALE_UI_CHECK" "$ROOT_OUT/notes/exclusive_sale_ui_check.txt"
+fi
+
+ANALYTICS_KPI_CHECK="$TMP_ARTIFACTS_DIR/analytics_kpi_check.txt"
+if [[ -f "$ANALYTICS_KPI_CHECK" ]]; then
+  cp "$ANALYTICS_KPI_CHECK" "$ROOT_OUT/notes/analytics_kpi_check.txt"
+fi
+
+ANALYTICS_SORT_UI_CHECK="$TMP_ARTIFACTS_DIR/analytics_sort_ui_check.txt"
+if [[ -f "$ANALYTICS_SORT_UI_CHECK" ]]; then
+  cp "$ANALYTICS_SORT_UI_CHECK" "$ROOT_OUT/notes/analytics_sort_ui_check.txt"
+fi
+
+ANALYTICS_CHART_30D_CHECK="$TMP_ARTIFACTS_DIR/analytics_chart_30d_check.txt"
+if [[ -f "$ANALYTICS_CHART_30D_CHECK" ]]; then
+  cp "$ANALYTICS_CHART_30D_CHECK" "$ROOT_OUT/notes/analytics_chart_30d_check.txt"
+fi
+
+ANALYTICS_ROUTE_FIX_CHECK="$TMP_ARTIFACTS_DIR/analytics_route_fix_check.txt"
+if [[ -f "$ANALYTICS_ROUTE_FIX_CHECK" ]]; then
+  cp "$ANALYTICS_ROUTE_FIX_CHECK" "$ROOT_OUT/notes/analytics_route_fix_check.txt"
+fi
+
+ANALYTICS_SUBTABS_STYLE_CHECK="$TMP_ARTIFACTS_DIR/analytics_subtabs_style_check.txt"
+if [[ -f "$ANALYTICS_SUBTABS_STYLE_CHECK" ]]; then
+  cp "$ANALYTICS_SUBTABS_STYLE_CHECK" "$ROOT_OUT/notes/analytics_subtabs_style_check.txt"
 fi
 
 # Build OUTBOX.zip with only root/ inside
