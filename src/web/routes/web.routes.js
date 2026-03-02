@@ -2,26 +2,29 @@
 import { Router } from 'express';
 
 import { createTemplatesRouter } from './templates.routes.js';
-import { createPreviewProxyRouter } from './preview-proxy.routes.js';
+import { createTemplatePreviewRouter } from './templatePreview.routes.js';
 import { createAuthPagesRouter } from './auth.pages.routes.js';
 
 export function createWebRouter() {
   const router = Router();
 
-  // ✅ ВАЖНО: прокси должен быть РАНЬШЕ страниц,
-  // чтобы картинки/превью не ловили 404 от Express
-  router.use(createPreviewProxyRouter());
-
-  // Auth pages (GET /login, GET /register, etc.)
-  // Должно стоять ДО /templates, чтобы страницы авторизации
-  // не пересекались с шаблонами/маршрутами каталога.
-  router.use(createAuthPagesRouter());
-
-  // UX: корень сайта → каталог
+  // Home -> templates catalog
   router.get('/', (_req, res) => res.redirect(302, '/templates'));
 
-  // /templates (catalog + template pages)
+  // Auth pages (SSR): /login, /logout, etc.
+  // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
+  // so we mount it at root.
+  router.use('/', createAuthPagesRouter());
+
+  // Public preview endpoint (backward-compatible with /t/<slug>/preview.png)
+  router.use('/t', createTemplatePreviewRouter());
+
+  // Public catalog + details
   router.use('/templates', createTemplatesRouter());
 
   return router;
 }
+
+export default {
+  createWebRouter,
+};

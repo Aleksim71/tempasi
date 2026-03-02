@@ -22,8 +22,6 @@ function normalizeDealType(row) {
 }
 
 function requireDb(db) {
-  // Routes pass req.app.locals.db
-  // We expect pg Pool-like object with .query(sql, params)
   if (!db || typeof db.query !== 'function') {
     throw new Error(
       'DB_NOT_CONFIGURED: req.app.locals.db must be a pg Pool-like object with .query()',
@@ -32,12 +30,10 @@ function requireDb(db) {
   return db;
 }
 
-function buildPreviewUrlById(id, updatedAt) {
-  // Public previews are stored locally in: public/uploads/previews/<id>.png
-  // Serve via: /uploads/previews/<id>.png
-  // Add cache-buster to avoid stale image in browser.
-  const v = updatedAt ? Date.parse(updatedAt) : Date.now();
-  return `/uploads/previews/${id}.png?t=${Number.isFinite(v) ? v : Date.now()}`;
+function buildPreviewUrlBySlug(slug) {
+  // ✅ canonical public endpoint
+  // It will serve cached preview or lazily generate it from ZIP.
+  return `/t/${encodeURIComponent(slug)}/preview.png`;
 }
 
 /**
@@ -71,11 +67,11 @@ export async function selectTemplatesForCatalog(db) {
     const buyAmount = centsToMoney(r.price_buy_cents);
     const rentAmount = centsToMoney(r.price_rent_cents);
 
-    const id = r.id; // IMPORTANT: keep numeric DB id for previews
+    const id = r.id;
     const slug = toStr(r.slug || '').trim();
 
     return {
-      // ✅ real DB id
+      // keep real DB id (useful for other logic)
       id,
 
       slug,
@@ -84,23 +80,19 @@ export async function selectTemplatesForCatalog(db) {
 
       description: toStr(r.short_description || ''),
 
-      // ✅ preview by numeric id
-      previewUrl: buildPreviewUrlById(id, r.updated_at || r.created_at),
+      // ✅ ALWAYS go through /t/<slug>/preview.png
+      previewUrl: buildPreviewUrlBySlug(slug),
 
-      // “zipReady/hasZip” flags
       zipReady: Boolean(r.zip_path),
       hasZip: Boolean(r.zip_path),
 
-      // for existing UI filters/labels (optional)
       dealType: normalizeDealType(r),
 
-      // Contract-like prices object supported by templates.routes.js normalizeTemplate()
       prices: {
         buy: buyAmount !== null ? { amount: buyAmount, currency: 'EUR' } : null,
         rent: rentAmount !== null ? { amount: rentAmount, currency: 'EUR', period: 'mo' } : null,
       },
 
-      // keep legacy fields some pages may still use
       price: buyAmount !== null ? buyAmount : '',
       currency: 'EUR',
     };
@@ -146,15 +138,15 @@ export async function getTemplateBySlug(db, slug) {
   const slugStr = toStr(r.slug || '').trim();
 
   return {
-    id, // ✅ real DB id
+    id,
     slug: slugStr,
     title: toStr(r.title || '').trim() || slugStr,
     name: toStr(r.title || '').trim() || slugStr,
 
     description: toStr(r.short_description || ''),
 
-    // ✅ preview by numeric id
-    previewUrl: buildPreviewUrlById(id, r.updated_at || r.created_at),
+    // ✅ ALWAYS go through /t/<slug>/preview.png
+    previewUrl: buildPreviewUrlBySlug(slugStr),
 
     demoUrl: '',
 
