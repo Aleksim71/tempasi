@@ -6,6 +6,9 @@
       <h1 class="tpl-title">{{template.title}}</h1>
 
       <div class="tpl-meta">
+        {{#if template.isSold}}
+          <span class="badge badge--sold">SOLD</span>
+        {{/if}}
         {{#if template.category}}
           <span class="tpl-muted">{{template.category}}</span>
         {{/if}}
@@ -58,17 +61,21 @@
 
         <div class="tpl-ctaRow">
           {{!-- BUY --}}
-          <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
-            <input type="hidden" name="dealType" value="BUY" />
-            {{#if template.prices.buy}}
-              <input type="hidden" name="amount" value="{{template.prices.buy.amount}}" />
-              <input type="hidden" name="currency" value="{{template.prices.buy.currency}}" />
-            {{else}}
-              <input type="hidden" name="amount" value="{{template.price}}" />
-              <input type="hidden" name="currency" value="EUR" />
-            {{/if}}
-            <button type="submit" class="c-btn">Buy</button>
-          </form>
+          {{#if template.isSold}}
+            <button type="button" class="c-btn" disabled>Already sold</button>
+          {{else}}
+            <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
+              <input type="hidden" name="dealType" value="BUY" />
+              {{#if template.prices.buy}}
+                <input type="hidden" name="amount" value="{{template.prices.buy.amount}}" />
+                <input type="hidden" name="currency" value="{{template.prices.buy.currency}}" />
+              {{else}}
+                <input type="hidden" name="amount" value="{{template.price}}" />
+                <input type="hidden" name="currency" value="EUR" />
+              {{/if}}
+              <button type="submit" class="c-btn">Buy</button>
+            </form>
+          {{/if}}
 
           {{!-- RENT (если есть в контракте) --}}
           {{#if template.prices.rent}}

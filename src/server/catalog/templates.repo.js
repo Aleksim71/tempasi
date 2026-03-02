@@ -54,7 +54,21 @@ export async function selectTemplatesForCatalog(db) {
       status,
       zip_path,
       created_at,
-      updated_at
+      updated_at,
+      EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      ) AS is_sold,
+      (
+        SELECT MAX(o.created_at)
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      ) AS sold_at
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
@@ -102,6 +116,8 @@ export async function selectTemplatesForCatalog(db) {
 
       price: buyAmount !== null ? buyAmount : '',
       currency: 'EUR',
+      isSold: Boolean(r.is_sold),
+      soldAt: r.sold_at || null,
     };
   });
 }
@@ -126,7 +142,21 @@ export async function getTemplateBySlug(db, slug) {
       status,
       zip_path,
       created_at,
-      updated_at
+      updated_at,
+      EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      ) AS is_sold,
+      (
+        SELECT MAX(o.created_at)
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      ) AS sold_at
     FROM seller_templates
     WHERE slug = $1
       AND status = 'published'
@@ -169,6 +199,8 @@ export async function getTemplateBySlug(db, slug) {
 
     price: buyAmount !== null ? buyAmount : '',
     currency: 'EUR',
+    isSold: Boolean(r.is_sold),
+    soldAt: r.sold_at || null,
   };
 }
 

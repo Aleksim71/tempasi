@@ -26,6 +26,7 @@
     </a>
 
     <div class="tcard__badges" aria-label="Template badges">
+      {{#if t.isSold}}<span class="tbadge tbadge--sold">SOLD</span>{{/if}}
       {{#if t.is_new}}<span class="tbadge tbadge--new">NEW</span>{{/if}}
       {{#if t.is_popular}}<span class="tbadge tbadge--popular">POPULAR</span>{{/if}}
       {{#if t.is_exclusive}}<span class="tbadge tbadge--exclusive">EXCLUSIVE</span>{{/if}}

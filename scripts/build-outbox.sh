@@ -230,6 +230,11 @@ if [[ -f "$EXCLUSIVE_SALE_DB_GUARD_CHECK" ]]; then
   cp "$EXCLUSIVE_SALE_DB_GUARD_CHECK" "$ROOT_OUT/notes/exclusive_sale_db_guard_check.txt"
 fi
 
+EXCLUSIVE_SALE_UI_CHECK="$TMP_ARTIFACTS_DIR/exclusive_sale_ui_check.txt"
+if [[ -f "$EXCLUSIVE_SALE_UI_CHECK" ]]; then
+  cp "$EXCLUSIVE_SALE_UI_CHECK" "$ROOT_OUT/notes/exclusive_sale_ui_check.txt"
+fi
+
 # Build OUTBOX.zip with only root/ inside
 OUTBOX_ZIP="$ROOT_DIR/$OUTBOX_DIR/OUTBOX.zip"
 rm -f "$OUTBOX_ZIP"

@@ -28,6 +28,13 @@ function formatMoneyEurFromCents(cents) {
   return (n / 100).toFixed(2);
 }
 
+function formatDateYMD(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
 // =========================
 // Upload (ZIP) — MVP
 // =========================
@@ -116,6 +123,9 @@ function createCabinetPagesRouter() {
         slug: r.slug,
         status: r.status,
         is_published: r.status === 'published',
+        is_sold: Number(r.sold_count || 0) > 0,
+        sold_at: r.sold_at || null,
+        sold_at_str: r.sold_at ? formatDateYMD(r.sold_at) : '',
         price_buy_eur:
           r.price_buy_cents !== null && r.price_buy_cents !== undefined
             ? formatMoneyEurFromCents(r.price_buy_cents)

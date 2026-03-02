@@ -177,6 +177,14 @@ function normalizeTemplate(raw, slugFromUrl) {
       ? meta.features
       : null;
 
+  const isSold =
+    Boolean(raw?.isSold) ||
+    Boolean(raw?.is_sold) ||
+    Boolean(meta?.isSold) ||
+    Boolean(meta?.is_sold);
+
+  const soldAt = raw?.soldAt || raw?.sold_at || meta?.soldAt || meta?.sold_at || null;
+
   return {
     id,
     slug,
@@ -200,6 +208,8 @@ function normalizeTemplate(raw, slugFromUrl) {
     price: legacyPrice !== '' ? legacyPrice : buy ? buy.amount : '',
     currency: legacyCurrency,
     hasZip,
+    isSold,
+    soldAt,
   };
 }
 

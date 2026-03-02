@@ -51,6 +51,13 @@
                 {{#if price_rent_eur}}
                   <div><strong>Rent:</strong> €{{price_rent_eur}}</div>
                 {{/if}}
+
+                {{#if is_sold}}
+                  <div><strong>Status:</strong> <span class="badge badge--sold">SOLD</span></div>
+                  {{#if sold_at_str}}
+                    <div><strong>Sold at:</strong> {{sold_at_str}}</div>
+                  {{/if}}
+                {{/if}}
               </div>
 
               <div class="seller-card__actions">

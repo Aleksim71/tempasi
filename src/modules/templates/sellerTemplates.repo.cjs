@@ -135,24 +135,43 @@ async function listByOwner({ pool, ownerUserId }) {
 
   const q = `
     SELECT
-      id,
-      owner_user_id,
-      title,
-      slug,
-      short_description,
-      price_buy_cents,
-      price_rent_cents,
-      status,
-      zip_path,
-      zip_original_name,
-      zip_uploaded_at,
-      deleted_at,
-      created_at,
-      updated_at
-    FROM seller_templates
-    WHERE owner_user_id = $1
-      AND deleted_at IS NULL
-    ORDER BY created_at DESC
+      st.id,
+      st.owner_user_id,
+      st.title,
+      st.slug,
+      st.short_description,
+      st.price_buy_cents,
+      st.price_rent_cents,
+      st.status,
+      st.zip_path,
+      st.zip_original_name,
+      st.zip_uploaded_at,
+      st.deleted_at,
+      st.created_at,
+      st.updated_at,
+      MAX(o.created_at) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'BUY') AS sold_at,
+      COUNT(*) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'BUY')::int AS sold_count
+    FROM seller_templates st
+    LEFT JOIN orders o
+      ON o.template_slug = st.slug
+    WHERE st.owner_user_id = $1
+      AND st.deleted_at IS NULL
+    GROUP BY
+      st.id,
+      st.owner_user_id,
+      st.title,
+      st.slug,
+      st.short_description,
+      st.price_buy_cents,
+      st.price_rent_cents,
+      st.status,
+      st.zip_path,
+      st.zip_original_name,
+      st.zip_uploaded_at,
+      st.deleted_at,
+      st.created_at,
+      st.updated_at
+    ORDER BY st.created_at DESC
   `;
 
   const { rows } = await pool.query(q, [ownerUserId]);
