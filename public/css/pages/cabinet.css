@@ -127,3 +127,37 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
+.mt-analytics {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.mt-analytics th,
+.mt-analytics td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.mt-analytics__sortLink {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.mt-analytics__sortLink.is-active {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.mt-analytics__templateTitle {
+  font-weight: 600;
+}
+
+.mt-analytics__templateSlug {
+  font-size: 12px;
+  opacity: 0.8;
+}

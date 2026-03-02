@@ -262,9 +262,102 @@
   {{#if isMyTemplatesAnalytics}}
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Analytics</div>
-      <p class="cabinet__panelText">
-        Sales / rentals analytics will be wired later (MVP).
-      </p>
+
+      {{#if workspaceData.analytics.items.length}}
+        <table class="mt-analytics">
+          <thead>
+            <tr>
+              <th>Template</th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=created_at&dir={{#if (and (eq workspaceData.analytics.sort 'created_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'created_at')}}is-active{{/if}}"
+                >
+                  Created
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=deleted_at&dir={{#if (and (eq workspaceData.analytics.sort 'deleted_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'deleted_at')}}is-active{{/if}}"
+                >
+                  Archived
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=first_order_at&dir={{#if (and (eq workspaceData.analytics.sort 'first_order_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'first_order_at')}}is-active{{/if}}"
+                >
+                  First order
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=last_order_at&dir={{#if (and (eq workspaceData.analytics.sort 'last_order_at') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'last_order_at')}}is-active{{/if}}"
+                >
+                  Last order
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=rent_count&dir={{#if (and (eq workspaceData.analytics.sort 'rent_count') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'rent_count')}}is-active{{/if}}"
+                >
+                  Rent count
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=rent_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'rent_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'rent_revenue')}}is-active{{/if}}"
+                >
+                  Rent revenue
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=buy_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'buy_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'buy_revenue')}}is-active{{/if}}"
+                >
+                  Buy revenue
+                </a>
+              </th>
+              <th>
+                <a
+                  href="/cabinet/my-templates/analytics?sort=total_revenue&dir={{#if (and (eq workspaceData.analytics.sort 'total_revenue') (eq workspaceData.analytics.dir 'desc'))}}asc{{else}}desc{{/if}}"
+                  class="mt-analytics__sortLink {{#if (eq workspaceData.analytics.sort 'total_revenue')}}is-active{{/if}}"
+                >
+                  Total revenue
+                </a>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each workspaceData.analytics.items}}
+              <tr>
+                <td>
+                  <div class="mt-analytics__templateTitle">{{title}}</div>
+                  <div class="mt-analytics__templateSlug">{{slug}}</div>
+                </td>
+                <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
+                <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
+                <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
+                <td>{{#if last_order_at_str}}{{last_order_at_str}}{{else}}—{{/if}}</td>
+                <td>{{rent_count}}</td>
+                <td>{{rent_revenue_eur}}</td>
+                <td>{{buy_revenue_eur}}</td>
+                <td>{{total_revenue_eur}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      {{else}}
+        <p class="cabinet__panelText">
+          No data yet. When customers buy or rent your templates, analytics will appear here.
+        </p>
+      {{/if}}
     </div>
   {{/if}}
 

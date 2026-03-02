@@ -8,6 +8,7 @@ const multer = require('multer');
 
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
+const analyticsService = require('../modules/analytics/analytics.cabinet.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 
@@ -462,22 +463,47 @@ function createCabinetPagesRouter() {
   });
 
   router.get('/my-templates/analytics', (req, res) => {
-    res.render('pages/cabinet', {
-      activeSpace: 'my-templates',
+    const ownerUserId = getUserId(req);
+    if (!ownerUserId) return res.redirect('/login');
 
-      isMyTemplatesList: false,
-      isMyTemplatesAdd: false,
-      isMyTemplatesAnalytics: true,
-      isMyTemplatesEdit: false,
+    const sort = String(req.query.sort || '').trim() || undefined;
+    const dir = String(req.query.dir || '').trim() || undefined;
 
-      workspaceData: { items: [] },
-      workspaceError: null,
+    let workspaceError = null;
+    let rows = [];
 
-      pageTitle: 'Analytics',
-      pageSubtitle: 'Sales, rentals and performance.',
-      panelTitle: 'Analytics',
-      panelText: '',
-    });
+    analyticsService
+      .getMyTemplatesAnalytics({ ownerUserId, sort, dir })
+      .then((result) => {
+        rows = Array.isArray(result) ? result : [];
+      })
+      .catch((e) => {
+        workspaceError = e;
+      })
+      .finally(() => {
+        res.render('pages/cabinet', {
+          activeSpace: 'my-templates',
+
+          isMyTemplatesList: false,
+          isMyTemplatesAdd: false,
+          isMyTemplatesAnalytics: true,
+          isMyTemplatesEdit: false,
+
+          workspaceData: {
+            analytics: {
+              items: rows,
+              sort: sort || 'total_revenue',
+              dir: dir === 'asc' ? 'asc' : 'desc',
+            },
+          },
+          workspaceError,
+
+          pageTitle: 'Analytics',
+          pageSubtitle: 'Sales, rentals and performance.',
+          panelTitle: 'Analytics',
+          panelText: '',
+        });
+      });
   });
 
   // =========================

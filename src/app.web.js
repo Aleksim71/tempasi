@@ -161,6 +161,15 @@ export function createWebApp({ db }) {
 
   // Helpers
   hbs.registerHelper('eq', (a, b) => a === b);
+  hbs.registerHelper('and', (...args) => {
+    const values = args.slice(0, -1);
+    return values.every(Boolean);
+  });
+  hbs.registerHelper('or', (...args) => {
+    const values = args.slice(0, -1);
+    return values.some(Boolean);
+  });
+  hbs.registerHelper('not', (value) => !value);
 
   // Header state middleware
   app.use((req, res, next) => {
