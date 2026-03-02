@@ -9,7 +9,6 @@
       rentPrice / rent_price
       buyPrice / price
     - Uses /preview/{{slug}} for Demo (matches current app)
-    - No eq helper required
 --}}
 
 <article class="tcard" data-template-slug="{{t.slug}}">
@@ -19,7 +18,7 @@
 
       <img
         class="tcard__img"
-        src="{{#if t.preview_url}}{{t.preview_url}}{{else if t.previewUrl}}{{t.previewUrl}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else}}/t/{{t.slug}}/preview.png{{/if}}"
+        src="{{#if t.previewUrl}}{{t.previewUrl}}{{else if t.preview_url}}{{t.preview_url}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else if t.id}}/uploads/previews/{{t.id}}.png{{else}}/t/{{t.slug}}/preview.png{{/if}}"
         alt="Preview {{t.slug}}"
         loading="lazy"
         onerror="try{const box=this.closest('.tcard__media'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"

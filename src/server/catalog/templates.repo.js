@@ -1,5 +1,4 @@
 // src/server/catalog/templates.repo.js
-import path from 'node:path';
 
 function toStr(v) {
   return v == null ? '' : String(v);
@@ -22,21 +21,19 @@ function normalizeDealType(row) {
   return '';
 }
 
-function buildPreviewUrl(slug) {
-  // Keep existing public preview convention: /t/<slug>/preview.png
-  // Later we can generate and store preview path in DB.
-  return `/t/${slug}/preview.png`;
-}
-
 function requireDb(db) {
-  // Routes pass req.app.locals.db
-  // We expect pg Pool-like object with .query(sql, params)
   if (!db || typeof db.query !== 'function') {
     throw new Error(
       'DB_NOT_CONFIGURED: req.app.locals.db must be a pg Pool-like object with .query()',
     );
   }
   return db;
+}
+
+function buildPreviewUrlBySlug(slug) {
+  // ✅ canonical public endpoint
+  // It will serve cached preview or lazily generate it from ZIP.
+  return `/t/${encodeURIComponent(slug)}/preview.png`;
 }
 
 /**
@@ -56,7 +53,8 @@ export async function selectTemplatesForCatalog(db) {
       price_rent_cents,
       status,
       zip_path,
-      created_at
+      created_at,
+      updated_at
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
@@ -69,30 +67,32 @@ export async function selectTemplatesForCatalog(db) {
     const buyAmount = centsToMoney(r.price_buy_cents);
     const rentAmount = centsToMoney(r.price_rent_cents);
 
+    const id = r.id;
+    const slug = toStr(r.slug || '').trim();
+
     return {
-      // routes normalizeTemplate understands slug/id/title/name/meta/prices/zipReady/hasZip
-      id: toStr(r.slug || r.id),
-      slug: toStr(r.slug || ''),
-      title: toStr(r.title || '').trim() || toStr(r.slug || ''),
-      name: toStr(r.title || '').trim() || toStr(r.slug || ''),
+      // keep real DB id (useful for other logic)
+      id,
+
+      slug,
+      title: toStr(r.title || '').trim() || slug,
+      name: toStr(r.title || '').trim() || slug,
 
       description: toStr(r.short_description || ''),
-      previewUrl: buildPreviewUrl(r.slug),
 
-      // “zipReady/hasZip” flags
+      // ✅ ALWAYS go through /t/<slug>/preview.png
+      previewUrl: buildPreviewUrlBySlug(slug),
+
       zipReady: Boolean(r.zip_path),
       hasZip: Boolean(r.zip_path),
 
-      // for existing UI filters/labels (optional)
       dealType: normalizeDealType(r),
 
-      // Contract-like prices object supported by templates.routes.js normalizeTemplate()
       prices: {
         buy: buyAmount !== null ? { amount: buyAmount, currency: 'EUR' } : null,
         rent: rentAmount !== null ? { amount: rentAmount, currency: 'EUR', period: 'mo' } : null,
       },
 
-      // keep legacy fields some pages may still use
       price: buyAmount !== null ? buyAmount : '',
       currency: 'EUR',
     };
@@ -118,7 +118,8 @@ export async function getTemplateBySlug(db, slug) {
       price_rent_cents,
       status,
       zip_path,
-      created_at
+      created_at,
+      updated_at
     FROM seller_templates
     WHERE slug = $1
       AND status = 'published'
@@ -133,14 +134,20 @@ export async function getTemplateBySlug(db, slug) {
   const buyAmount = centsToMoney(r.price_buy_cents);
   const rentAmount = centsToMoney(r.price_rent_cents);
 
+  const id = r.id;
+  const slugStr = toStr(r.slug || '').trim();
+
   return {
-    id: toStr(r.slug || r.id),
-    slug: toStr(r.slug || ''),
-    title: toStr(r.title || '').trim() || toStr(r.slug || ''),
-    name: toStr(r.title || '').trim() || toStr(r.slug || ''),
+    id,
+    slug: slugStr,
+    title: toStr(r.title || '').trim() || slugStr,
+    name: toStr(r.title || '').trim() || slugStr,
 
     description: toStr(r.short_description || ''),
-    previewUrl: buildPreviewUrl(r.slug),
+
+    // ✅ ALWAYS go through /t/<slug>/preview.png
+    previewUrl: buildPreviewUrlBySlug(slugStr),
+
     demoUrl: '',
 
     zipReady: Boolean(r.zip_path),

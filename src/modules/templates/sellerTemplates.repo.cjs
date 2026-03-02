@@ -57,8 +57,6 @@ async function insertSellerTemplate({
   const price_buy_cents = toCentsOrNull(priceBuy);
   const price_rent_cents = toCentsOrNull(priceRent);
 
-  // IMPORTANT:
-  // Explicit cast for $8 fixes: "could not determine data type of parameter $8"
   const q = `
     INSERT INTO seller_templates
       (
@@ -129,7 +127,7 @@ async function insertSellerTemplate({
 }
 
 // ------------------------------------------------------------
-// LIST (Owner-safe) — NEW NAME: listByOwner
+// LIST (Owner-safe) — canonical name: listByOwner
 // ------------------------------------------------------------
 async function listByOwner({ pool, ownerUserId }) {
   if (!pool) throw new Error('DB_POOL_REQUIRED');
@@ -161,15 +159,13 @@ async function listByOwner({ pool, ownerUserId }) {
   return rows;
 }
 
-// ------------------------------------------------------------
-// Backward-compat alias (старое имя, чтобы ничего не ломать)
-// ------------------------------------------------------------
+// backward-compat alias
 async function listSellerTemplatesForOwner({ pool, ownerUserId }) {
   return listByOwner({ pool, ownerUserId });
 }
 
 // ------------------------------------------------------------
-// GET ONE (Owner-safe) — используется download/edit/delete
+// GET ONE (Owner-safe)
 // ------------------------------------------------------------
 async function getSellerTemplateForOwnerById({ pool, ownerUserId, id }) {
   if (!pool) throw new Error('DB_POOL_REQUIRED');
@@ -201,6 +197,129 @@ async function getSellerTemplateForOwnerById({ pool, ownerUserId, id }) {
 
   const { rows } = await pool.query(q, [ownerUserId, id]);
   return rows[0] || null;
+}
+
+// ------------------------------------------------------------
+// UPDATE fields (+ optional ZIP) (Owner-safe)
+// ------------------------------------------------------------
+async function updateSellerTemplateByOwner({
+  pool,
+  ownerUserId,
+  id,
+  title,
+  slug,
+  shortDescription,
+  priceBuy,
+  priceRent,
+  zipPath, // optional
+  zipOriginalName, // optional
+}) {
+  if (!pool) throw new Error('DB_POOL_REQUIRED');
+  if (!ownerUserId) throw new Error('OWNER_USER_ID_REQUIRED');
+  if (!id) throw new Error('ID_REQUIRED');
+
+  assertNonEmptyString(title, 'TITLE');
+
+  const normSlug = normalizeSlug(slug);
+  assertNonEmptyString(normSlug, 'SLUG');
+
+  const price_buy_cents = toCentsOrNull(priceBuy);
+  const price_rent_cents = toCentsOrNull(priceRent);
+
+  // If zipPath is provided (even null), update zip meta.
+  // If zipPath is undefined => do not touch ZIP columns.
+  const withZip = zipPath !== undefined;
+
+  const q = withZip
+    ? `
+      UPDATE seller_templates
+      SET
+        title = $1,
+        slug = $2,
+        short_description = $3,
+        price_buy_cents = $4,
+        price_rent_cents = $5,
+        zip_path = $6::text,
+        zip_original_name = $7::text,
+        zip_uploaded_at = CASE WHEN $6::text IS NULL THEN NULL ELSE NOW() END,
+        updated_at = NOW()
+      WHERE id = $8
+        AND owner_user_id = $9
+        AND deleted_at IS NULL
+      RETURNING
+        id,
+        owner_user_id,
+        title,
+        slug,
+        short_description,
+        price_buy_cents,
+        price_rent_cents,
+        status,
+        zip_path,
+        zip_original_name,
+        zip_uploaded_at,
+        updated_at
+    `
+    : `
+      UPDATE seller_templates
+      SET
+        title = $1,
+        slug = $2,
+        short_description = $3,
+        price_buy_cents = $4,
+        price_rent_cents = $5,
+        updated_at = NOW()
+      WHERE id = $6
+        AND owner_user_id = $7
+        AND deleted_at IS NULL
+      RETURNING
+        id,
+        owner_user_id,
+        title,
+        slug,
+        short_description,
+        price_buy_cents,
+        price_rent_cents,
+        status,
+        zip_path,
+        zip_original_name,
+        zip_uploaded_at,
+        updated_at
+    `;
+
+  const params = withZip
+    ? [
+        title.trim(),
+        normSlug,
+        shortDescription ? String(shortDescription).trim() : null,
+        price_buy_cents,
+        price_rent_cents,
+        zipPath === undefined ? null : zipPath,
+        zipOriginalName === undefined ? null : zipOriginalName,
+        id,
+        ownerUserId,
+      ]
+    : [
+        title.trim(),
+        normSlug,
+        shortDescription ? String(shortDescription).trim() : null,
+        price_buy_cents,
+        price_rent_cents,
+        id,
+        ownerUserId,
+      ];
+
+  try {
+    const { rows } = await pool.query(q, params);
+    return rows[0] || null;
+  } catch (e) {
+    if (e && e.code === '23505') {
+      const err = new Error('SLUG_TAKEN');
+      err.code = 'SLUG_TAKEN';
+      throw err;
+    }
+    throw e;
+  }
 }
 
 // ------------------------------------------------------------
@@ -251,16 +370,17 @@ async function softDeleteByOwner({ pool, ownerUserId, id }) {
 module.exports = {
   insertSellerTemplate,
 
-  // new canonical name
+  // list
   listByOwner,
-
-  // old compatibility name
   listSellerTemplatesForOwner,
 
+  // get/update
   getSellerTemplateForOwnerById,
+  updateSellerTemplateByOwner,
   updateStatusByOwner,
   softDeleteByOwner,
 
+  // utils
   normalizeSlug,
   toCentsOrNull,
 };

@@ -6,11 +6,9 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
-// Seller templates service + repo
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
 
-// Canonical pool getter (routes/ -> web/ -> src/ -> project root)
 const { getPool } = require('../../../scripts/db.pool.cjs');
 
 function requireAuthPage(req, res, next) {
@@ -32,11 +30,6 @@ function formatMoneyEurFromCents(cents) {
 // =========================
 // Upload (ZIP) — MVP
 // =========================
-
-// IMPORTANT:
-// - If TEMPLATE_UPLOAD_DIR is set, we REQUIRE it to exist (e.g., sshfs mount).
-//   We do NOT silently fallback to local storage — that would hide infra issues.
-// - If TEMPLATE_UPLOAD_DIR is NOT set, we use local ./uploads/templates and create it.
 
 let UPLOAD_DIR;
 const configuredUploadDir = process.env.TEMPLATE_UPLOAD_DIR;
@@ -60,7 +53,6 @@ if (configuredUploadDir) {
   }
 }
 
-// Debug (MVP): always print effective upload directory at startup
 console.log('[UPLOAD] TEMPLATE_UPLOAD_DIR =', process.env.TEMPLATE_UPLOAD_DIR || '(not set)');
 console.log('[UPLOAD] Using UPLOAD_DIR =', UPLOAD_DIR);
 
@@ -86,36 +78,27 @@ const upload = multer({
     return cb(new Error('ONLY_ZIP_ALLOWED'));
   },
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB
+    fileSize: 50 * 1024 * 1024,
   },
 });
 
 function createCabinetPagesRouter() {
   const router = express.Router();
 
-  // Mark cabinet for layout + inject MVP metrics globally
   router.use((req, res, next) => {
     res.locals.isCabinet = true;
-
-    // Static KPI metrics (MVP)
     res.locals.metrics = {
-      today: {
-        revenue: 0,
-        invested: 0,
-      },
+      today: { revenue: 0, invested: 0 },
     };
-
     next();
   });
 
-  // Cabinet is protected
   router.use(requireAuthPage);
 
-  // Root -> seller-first workspace
   router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
 
   // =========================
-  // My Templates (seller workspace)
+  // My Templates
   // =========================
 
   router.get('/my-templates', async (req, res) => {
@@ -132,7 +115,6 @@ function createCabinetPagesRouter() {
         slug: r.slug,
         status: r.status,
         is_published: r.status === 'published',
-        is_rent_enabled: r.price_rent_cents !== null && r.price_rent_cents !== undefined,
         price_buy_eur:
           r.price_buy_cents !== null && r.price_buy_cents !== undefined
             ? formatMoneyEurFromCents(r.price_buy_cents)
@@ -141,7 +123,8 @@ function createCabinetPagesRouter() {
           r.price_rent_cents !== null && r.price_rent_cents !== undefined
             ? formatMoneyEurFromCents(r.price_rent_cents)
             : '',
-        zip_ready: Boolean(r.zip_path),
+        // for cache-busting preview on updates
+        updated_ts: r.updated_at ? new Date(r.updated_at).getTime() : Date.now(),
       }));
     } catch (e) {
       workspaceError = e;
@@ -177,7 +160,6 @@ function createCabinetPagesRouter() {
       workspaceData: { items: [] },
       workspaceError: null,
 
-      // Form state
       form: { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
       formErrors: {},
       formIsDraft: true,
@@ -218,7 +200,6 @@ function createCabinetPagesRouter() {
         file,
       });
 
-      // ✅ after successful create -> go to list
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
       if (e && e.message === 'ONLY_ZIP_ALLOWED') {
@@ -272,33 +253,11 @@ function createCabinetPagesRouter() {
     if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
 
     const nextStatus = String(req.body?.status || '').trim();
-
     if (!['draft', 'published'].includes(nextStatus)) {
       return res.status(400).send('Bad status');
     }
 
     try {
-      // Rule: publish allowed only when mandatory data is present.
-      if (nextStatus === 'published') {
-        const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
-          pool,
-          ownerUserId,
-          id: Number(id),
-        });
-
-        if (!row) return res.status(404).send('Not found');
-
-        const hasTitle = Boolean(String(row.title || '').trim());
-        const hasSlug = Boolean(String(row.slug || '').trim());
-        const hasZip = Boolean(row.zip_path);
-
-        // MVP mandatory: title + slug + zip
-        if (!hasTitle || !hasSlug || !hasZip) {
-          // per your flow: redirect to Edit if publish can't happen
-          return res.redirect(`/cabinet/my-templates/${Number(id)}/edit`);
-        }
-      }
-
       await sellerTemplatesService.updateMyTemplateStatus({
         pool,
         user: req.user,
@@ -308,12 +267,16 @@ function createCabinetPagesRouter() {
 
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
+      // If publish blocked by requirements -> redirect to edit
+      if (e && (e.code === 'PUBLISH_VALIDATION_FAILED' || e.code === 'PUBLISH_ZIP_INVALID')) {
+        return res.redirect(`/cabinet/my-templates/${Number(id)}/edit`);
+      }
       return res.status(500).send(`Status error: ${e.message}`);
     }
   });
 
   // =========================
-  // Edit (MVP)
+  // Edit (MVP) + Replace ZIP
   // =========================
   router.get('/my-templates/:id/edit', async (req, res) => {
     const pool = getPool();
@@ -351,6 +314,7 @@ function createCabinetPagesRouter() {
           ? formatMoneyEurFromCents(row.price_rent_cents)
           : '',
       status: row ? row.status : 'draft',
+      currentZipName: row ? row.zip_original_name || '' : '',
     };
 
     res.render('pages/cabinet', {
@@ -376,7 +340,7 @@ function createCabinetPagesRouter() {
     });
   });
 
-  router.post('/my-templates/:id/edit', async (req, res) => {
+  router.post('/my-templates/:id/edit', upload.single('templateZip'), async (req, res) => {
     const pool = getPool();
     const ownerUserId = getUserId(req);
     const id = String(req.params.id || '').trim();
@@ -392,18 +356,28 @@ function createCabinetPagesRouter() {
       priceBuy: String(req.body?.priceBuy || '').trim(),
       priceRent: String(req.body?.priceRent || '').trim(),
       status: String(req.body?.status || 'draft').trim(),
+      currentZipName: '',
     };
 
     let workspaceError = null;
     let formErrors = {};
 
     try {
-      // NOTE: keep your existing service call (если у тебя реализация уже есть)
+      // fetch current zip name to show in form on error
+      const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
+        pool,
+        ownerUserId,
+        id: Number(id),
+      });
+      if (!row) return res.status(404).send('Not found');
+      form.currentZipName = row.zip_original_name || '';
+
       await sellerTemplatesService.updateSellerTemplate({
         pool,
         user: req.user,
         id: Number(id),
         body: req.body,
+        file: req.file || null,
       });
 
       return res.redirect('/cabinet/my-templates');
@@ -412,6 +386,8 @@ function createCabinetPagesRouter() {
         formErrors = { ...formErrors, ...e.details.errors };
       } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
         formErrors.slug = 'This slug is already used. Choose another one.';
+      } else if (e && e.code === 'PREVIEW_NOT_PNG') {
+        workspaceError = new Error('PREVIEW_NOT_PNG');
       } else {
         workspaceError = e;
       }
@@ -441,7 +417,7 @@ function createCabinetPagesRouter() {
   });
 
   // =========================
-  // Delete (MVP soft delete)
+  // Delete
   // =========================
   router.post('/my-templates/:id/delete', async (req, res) => {
     const pool = getPool();
@@ -459,59 +435,29 @@ function createCabinetPagesRouter() {
       });
       if (!row) return res.status(404).send('Not found');
 
-      // ✅ use service (soft delete)
       await sellerTemplatesService.deleteMyTemplate({
         pool,
         user: req.user,
         id: Number(id),
       });
 
-      // Best effort: remove ZIP file from disk
+      // Best effort: remove ZIP and preview
       if (row.zip_path && fs.existsSync(row.zip_path)) {
         try {
           fs.unlinkSync(row.zip_path);
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
+      }
+
+      const previewPath = path.join(process.cwd(), 'public/uploads/previews', `${Number(id)}.png`);
+      if (fs.existsSync(previewPath)) {
+        try {
+          fs.unlinkSync(previewPath);
+        } catch (_) {}
       }
 
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
       return res.status(500).send(`Delete error: ${e.message}`);
-    }
-  });
-
-  // =========================
-  // Owner download (internal)
-  // =========================
-  router.get('/my-templates/:id/download', async (req, res) => {
-    const ownerUserId = getUserId(req);
-    const id = String(req.params.id || '').trim();
-
-    if (!ownerUserId) return res.redirect('/login');
-    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
-
-    try {
-      const pool = getPool();
-      const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
-        pool,
-        ownerUserId,
-        id: Number(id),
-      });
-
-      if (!row) return res.status(404).send('Not found');
-      if (!row.zip_path) return res.status(404).send('No ZIP uploaded');
-
-      const zipPath = row.zip_path;
-
-      if (!fs.existsSync(zipPath)) return res.status(404).send('File missing on disk');
-
-      const baseNameRaw = row.zip_original_name || `${row.slug || 'template'}.zip`;
-      const safeName = String(baseNameRaw).replace(/[^\w.\-]+/g, '_');
-
-      return res.download(zipPath, safeName);
-    } catch (e) {
-      return res.status(500).send(`Download error: ${e.message}`);
     }
   });
 
@@ -537,7 +483,6 @@ function createCabinetPagesRouter() {
   // =========================
   // Other Cabinet Spaces
   // =========================
-
   router.get('/cases', (req, res) => {
     res.render('pages/cabinet', {
       activeSpace: 'cases',
