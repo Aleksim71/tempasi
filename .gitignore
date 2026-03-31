@@ -12,8 +12,10 @@ uploads/
 # Environment files
 # ==========================
 .env
+.env.guard
 .env.*
 !.env.example
+
 
 # ==========================
 # Builds / Coverage
@@ -21,6 +23,7 @@ uploads/
 dist/
 build/
 coverage/
+tools/**/node_modules/
 
 # ==========================
 # Editors / OS
