@@ -1,10 +1,137 @@
-{{!-- src/web/views/partials/cabinet/space-cases.hbs --}}
-<div class="cabinet__workspace-title">Cases</div>
-<div class="cabinet__workspace-text">
-  Client shortlists and presentations.
-</div>
+{{!-- src/web/views/partials/space-cases.hbs --}}
+<section class="cases-shell">
+  <nav class="cases-tabs" aria-label="Cases sections">
+    {{#each workspaceData.cases.tabs}}
+      <a
+        class="cases-tab {{#if isActive}}is-active{{/if}}"
+        href="{{href}}"
+        {{#if isActive}}aria-current="page"{{/if}}
+      >
+        {{label}}
+      </a>
+    {{/each}}
+  </nav>
 
-<div class="cabinet__workspace-actions">
-  <a class="cabinet__btn" href="/cabinet/cases">Open Cases</a>
-  <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-</div>
+  {{!-- LIST --}}
+  {{#if (eq workspaceData.cases.tab "list")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">Case List</h3>
+        <p class="cases-panel__text">Open and manage client presentation spaces.</p>
+      </div>
+
+      {{#if workspaceData.cases.items.length}}
+        <div class="cases-list">
+          {{#each workspaceData.cases.items}}
+            <article class="cases-card">
+              <div class="cases-card__main">
+                <div class="cases-card__title">{{title}}</div>
+                <div class="cases-card__meta">
+                  <span>Status: {{status}}</span>
+                  <span>Templates: {{templatesCount}}</span>
+                </div>
+              </div>
+              <div class="cases-card__actions">
+                <a class="button" href="/cabinet/cases/{{id}}">Open</a>
+                <a class="button button--ghost" href="/cabinet/cases/{{id}}">Demo</a>
+                <button class="button button--ghost" type="button">Clear</button>
+                <button class="button button--ghost" type="button">Close</button>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="cases-empty">
+          <div class="cases-empty__title">No cases yet</div>
+          <div class="cases-empty__text">Create your first case to start building a client shortlist.</div>
+          <a class="button button--primary" href="/cabinet/cases?tab=create">Create case</a>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{!-- CREATE --}}
+  {{#if (eq workspaceData.cases.tab "create")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">Create Case</h3>
+        <p class="cases-panel__text">Create an empty client space and fill it later.</p>
+      </div>
+
+      <form class="form cases-create-form" method="post" action="/cabinet/cases">
+        <div class="form__row">
+          <label class="form__label" for="caseTitle">Case name</label>
+          <input class="input" id="caseTitle" name="title" type="text" placeholder="Client Alpha" />
+        </div>
+
+        <div class="actions">
+          <button class="button button--primary" type="submit">Create case</button>
+          <a class="button" href="/cabinet/cases?tab=list">Back to list</a>
+        </div>
+      </form>
+    </div>
+  {{/if}}
+
+  {{!-- RENTS --}}
+  {{#if (eq workspaceData.cases.tab "rents")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">Rents</h3>
+        <p class="cases-panel__text">Templates currently held by the user and available for case assignment.</p>
+      </div>
+
+      {{#if workspaceData.cases.rents.length}}
+        <div class="cases-rents">
+          {{#each workspaceData.cases.rents}}
+            <article class="cases-rent-card">
+              <div class="cases-rent-card__title">{{title}}</div>
+              <div class="cases-rent-card__meta">
+                <span>Type: {{source}}</span>
+                <span>Cases: {{casesCount}}</span>
+              </div>
+              <div class="cases-rent-card__actions">
+                <button class="button" type="button">Add to case(s)</button>
+                <button class="button button--ghost" type="button">Buy</button>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="cases-empty">
+          <div class="cases-empty__title">No held templates</div>
+          <div class="cases-empty__text">After rent or owner-reserve, templates will appear here.</div>
+          <a class="button button--primary" href="/templates">Browse catalog</a>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{!-- ANALYTICS --}}
+  {{#if (eq workspaceData.cases.tab "analytics")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">Analytics</h3>
+        <p class="cases-panel__text">Current state and later time-based case/rent analytics.</p>
+      </div>
+
+      <div class="cases-kpis">
+        <div class="cases-kpi">
+          <div class="cases-kpi__label">Active cases</div>
+          <div class="cases-kpi__value">{{workspaceData.cases.analytics.activeCases}}</div>
+        </div>
+        <div class="cases-kpi">
+          <div class="cases-kpi__label">Held templates</div>
+          <div class="cases-kpi__value">{{workspaceData.cases.analytics.heldTemplates}}</div>
+        </div>
+        <div class="cases-kpi">
+          <div class="cases-kpi__label">Active rent cost</div>
+          <div class="cases-kpi__value">€{{workspaceData.cases.analytics.activeRentCostEur}}</div>
+        </div>
+      </div>
+
+      <div class="cases-placeholder">
+        Deeper analytics for periods, case efficiency, and rent dynamics will be added in the next pass.
+      </div>
+    </div>
+  {{/if}}
+</section>

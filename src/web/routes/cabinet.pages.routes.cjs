@@ -583,12 +583,45 @@ function createCabinetPagesRouter() {
   // Other Cabinet Spaces
   // =========================
   router.get('/cases', (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['list', 'create', 'rents', 'analytics']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'list';
+
+    const demoCases = [
+      { id: 1, title: 'Client Alpha', status: 'open', templatesCount: 2 },
+      { id: 2, title: 'Client Beta', status: 'open', templatesCount: 0 },
+      { id: 3, title: 'Client Gamma', status: 'closed', templatesCount: 1 },
+    ];
+
+    const demoRents = [
+      { id: 101, title: 'Dentist Landing', source: 'rent', casesCount: 2 },
+      { id: 102, title: 'Agency Portfolio', source: 'owner-reserve', casesCount: 1 },
+    ];
+
     res.render('pages/cabinet', {
       activeSpace: 'cases',
       pageTitle: 'Cases',
       pageSubtitle: 'Client shortlists and presentations.',
       panelTitle: 'Cases',
       panelText: '',
+      workspaceData: {
+        cases: {
+          tab,
+          tabs: [
+            { key: 'list', label: 'List', href: '/cabinet/cases?tab=list', isActive: tab === 'list' },
+            { key: 'create', label: 'Create', href: '/cabinet/cases?tab=create', isActive: tab === 'create' },
+            { key: 'rents', label: 'Rents', href: '/cabinet/cases?tab=rents', isActive: tab === 'rents' },
+            { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: tab === 'analytics' },
+          ],
+          items: demoCases,
+          rents: demoRents,
+          analytics: {
+            activeCases: 2,
+            heldTemplates: 2,
+            activeRentCostEur: '24.00',
+          },
+        },
+      },
     });
   });
 
