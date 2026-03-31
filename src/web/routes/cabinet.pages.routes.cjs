@@ -478,7 +478,9 @@ function createCabinetPagesRouter() {
 
     const sort = String(req.query.sort || '').trim() || undefined;
     const dir = String(req.query.dir || '').trim() || undefined;
-    const tab = String(req.query.tab || '').trim() === 'table' ? 'table' : 'overview';
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['overview', 'table', 'advanced']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
 
     let workspaceError = null;
     let rows = [];

@@ -270,165 +270,214 @@
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Analytics</div>
 
-      <nav class="mt-tabs mt-tabs--sub" aria-label="Analytics tabs">
-        {{#each workspaceData.analytics.tabs}}
-          <a
-            class="mt-tab {{#if isActive}}is-active{{/if}}"
-            href="{{href}}"
-            {{#if isActive}}aria-current="page"{{/if}}
-          >
-            {{label}}
-          </a>
-        {{/each}}
+      {{!-- MVP view switch: 3 subtabs --}}
+      <nav class="mt-view-switch" aria-label="Analytics view">
+        <a
+          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "overview")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=overview"
+          {{#if (eq workspaceData.analytics.tab "overview")}}aria-current="page"{{/if}}
+        >
+          Overview
+        </a>
+
+        <a
+          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "table")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=table"
+          {{#if (eq workspaceData.analytics.tab "table")}}aria-current="page"{{/if}}
+        >
+          Table
+        </a>
+
+        <a
+          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "advanced")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=advanced"
+          {{#if (eq workspaceData.analytics.tab "advanced")}}aria-current="page"{{/if}}
+        >
+          Advanced
+        </a>
       </nav>
 
-      <div class="mt-kpis">
-        <div class="mt-kpi">
-          <div class="mt-kpi__label">Active templates</div>
-          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
-        </div>
-        <div class="mt-kpi">
-          <div class="mt-kpi__label">Sold templates</div>
-          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.soldTemplates}}</div>
-        </div>
-        <div class="mt-kpi">
-          <div class="mt-kpi__label">Rent revenue</div>
-          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.rentRevenueEur}}</div>
-        </div>
-        <div class="mt-kpi">
-          <div class="mt-kpi__label">Total revenue</div>
-          <div class="mt-kpi__value">{{workspaceData.analytics.kpis.totalRevenueEur}}</div>
-        </div>
-      </div>
+      {{!-- OVERVIEW TAB: KPIs + chart only --}}
+      {{#if (eq workspaceData.analytics.tab "overview")}}
+        <div data-analytics-tab="overview">
 
-      <div class="mt-chart">
-        <div class="mt-chart__title">Revenue (last 30 days)</div>
-        <canvas id="rev30dChart" width="720" height="220" aria-label="Revenue last 30 days"></canvas>
-        <script type="application/json" id="rev30dData">{{{workspaceData.analytics.revenueSeries30dJson}}}</script>
-      </div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Active templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Sold templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.soldTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Rent revenue</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.rentRevenueEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total revenue</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.totalRevenueEur}}</div>
+            </div>
+          </div>
 
-      {{#if (eq workspaceData.analytics.tab "table")}}
-        {{#if workspaceData.analytics.items.length}}
-          <table class="mt-analytics">
-            <thead>
-              <tr>
-                {{#each workspaceData.analytics.columns}}
-                  <th class="{{#if isActive}}is-active{{/if}}">
-                    {{#if sortable}}
-                      <a
-                        href="{{href}}"
-                        class="mt-analytics__sortLink {{#if isActive}}is-active{{/if}}"
-                      >
-                        {{label}}{{#if arrow}}<span class="mt-analytics__arrow">{{arrow}}</span>{{/if}}
-                      </a>
-                    {{else}}
-                      {{label}}
-                    {{/if}}
-                  </th>
-                {{/each}}
-              </tr>
-            </thead>
-            <tbody>
-              {{#each workspaceData.analytics.items}}
-                <tr>
-                  <td>
-                    <div class="mt-analytics__templateTitle">{{title}}</div>
-                    <div class="mt-analytics__templateSlug">{{slug}}</div>
-                  </td>
-                  <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
-                  <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
-                  <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
-                  <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
-                  <td>{{rent_count}}</td>
-                  <td>{{rent_revenue_eur}}</td>
-                  <td>{{buy_revenue_eur}}</td>
-                  <td>{{total_revenue_eur}}</td>
-                </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        {{else}}
-          <p class="cabinet__panelText">
-            No data yet. When customers buy or rent your templates, analytics will appear here.
-          </p>
-        {{/if}}
+          <div class="mt-chart">
+            <div class="mt-chart__title">Revenue (last 30 days)</div>
+            <canvas id="rev30dChart" width="720" height="220" aria-label="Revenue last 30 days"></canvas>
+            <script type="application/json" id="rev30dData">{{{workspaceData.analytics.revenueSeries30dJson}}}</script>
+          </div>
+
+          <script>
+            (function () {
+              const dataEl = document.getElementById('rev30dData');
+              const canvas = document.getElementById('rev30dChart');
+              if (!dataEl || !canvas) return;
+
+              let series = [];
+              try {
+                series = JSON.parse(dataEl.textContent || '[]');
+              } catch (e) {
+                return;
+              }
+
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+
+              const w = canvas.width;
+              const h = canvas.height;
+              const padding = 24;
+
+              ctx.clearRect(0, 0, w, h);
+
+              const values = series.map((d) => Number(d.revenueCents || 0));
+              const max = values.length ? Math.max(...values) : 0;
+
+              // Axes baseline
+              ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+              ctx.beginPath();
+              ctx.moveTo(padding, h - padding);
+              ctx.lineTo(w - padding, h - padding);
+              ctx.stroke();
+
+              if (max === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '12px system-ui, sans-serif';
+                ctx.fillText('No revenue in last 30 days', padding, padding);
+                return;
+              }
+
+              const xStep = (w - padding * 2) / (series.length - 1 || 1);
+              const yScale = (h - padding * 2) / max;
+
+              ctx.strokeStyle = 'rgba(120, 200, 255, 0.9)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+
+              series.forEach((d, i) => {
+                const x = padding + i * xStep;
+                const y = h - padding - Number(d.revenueCents || 0) * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              });
+              ctx.stroke();
+
+              ctx.fillStyle = 'rgba(120, 200, 255, 0.9)';
+              series.forEach((d, i) => {
+                const x = padding + i * xStep;
+                const y = h - padding - Number(d.revenueCents || 0) * yScale;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+              });
+
+              // X labels (every ~6 points)
+              ctx.fillStyle = 'rgba(255,255,255,0.6)';
+              ctx.font = '10px system-ui, sans-serif';
+              const step = Math.max(1, Math.floor(series.length / 5));
+              series.forEach((d, i) => {
+                if (i % step !== 0 && i !== series.length - 1) return;
+                const x = padding + i * xStep;
+                const label = d.label || '';
+                ctx.fillText(label, x - 8, h - 8);
+              });
+            })();
+          </script>
+
+        </div>
       {{/if}}
 
-      <script>
-        (function () {
-          const dataEl = document.getElementById('rev30dData');
-          const canvas = document.getElementById('rev30dChart');
-          if (!dataEl || !canvas) return;
+      {{!-- TABLE TAB --}}
+      {{#if (eq workspaceData.analytics.tab "table")}}
+        <div data-analytics-tab="table">
+          <div class="mt-analytics-wrap">
+            <table class="mt-analytics">
+              <thead>
+                <tr>
+                  {{#each workspaceData.analytics.columns}}
+                    <th class="{{#if isActive}}is-active{{/if}}">
+                      {{#if sortable}}
+                        <a
+                          href="{{href}}"
+                          class="mt-analytics__sortLink {{#if isActive}}is-active{{/if}}"
+                        >
+                          {{label}}{{#if arrow}}<span class="mt-analytics__arrow">{{arrow}}</span>{{/if}}
+                        </a>
+                      {{else}}
+                        {{label}}
+                      {{/if}}
+                    </th>
+                  {{/each}}
+                </tr>
+              </thead>
+              <tbody>
+                {{#if workspaceData.analytics.items.length}}
+                  {{#each workspaceData.analytics.items}}
+                    <tr>
+                      <td>
+                        <div class="mt-analytics__templateTitle">{{title}}</div>
+                        <div class="mt-analytics__templateSlug">{{slug}}</div>
+                      </td>
+                      <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
+                      <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
+                      <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
+                      <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
+                      <td>{{rent_count}}</td>
+                      <td>€{{rent_revenue_eur}}</td>
+                      <td>€{{buy_revenue_eur}}</td>
+                      <td>€{{total_revenue_eur}}</td>
+                    </tr>
+                  {{/each}}
+                {{else}}
+                  <tr class="mt-analytics__emptyRow">
+                    <td colspan="9" class="mt-analytics__empty">
+                    </td>
+                  </tr>
+                {{/if}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {{/if}}
 
-          let series = [];
-          try {
-            series = JSON.parse(dataEl.textContent || '[]');
-          } catch (e) {
-            return;
-          }
+      {{!-- ADVANCED TAB (MVP placeholder) --}}
+      {{#if (eq workspaceData.analytics.tab "advanced")}}
+        <div data-analytics-tab="advanced">
+          <section class="mt-advanced-placeholder">
+            <div class="mt-advanced-placeholder__eyebrow">MVP</div>
+            <h3 class="mt-advanced-placeholder__title">Advanced analytics</h3>
+            <p class="mt-advanced-placeholder__text">
+              This section is reserved for deeper seller insights. For MVP, the tab is active and ready for the next iteration.
+            </p>
 
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
+            <ul class="mt-advanced-placeholder__list">
+              <li>Conversion from rent to buy</li>
+              <li>Best-performing templates over time</li>
+              <li>Revenue trends by period</li>
+              <li>Archived vs active template performance</li>
+            </ul>
+          </section>
+        </div>
+      {{/if}}
 
-          const w = canvas.width;
-          const h = canvas.height;
-          const padding = 24;
-
-          ctx.clearRect(0, 0, w, h);
-
-          const values = series.map((d) => Number(d.revenueCents || 0));
-          const max = values.length ? Math.max(...values) : 0;
-
-          // Axes baseline
-          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-          ctx.beginPath();
-          ctx.moveTo(padding, h - padding);
-          ctx.lineTo(w - padding, h - padding);
-          ctx.stroke();
-
-          if (max === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = '12px system-ui, sans-serif';
-            ctx.fillText('No revenue in last 30 days', padding, padding);
-            return;
-          }
-
-          const xStep = (w - padding * 2) / (series.length - 1 || 1);
-          const yScale = (h - padding * 2) / max;
-
-          ctx.strokeStyle = 'rgba(120, 200, 255, 0.9)';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-
-          series.forEach((d, i) => {
-            const x = padding + i * xStep;
-            const y = h - padding - Number(d.revenueCents || 0) * yScale;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          });
-          ctx.stroke();
-
-          ctx.fillStyle = 'rgba(120, 200, 255, 0.9)';
-          series.forEach((d, i) => {
-            const x = padding + i * xStep;
-            const y = h - padding - Number(d.revenueCents || 0) * yScale;
-            ctx.beginPath();
-            ctx.arc(x, y, 2, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          // X labels (every ~6 points)
-          ctx.fillStyle = 'rgba(255,255,255,0.6)';
-          ctx.font = '10px system-ui, sans-serif';
-          const step = Math.max(1, Math.floor(series.length / 5));
-          series.forEach((d, i) => {
-            if (i % step !== 0 && i !== series.length - 1) return;
-            const x = padding + i * xStep;
-            const label = d.label || '';
-            ctx.fillText(label, x - 8, h - 8);
-          });
-        })();
-      </script>
     </div>
   {{/if}}
 

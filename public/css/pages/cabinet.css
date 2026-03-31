@@ -42,7 +42,10 @@
     position: static;
   }
 }
-/* My Templates: tabs + workspace */
+
+/* =========================
+   My Templates: tabs + workspace
+========================= */
 .mt-tabs {
   display: flex;
   gap: 10px;
@@ -84,6 +87,61 @@
 .mt-workspace {
   margin-top: 12px;
 }
+
+/* =========================
+   Analytics: view switch (Overview / Table / Advanced)
+   “слегка вытянутый по горизонтали чекбоксик”
+========================= */
+.mt-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 16px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mt-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  min-width: 92px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.82;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.mt-view-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mt-view-btn.is-active {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 520px) {
+  .mt-view-switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .mt-view-btn {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+/* =========================
+   Seller cards (List)
+========================= */
 .seller-card {
   display: flex;
   gap: 32px;
@@ -132,6 +190,9 @@
   flex-wrap: wrap;
 }
 
+/* =========================
+   Analytics table
+========================= */
 .mt-analytics {
   width: 100%;
   border-collapse: collapse;
@@ -175,6 +236,9 @@
   margin-left: 4px;
 }
 
+/* =========================
+   KPI grid
+========================= */
 .mt-kpis {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -206,6 +270,9 @@
   }
 }
 
+/* =========================
+   Chart
+========================= */
 .mt-chart {
   margin: 12px 0 18px;
   padding: 14px;
@@ -218,4 +285,67 @@
   font-size: 13px;
   opacity: 0.8;
   margin-bottom: 8px;
+}
+
+.mt-analytics-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.mt-analytics__emptyRow {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mt-analytics__emptyRow td,
+.mt-analytics__empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mt-analytics__empty {
+  min-height: 96px;
+}
+
+/* =========================
+   Advanced placeholder
+========================= */
+.mt-advanced-placeholder {
+  margin-top: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-advanced-placeholder__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: 8px;
+}
+
+.mt-advanced-placeholder__title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.mt-advanced-placeholder__text {
+  margin: 0 0 14px;
+  opacity: 0.86;
+  max-width: 62ch;
+}
+
+.mt-advanced-placeholder__list {
+  margin: 0;
+  padding-left: 18px;
+  opacity: 0.92;
+}
+
+.mt-advanced-placeholder__list li + li {
+  margin-top: 6px;
 }
