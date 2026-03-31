@@ -1,10 +1,130 @@
-{{!-- src/web/views/partials/cabinet/space-profile-security.hbs --}}
-<div class="cabinet__workspace-title">Profile &amp; Security</div>
-<div class="cabinet__workspace-text">
-  Account details, password, sessions. Next: wire to profile pages and security actions.
-</div>
+{{!-- src/web/views/partials/space-profile-security.hbs --}}
+<section class="profile-shell">
 
-<div class="cabinet__workspace-actions">
-  <a class="cabinet__btn" href="/profile">Open Profile</a>
-  <a class="cabinet__btn cabinet__btn--ghost" href="/auth/logout">Logout</a>
-</div>
+  <nav class="profile-tabs">
+    {{#each workspaceData.profile.tabs}}
+      <a class="profile-tab {{#if isActive}}is-active{{/if}}" href="{{href}}">
+        {{label}}
+      </a>
+    {{/each}}
+  </nav>
+
+  {{!-- PROFILE --}}
+  {{#if (eq workspaceData.profile.tab "profile")}}
+    <div class="profile-panel">
+      <section class="profile-content">
+
+        <div class="profile-section card">
+          <h2 class="section-title">Основные данные</h2>
+
+          <form class="profile-form">
+            <div class="form-row">
+              <label>Полное имя</label>
+              <input type="text" placeholder="Ваше имя" />
+            </div>
+
+            <div class="form-row">
+              <label>Никнейм</label>
+              <input type="text" placeholder="Ваш никнейм" />
+            </div>
+
+            <div class="form-row">
+              <label>Email</label>
+              <input type="email" placeholder="you@example.com" />
+            </div>
+
+            <div class="form-row">
+              <label>Роль</label>
+              <input type="text" placeholder="Дизайнер, студия, агентство..." />
+            </div>
+
+            <div class="form-row">
+              <label>Кратко о себе</label>
+              <textarea placeholder="Пара предложений о том, чем вы занимаетесь."></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn alt">Отменить</button>
+              <button type="submit" class="btn primary">Сохранить</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="profile-section card">
+          <h2 class="section-title">Публичный профиль</h2>
+
+          <form class="profile-form">
+            <div class="form-row">
+              <label>Сайт или портфолио</label>
+              <input type="text" placeholder="https://dribbble.com/username" />
+            </div>
+
+            <div class="form-row">
+              <label>Социальные сети</label>
+              <input type="text" placeholder="@behance, @instagram, @twitter" />
+            </div>
+
+            <div class="form-row">
+              <label>Биография</label>
+              <textarea placeholder="Расскажите немного о себе для страницы автора."></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn alt">Отменить</button>
+              <button type="submit" class="btn primary">Сохранить</button>
+            </div>
+          </form>
+        </div>
+
+      </section>
+    </div>
+  {{/if}}
+
+  {{!-- SECURITY --}}
+  {{#if (eq workspaceData.profile.tab "security")}}
+    <div class="profile-panel">
+      <section class="profile-security-grid">
+
+        <div class="profile-section card">
+          <h2 class="section-title">Пароль</h2>
+          <form class="profile-form">
+            <div class="form-row">
+              <label>Текущий пароль</label>
+              <input type="password" placeholder="••••••••" />
+            </div>
+
+            <div class="form-row">
+              <label>Новый пароль</label>
+              <input type="password" placeholder="Минимум 8 символов" />
+            </div>
+
+            <div class="form-row">
+              <label>Повторите новый пароль</label>
+              <input type="password" placeholder="Повторите пароль" />
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn alt">Отменить</button>
+              <button type="submit" class="btn primary">Обновить пароль</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="profile-section card">
+          <h2 class="section-title">Сессии и защита</h2>
+
+          <div class="security-note">
+            Управление сессиями, активными устройствами и 2FA будет подключено на следующем проходе.
+          </div>
+
+          <div class="security-actions">
+            <button type="button" class="btn alt">Завершить другие сессии</button>
+            <button type="button" class="btn primary">Настроить 2FA</button>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  {{/if}}
+
+</section>
