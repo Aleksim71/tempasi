@@ -1,0 +1,61 @@
+/* public/css/pages/cabinet-support.css */
+
+.support-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.support-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.support-card {
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.support-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.support-card p {
+  margin: 0 0 12px;
+  opacity: 0.85;
+}
+
+.support-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.support-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.support-tab {
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.support-tab.is-active {
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.support-panel {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

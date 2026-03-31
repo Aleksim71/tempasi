@@ -1,10 +1,56 @@
-{{!-- src/web/views/partials/cabinet/space-support.hbs --}}
-<div class="cabinet__workspace-title">Support</div>
-<div class="cabinet__workspace-text">
-  Help center, contact, FAQs. Next: add support form and documentation links.
-</div>
+{{!-- src/web/views/partials/space-support.hbs --}}
+<section class="support-shell">
 
-<div class="cabinet__workspace-actions">
-  <a class="cabinet__btn" href="/cabinet/support">Open Support</a>
-  <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-</div>
+  <nav class="support-tabs">
+    {{#each workspaceData.support.tabs}}
+      <a class="support-tab {{#if isActive}}is-active{{/if}}" href="{{href}}">
+        {{label}}
+      </a>
+    {{/each}}
+  </nav>
+
+  {{!-- HELP --}}
+  {{#if (eq workspaceData.support.tab "help")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Help Center</h3>
+        <p>Guides on how to use Tempasi, templates, cases, and finance.</p>
+
+        <div class="support-actions">
+          <a class="btn" href="/templates">Browse Templates</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- CONTACT --}}
+  {{#if (eq workspaceData.support.tab "contact")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Contact</h3>
+        <p>If something is not working or unclear — contact us.</p>
+
+        <div class="support-actions">
+          <a class="btn primary" href="mailto:support@tempasi.com">Email Support</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- QUICK HELP --}}
+  {{#if (eq workspaceData.support.tab "quick")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Quick Help</h3>
+        <p>Common actions and quick navigation.</p>
+
+        <div class="support-actions">
+          <a class="btn alt" href="/cabinet/my-templates">My Templates</a>
+          <a class="btn alt" href="/cabinet/finance">Finance</a>
+          <a class="btn alt" href="/cabinet/profile">Profile</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+</section>

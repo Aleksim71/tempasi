@@ -659,12 +659,26 @@ function createCabinetPagesRouter() {
   });
 
   router.get('/support', (req, res) => {
+    const tab = req.query.tab || 'help';
+
+    const tabs = [
+      { key: 'help', label: 'Help', href: '/cabinet/support?tab=help', isActive: tab === 'help' },
+      { key: 'contact', label: 'Contact', href: '/cabinet/support?tab=contact', isActive: tab === 'contact' },
+      { key: 'quick', label: 'Quick Help', href: '/cabinet/support?tab=quick', isActive: tab === 'quick' },
+    ];
+
     res.render('pages/cabinet', {
       activeSpace: 'support',
       pageTitle: 'Support',
       pageSubtitle: 'Help and documentation.',
       panelTitle: 'Support',
       panelText: '',
+      workspaceData: {
+        support: {
+          tab,
+          tabs,
+        },
+      },
     });
   });
 
