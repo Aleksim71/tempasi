@@ -71,3 +71,7 @@ seed-*.zip
 public/icons/
 public/js/
 artifacts/
+
+# local tools
+.uri/
+.runner-work/
