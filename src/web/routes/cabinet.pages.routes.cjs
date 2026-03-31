@@ -626,12 +626,100 @@ function createCabinetPagesRouter() {
   });
 
   router.get('/finance', (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['overview', 'orders', 'reports']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
+
+    const demoOrders = [
+      {
+        id: 'ORD-1001',
+        type: 'BUY',
+        direction: 'own-income',
+        templateTitle: 'Dentist Landing',
+        seller: 'Tempasi Studio',
+        amountEur: '120.00',
+        status: 'paid',
+        license: 'exclusive',
+        date: '2026-03-28',
+        caseTitle: '—',
+      },
+      {
+        id: 'ORD-1002',
+        type: 'RENT',
+        direction: 'external-procurement',
+        templateTitle: 'Agency Portfolio',
+        seller: 'Nordic Author',
+        amountEur: '24.00',
+        status: 'paid',
+        license: 'rent',
+        date: '2026-03-29',
+        caseTitle: 'Client Alpha',
+      },
+      {
+        id: 'ORD-1003',
+        type: 'RENT',
+        direction: 'own-income',
+        templateTitle: 'Lawyer Onepager',
+        seller: 'Tempasi Studio',
+        amountEur: '18.00',
+        status: 'paid',
+        license: 'rent',
+        date: '2026-03-30',
+        caseTitle: '—',
+      },
+    ];
+
+    const demoReports = [
+      {
+        month: 'March 2026',
+        totalOrders: 14,
+        buyOrders: 4,
+        rentOrders: 10,
+        ownRevenueEur: '480.00',
+        procurementEur: '96.00',
+      },
+      {
+        month: 'February 2026',
+        totalOrders: 9,
+        buyOrders: 2,
+        rentOrders: 7,
+        ownRevenueEur: '260.00',
+        procurementEur: '54.00',
+      },
+    ];
+
     res.render('pages/cabinet', {
       activeSpace: 'finance',
       pageTitle: 'Finance',
-      pageSubtitle: 'Orders and transactions overview.',
+      pageSubtitle: 'Orders, reports, and financial history.',
       panelTitle: 'Finance',
       panelText: '',
+      workspaceData: {
+        finance: {
+          tab,
+          tabs: [
+            { key: 'overview', label: 'Overview', href: '/cabinet/finance?tab=overview', isActive: tab === 'overview' },
+            { key: 'orders', label: 'Orders', href: '/cabinet/finance?tab=orders', isActive: tab === 'orders' },
+            { key: 'reports', label: 'Reports', href: '/cabinet/finance?tab=reports', isActive: tab === 'reports' },
+          ],
+          overview: {
+            totalOrders: 23,
+            buyOrders: 6,
+            rentOrders: 17,
+            ownRevenueEur: '740.00',
+            procurementEur: '150.00',
+          },
+          filters: {
+            type: '',
+            direction: '',
+            status: '',
+            license: '',
+            query: '',
+          },
+          orders: demoOrders,
+          reports: demoReports,
+        },
+      },
     });
   });
 
