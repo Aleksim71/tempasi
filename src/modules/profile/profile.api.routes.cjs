@@ -4,14 +4,40 @@
 const express = require('express');
 
 const { requireAuth } = require('../../middlewares/auth.middleware.cjs');
-const { getMyDownloadsJson } = require('./profile.controller.cjs');
+const {
+  changeMyPasswordJson,
+  getMyDownloadsJson,
+  getMyProfileJson,
+  updateMyProfileJson,
+} = require('./profile.controller.cjs');
 
 function profileApiRoutes() {
   const router = express.Router();
 
-  // GET /api/profile/downloads
-  // Stable contract for tests/UI:
-  // - returns BUY items only (implemented in controller)
+  router.get('/', requireAuth, async (req, res, next) => {
+    try {
+      return await getMyProfileJson(req, res);
+    } catch (e) {
+      return next(e);
+    }
+  });
+
+  router.post('/', requireAuth, express.json(), async (req, res, next) => {
+    try {
+      return await updateMyProfileJson(req, res);
+    } catch (e) {
+      return next(e);
+    }
+  });
+
+  router.post('/password', requireAuth, express.json(), async (req, res, next) => {
+    try {
+      return await changeMyPasswordJson(req, res);
+    } catch (e) {
+      return next(e);
+    }
+  });
+
   router.get('/downloads', requireAuth, async (req, res, next) => {
     try {
       return await getMyDownloadsJson(req, res);

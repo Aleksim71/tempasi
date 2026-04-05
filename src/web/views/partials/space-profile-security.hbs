@@ -9,122 +9,192 @@
     {{/each}}
   </nav>
 
-  {{!-- PROFILE --}}
   {{#if (eq workspaceData.profile.tab "profile")}}
-    <div class="profile-panel">
-      <section class="profile-content">
+    <section class="profile-content">
 
-        <div class="profile-section card">
-          <h2 class="section-title">Основные данные</h2>
+      <div class="profile-section card">
+        <h2 class="section-title">Basic Information</h2>
 
-          <form class="profile-form">
-            <div class="form-row">
-              <label>Полное имя</label>
-              <input type="text" placeholder="Ваше имя" />
-            </div>
+        <form class="profile-form" id="profileForm">
+          <div class="form-row">
+            <label for="profile_full_name">Full Name</label>
+            <input
+              id="profile_full_name"
+              name="full_name"
+              type="text"
+              value="{{workspaceData.profile.form.full_name}}"
+            />
+          </div>
 
-            <div class="form-row">
-              <label>Никнейм</label>
-              <input type="text" placeholder="Ваш никнейм" />
-            </div>
+          <div class="form-row">
+            <label for="profile_nickname">Username</label>
+            <input
+              id="profile_nickname"
+              name="nickname"
+              type="text"
+              value="{{workspaceData.profile.form.nickname}}"
+            />
+          </div>
 
-            <div class="form-row">
-              <label>Email</label>
-              <input type="email" placeholder="you@example.com" />
-            </div>
+          <div class="form-row">
+            <label for="profile_email">Email</label>
+            <input
+              id="profile_email"
+              name="email"
+              type="email"
+              value="{{workspaceData.profile.form.email}}"
+              readonly
+            />
+          </div>
 
-            <div class="form-row">
-              <label>Роль</label>
-              <input type="text" placeholder="Дизайнер, студия, агентство..." />
-            </div>
+          <div class="form-row">
+            <label for="profile_about">About</label>
+            <textarea
+              id="profile_about"
+              name="about"
+            >{{workspaceData.profile.form.about}}</textarea>
+          </div>
 
-            <div class="form-row">
-              <label>Кратко о себе</label>
-              <textarea placeholder="Пара предложений о том, чем вы занимаетесь."></textarea>
-            </div>
+          <div class="form-actions">
+            <button type="reset" class="btn alt">Cancel</button>
+            <button type="submit" class="btn primary">Save</button>
+          </div>
 
-            <div class="form-actions">
-              <button type="button" class="btn alt">Отменить</button>
-              <button type="submit" class="btn primary">Сохранить</button>
-            </div>
-          </form>
-        </div>
+          <div id="profileFormStatus" class="security-note" style="display:none;"></div>
+        </form>
+      </div>
 
-        <div class="profile-section card">
-          <h2 class="section-title">Публичный профиль</h2>
+    </section>
 
-          <form class="profile-form">
-            <div class="form-row">
-              <label>Сайт или портфолио</label>
-              <input type="text" placeholder="https://dribbble.com/username" />
-            </div>
+    <script>
+      (function () {
+        const form = document.getElementById('profileForm');
+        const status = document.getElementById('profileFormStatus');
+        if (!form || !status) return;
 
-            <div class="form-row">
-              <label>Социальные сети</label>
-              <input type="text" placeholder="@behance, @instagram, @twitter" />
-            </div>
+        form.addEventListener('submit', async function (event) {
+          event.preventDefault();
 
-            <div class="form-row">
-              <label>Биография</label>
-              <textarea placeholder="Расскажите немного о себе для страницы автора."></textarea>
-            </div>
+          status.style.display = 'block';
+          status.textContent = 'Saving...';
 
-            <div class="form-actions">
-              <button type="button" class="btn alt">Отменить</button>
-              <button type="submit" class="btn primary">Сохранить</button>
-            </div>
-          </form>
-        </div>
+          const payload = {
+            full_name: form.elements.full_name.value,
+            nickname: form.elements.nickname.value,
+            about: form.elements.about.value,
+          };
 
-      </section>
-    </div>
+          try {
+            const response = await fetch('/api/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+              status.textContent = 'Save failed.';
+              return;
+            }
+
+            status.textContent = 'Saved.';
+          } catch (error) {
+            status.textContent = 'Network error.';
+          }
+        });
+      })();
+    </script>
   {{/if}}
 
-  {{!-- SECURITY --}}
   {{#if (eq workspaceData.profile.tab "security")}}
-    <div class="profile-panel">
-      <section class="profile-security-grid">
+    <section class="profile-content">
 
-        <div class="profile-section card">
-          <h2 class="section-title">Пароль</h2>
-          <form class="profile-form">
-            <div class="form-row">
-              <label>Текущий пароль</label>
-              <input type="password" placeholder="••••••••" />
-            </div>
+      <div class="profile-section card">
+        <h2 class="section-title">Password</h2>
 
-            <div class="form-row">
-              <label>Новый пароль</label>
-              <input type="password" placeholder="Минимум 8 символов" />
-            </div>
-
-            <div class="form-row">
-              <label>Повторите новый пароль</label>
-              <input type="password" placeholder="Повторите пароль" />
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn alt">Отменить</button>
-              <button type="submit" class="btn primary">Обновить пароль</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="profile-section card">
-          <h2 class="section-title">Сессии и защита</h2>
-
-          <div class="security-note">
-            Управление сессиями, активными устройствами и 2FA будет подключено на следующем проходе.
+        <form class="profile-form" id="passwordForm">
+          <div class="form-row">
+            <label for="password_current">Current Password</label>
+            <input id="password_current" name="current_password" type="password" />
           </div>
 
-          <div class="security-actions">
-            <button type="button" class="btn alt">Завершить другие сессии</button>
-            <button type="button" class="btn primary">Настроить 2FA</button>
+          <div class="form-row">
+            <label for="password_new">New Password</label>
+            <input id="password_new" name="new_password" type="password" />
           </div>
-        </div>
 
-      </section>
-    </div>
+          <div class="form-row">
+            <label for="password_repeat">Repeat Password</label>
+            <input id="password_repeat" name="repeat_password" type="password" />
+          </div>
+
+          <div class="form-actions">
+            <button type="reset" class="btn alt">Cancel</button>
+            <button type="submit" class="btn primary">Update</button>
+          </div>
+
+          <div id="passwordFormStatus" class="security-note" style="display:none;"></div>
+        </form>
+      </div>
+
+    </section>
+
+    <script>
+      (function () {
+        const form = document.getElementById('passwordForm');
+        const status = document.getElementById('passwordFormStatus');
+        if (!form || !status) return;
+
+        form.addEventListener('submit', async function (event) {
+          event.preventDefault();
+
+          status.style.display = 'block';
+          status.textContent = 'Updating...';
+
+          const payload = {
+            current_password: form.elements.current_password.value,
+            new_password: form.elements.new_password.value,
+            repeat_password: form.elements.repeat_password.value,
+          };
+
+          try {
+            const response = await fetch('/api/profile/password', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+              switch (data && data.error) {
+                case 'PASSWORD_FIELDS_REQUIRED':
+                  status.textContent = 'Fill all password fields.';
+                  break;
+                case 'PASSWORD_TOO_SHORT':
+                  status.textContent = 'New password must be at least 8 characters.';
+                  break;
+                case 'PASSWORD_REPEAT_MISMATCH':
+                  status.textContent = 'Passwords do not match.';
+                  break;
+                case 'CURRENT_PASSWORD_INVALID':
+                  status.textContent = 'Current password is incorrect.';
+                  break;
+                default:
+                  status.textContent = 'Password update failed.';
+              }
+              return;
+            }
+
+            form.reset();
+            status.textContent = 'Password updated.';
+          } catch (error) {
+            status.textContent = 'Network error.';
+          }
+        });
+      })();
+    </script>
   {{/if}}
 
 </section>

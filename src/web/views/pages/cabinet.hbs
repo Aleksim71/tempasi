@@ -55,8 +55,8 @@
 
       <main class="cabinet__workspace">
 
-        {{!-- Title/subtitle are hidden for My Templates workspace (tabs own the top area) --}}
-        {{#unless (eq activeSpace 'my-templates')}}
+        {{!-- Title/subtitle are hidden for My Templates and Profile workspaces --}}
+        {{#unless (or (eq activeSpace 'my-templates') (eq activeSpace 'profile'))}}
           <h1 class="cabinet__title">{{pageTitle}}</h1>
           <p class="cabinet__subtitle">{{pageSubtitle}}</p>
         {{/unless}}
