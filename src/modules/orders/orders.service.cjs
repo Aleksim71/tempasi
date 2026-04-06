@@ -2,9 +2,9 @@
 'use strict';
 
 const ordersRepo = require('./orders.repo.cjs');
+const paymentsService = require('../payments/payments.service.cjs');
 
-// простая таблица цен под тесты/дев
-const LICENSE_TO_PRICE = {
+const LICENSE_DEFAULTS = {
   PU: { amountCents: 0, currency: 'EUR', dealType: 'BUY' },
   CU: { amountCents: 0, currency: 'EUR', dealType: 'BUY' },
   EL: { amountCents: 0, currency: 'EUR', dealType: 'BUY' },
@@ -13,38 +13,46 @@ const LICENSE_TO_PRICE = {
 };
 
 function normalizeBuyPayload(payload = {}) {
-  // тест шлёт { license: 'PU' }
-  if (payload.license && LICENSE_TO_PRICE[payload.license]) {
-    const p = LICENSE_TO_PRICE[payload.license];
-    return { ...p, license: payload.license };
+  const license = String(payload.license || 'PU').trim().toUpperCase();
+  const fallback = LICENSE_DEFAULTS[license];
+  if (!fallback) {
+    const err = new Error('INVALID_LICENSE');
+    err.status = 400;
+    err.code = 'INVALID_LICENSE';
+    throw err;
   }
 
-  // если вдруг шлёшь уже “полный” формат
+  const amountCents =
+    Number.isFinite(Number(payload.amountCents)) ? Number(payload.amountCents) :
+    Number.isFinite(Number(payload.amount)) ? Math.round(Number(payload.amount) * 100) :
+    fallback.amountCents;
+
   return {
-    dealType: String(payload.dealType || 'BUY').toUpperCase(),
-    amountCents: Number.isFinite(payload.amountCents) ? payload.amountCents : 0,
-    currency: String(payload.currency || 'EUR').toUpperCase(),
-    license: payload.license ? String(payload.license) : null,
+    license,
+    amountCents,
+    currency: String(payload.currency || fallback.currency || 'EUR').trim().toUpperCase(),
+    dealType: String(payload.dealType || fallback.dealType || 'BUY').trim().toUpperCase(),
   };
 }
 
 async function createPendingOrder({ userId, templateSlug, payload }) {
   if (!userId) {
-    const err = new Error('UNAUTHORIZED');
-    err.status = 401;
-    err.code = 'UNAUTHORIZED';
+    const err = new Error('USER_ID_REQUIRED');
+    err.status = 400;
+    err.code = 'USER_ID_REQUIRED';
     throw err;
   }
+
   if (!templateSlug) {
-    const err = new Error('BAD_REQUEST');
+    const err = new Error('TEMPLATE_SLUG_REQUIRED');
     err.status = 400;
-    err.code = 'BAD_REQUEST';
+    err.code = 'TEMPLATE_SLUG_REQUIRED';
     throw err;
   }
 
   const p = normalizeBuyPayload(payload);
 
-  if (String(p.dealType).toUpperCase() === 'BUY') {
+  if (p.dealType === 'BUY') {
     const alreadySold = await ordersRepo.hasPaidBuyByTemplateSlug(templateSlug);
     if (alreadySold) {
       const err = new Error('Template already sold (exclusive sale).');
@@ -54,7 +62,6 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
     }
   }
 
-  // IMPORTANT: repo should accept license; if it doesn't, we'll adjust repo next.
   const order = await ordersRepo.createOrder({
     userId,
     templateSlug,
@@ -68,6 +75,31 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
   return order;
 }
 
+async function createOrderCheckout(req, { userId, templateSlug, payload }) {
+  const order = await createPendingOrder({ userId, templateSlug, payload });
+
+  const session = await paymentsService.createCheckoutSession(req, { order });
+  if (!session || !session.id || !session.url) {
+    const err = new Error('CHECKOUT_SESSION_CREATE_FAILED');
+    err.status = 500;
+    err.code = 'CHECKOUT_SESSION_CREATE_FAILED';
+    throw err;
+  }
+
+  await ordersRepo.attachProviderSession({
+    orderId: order.id,
+    providerSessionId: session.id,
+  });
+
+  return {
+    orderId: order.id,
+    sessionId: session.id,
+    checkoutUrl: session.url,
+  };
+}
+
 module.exports = {
+  normalizeBuyPayload,
   createPendingOrder,
+  createOrderCheckout,
 };

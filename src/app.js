@@ -18,6 +18,7 @@ import { createRequire } from 'module';
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
 import { requireAuthWeb } from './web/middleware/require-auth.web.js';
+import checkoutRouter from './web/routes/checkout.routes.js';
 
 const require = createRequire(import.meta.url);
 
@@ -332,6 +333,8 @@ if (process.env.TEMPASI_SKIP_SSR) {
     requireAuthWeb({ loginPath: '/login', defaultNext: '/profile' }),
     profileRouter,
   );
+
+  webApp.use('/checkout', checkoutRouter);
 
   app.use(webApp);
 }

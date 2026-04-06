@@ -1,20 +1,19 @@
 import express from 'express';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const {
+  handleCheckoutSuccessDev,
+} = require('../../modules/payments/checkoutSuccessDev.controller.cjs');
 
 const router = express.Router();
 
-router.get('/checkout/success', (req, res) => {
-  const { slug } = req.query;
-
-  return res.render('pages/checkout/success', {
-    title: 'Checkout success',
-    slug,
-
-    pageClass: 'page-checkout-success',
-
-    pageCss: ['/css/checkout.success.css'],
-
-    pageJs: ['/js/checkout.success.js'],
-  });
+router.get('/success', async (req, res, next) => {
+  try {
+    return await handleCheckoutSuccessDev(req, res);
+  } catch (err) {
+    return next(err);
+  }
 });
 
 export default router;

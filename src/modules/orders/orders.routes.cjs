@@ -7,28 +7,34 @@ const ordersService = require('./orders.service.cjs');
 
 const router = express.Router();
 
-/**
- * Resolve userId from the auth layer.
- * We support a few common shapes to be resilient in tests/dev-login:
- * - req.user.id
- * - req.session.userId
- * - req.session.user_id
- */
 function getUserId(req) {
   if (req && req.user && Number.isFinite(Number(req.user.id))) return Number(req.user.id);
+  if (req && req.user && Number.isFinite(Number(req.user.user_id))) return Number(req.user.user_id);
+  if (req && req.user && Number.isFinite(Number(req.user.userId))) return Number(req.user.userId);
   if (req && req.session && Number.isFinite(Number(req.session.userId))) return Number(req.session.userId);
   if (req && req.session && Number.isFinite(Number(req.session.user_id))) return Number(req.session.user_id);
   return null;
 }
 
-function isValidLicense(x) {
-  return typeof x === 'string' && ['PU', 'CU', 'EL', 'ML', 'EX'].includes(x);
+function wantsHtml(req) {
+  const accept = String(req.headers?.accept || '');
+  if (accept.includes('text/html')) return true;
+  if (accept.includes('application/xhtml+xml')) return true;
+  if (!accept) return true;
+  if (accept.includes('application/json') || accept.includes('+json')) return false;
+  return true;
 }
 
-function buyFailed(res, err) {
+function buyFailed(res, err, req) {
   const status = (err && err.status) || 500;
   const code = (err && err.code) || 'BUY_FAILED';
   const msg = err && err.message ? String(err.message) : 'BUY_FAILED';
+
+  if (wantsHtml(req)) {
+    const qs = new URLSearchParams();
+    qs.set('buy_error', code);
+    return res.redirect(303, `/templates?${qs.toString()}`);
+  }
 
   return res.status(status).json({
     error: {
@@ -38,49 +44,44 @@ function buyFailed(res, err) {
   });
 }
 
-/**
- * POST /api/orders/:templateSlug/buy
- * Body: { license: 'PU' }
- *
- * IMPORTANT:
- * - We MUST parse JSON here (app.js does not have global express.json()).
- *
- * NOTE (Stage 0.5):
- * This route MUST NOT grant entitlements directly.
- * Money pipeline should be:
- * order (pending) -> checkout -> webhook -> mark paid -> ensure entitlement -> download.
- */
-router.post('/:templateSlug/buy', express.json(), async (req, res) => {
-  const userId = getUserId(req);
-  if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Login required' } });
+router.post(
+  '/:templateSlug/buy',
+  express.urlencoded({ extended: false }),
+  express.json(),
+  async (req, res) => {
+    const userId = getUserId(req);
+    if (!userId) {
+      if (wantsHtml(req)) return res.redirect(303, '/login');
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Login required' } });
+    }
 
-  const templateSlug = String(req.params.templateSlug || '').trim();
-  if (!templateSlug) return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing templateSlug' } });
+    const templateSlug = String(req.params.templateSlug || '').trim();
+    if (!templateSlug) {
+      return buyFailed(res, { status: 400, code: 'BAD_REQUEST', message: 'Missing templateSlug' }, req);
+    }
 
-  const license = req && req.body ? req.body.license : undefined;
-  if (!isValidLicense(license)) {
-    return res.status(400).json({
-      error: { code: 'BAD_REQUEST', message: 'Invalid license. Expected one of: PU, CU, EL, ML, EX' },
-    });
+    try {
+      const result = await ordersService.createOrderCheckout(req, {
+        userId,
+        templateSlug,
+        payload: req.body || {},
+      });
+
+      if (wantsHtml(req)) {
+        return res.redirect(303, result.checkoutUrl);
+      }
+
+      return res.status(201).json({
+        order_id: String(result.orderId),
+        session_id: String(result.sessionId),
+        checkout_url: result.checkoutUrl,
+      });
+    } catch (err) {
+      return buyFailed(res, err, req);
+    }
   }
-
-  try {
-    const order = await ordersService.createPendingOrder({
-      userId,
-      templateSlug,
-      payload: { license },
-    });
-
-    const orderId = order && (order.id || order.order_id);
-    if (!orderId) throw new Error('Order insert failed (no id)');
-
-    return res.status(201).json({ order_id: String(orderId) });
-  } catch (err) {
-    return buyFailed(res, err);
-  }
-});
+);
 
 module.exports = router;
-// Export named alias for pickRouter()
 module.exports.ordersRouter = router;
 module.exports.router = router;

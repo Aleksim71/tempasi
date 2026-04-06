@@ -85,22 +85,22 @@ async function handleCheckoutSuccessDev(req, res) {
 
     // 3) success HTML + CTA
     const slug = encodeURIComponent(order.template_slug);
-    const downloadUrl = `/download/${slug}`;
+    const downloadUrl = `/downloads/${slug}`;
 
     return res.type('html').send(`<!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Оплата успешна — Tempasi</title>
+  <title>Payment successful — Tempasi</title>
   <link rel="stylesheet" href="/css/core.css"/>
   <link rel="stylesheet" href="/css/custom.css"/>
 </head>
 <body>
   <main class="page">
-    <h1>✅ Оплата успешна</h1>
-    <p>Заказ #${escapeHtml(order.id)} — шаблон <b>${escapeHtml(order.template_slug)}</b> активирован.</p>
-    <p><a class="btn primary" href="${downloadUrl}">Скачать ZIP</a></p>
+    <h1>✅ Payment successful</h1>
+    <p>Order #${escapeHtml(order.id)} — template <b>${escapeHtml(order.template_slug)}</b> activated.</p>
+    <p><a class="btn primary" href="${downloadUrl}">Download ZIP</a></p>
     <p style="opacity:.7;font-size:12px">session_id: ${escapeHtml(sessionId || order.provider_session_id || '')}</p>
   </main>
 </body>
