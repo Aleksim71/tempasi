@@ -226,7 +226,33 @@ async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
   });
 }
 
+
+async function getCabinetAnalytics({ ownerUserId, months = 6, sort, dir } = {}) {
+  const [summary, topTemplates, monthlyRevenue] = await Promise.all([
+    getMyTemplatesKpis({ ownerUserId }),
+    getMyTemplatesAnalytics({ ownerUserId, sort, dir }),
+    getMyTemplatesRevenueSeries30d({ ownerUserId }),
+  ]);
+
+  return {
+    summary: {
+      templatesCount: Number(summary.activeTemplates || 0),
+      publishedCount: Number(summary.activeTemplates || 0),
+      soldTemplatesCount: Number(summary.soldTemplates || 0),
+      buyOrdersCount: topTemplates.reduce((acc, row) => acc + (row.sold_at ? 1 : 0), 0),
+      rentOrdersCount: topTemplates.reduce((acc, row) => acc + Number(row.rent_count || 0), 0),
+      revenueBuyEur: (topTemplates.reduce((acc, row) => acc + Number(row.buy_revenue_cents || 0), 0) / 100).toFixed(2),
+      revenueRentEur: String(summary.rentRevenueEur || '0.00'),
+      revenueTotalEur: String(summary.totalRevenueEur || '0.00'),
+    },
+    topTemplates,
+    monthlyRevenue,
+    months,
+  };
+}
+
 module.exports = {
+  getCabinetAnalytics,
   getMyTemplatesAnalytics,
   getMyTemplatesKpis,
   getMyTemplatesRevenueSeries30d,

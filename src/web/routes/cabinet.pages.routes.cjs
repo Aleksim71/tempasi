@@ -385,32 +385,66 @@ function createCabinetPagesRouter() {
   });
 
   router.get('/my-templates/analytics', async (req, res) => {
-    const pool = getPool();
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['overview', 'table', 'advanced']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
+
+    const sort = String(req.query.sort || 'total_revenue').trim();
+    const dir = String(req.query.dir || 'desc').trim().toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const ownerUserId = getUserId(req);
     let workspaceError = null;
 
     const empty = {
-      summary: {
-        templatesCount: 0,
-        publishedCount: 0,
-        soldTemplatesCount: 0,
-        buyOrdersCount: 0,
-        rentOrdersCount: 0,
-        revenueBuyEur: '0.00',
-        revenueRentEur: '0.00',
-        revenueTotalEur: '0.00',
+      analytics: {
+        tab,
+        sort,
+        dir,
+        summary: {
+          templatesCount: 0,
+          publishedCount: 0,
+          soldTemplatesCount: 0,
+          buyOrdersCount: 0,
+          rentOrdersCount: 0,
+          revenueBuyEur: '0.00',
+          revenueRentEur: '0.00',
+          revenueTotalEur: '0.00',
+        },
+        topTemplates: [],
+        monthlyRevenue: [],
+        columns: [
+          { key: 'title', label: 'Template', sortable: false },
+          { key: 'created_at', label: 'Created', sortable: true },
+          { key: 'first_order_at', label: 'First order', sortable: true },
+          { key: 'last_order_at', label: 'Last order', sortable: true },
+          { key: 'rent_count', label: 'Rents', sortable: true },
+          { key: 'rent_revenue', label: 'Rent revenue', sortable: true },
+          { key: 'buy_revenue', label: 'Buy revenue', sortable: true },
+          { key: 'sold_at', label: 'Sold at', sortable: true },
+          { key: 'total_revenue', label: 'Total revenue', sortable: true },
+        ],
       },
-      topTemplates: [],
-      monthlyRevenue: [],
     };
 
-    let analytics = empty;
+    let analyticsPayload = empty.analytics;
 
     try {
-      analytics = await analyticsService.getCabinetAnalytics({
+      const analytics = await analyticsService.getCabinetAnalytics({
         ownerUserId,
         months: 6,
+        sort,
+        dir,
       });
+
+      analyticsPayload = {
+        tab,
+        sort,
+        dir,
+        summary: analytics.summary || empty.analytics.summary,
+        topTemplates: analytics.topTemplates || [],
+        monthlyRevenue: analytics.monthlyRevenue || [],
+        columns: empty.analytics.columns,
+      };
     } catch (e) {
       workspaceError = e;
     }
@@ -421,7 +455,9 @@ function createCabinetPagesRouter() {
       isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: true,
       isMyTemplatesEdit: false,
-      workspaceData: analytics,
+      workspaceData: {
+        analytics: analyticsPayload,
+      },
       workspaceError,
       pageTitle: 'Analytics',
       pageSubtitle: 'Performance of your templates.',
