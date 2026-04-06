@@ -544,15 +544,17 @@ function createCabinetPagesRouter() {
         `
           SELECT
             o.id,
-            o.kind,
+            o.template_slug,
+            o.deal_type,
+            o.license,
             o.status,
             o.created_at,
             o.amount_cents,
             o.currency,
-            t.slug AS template_slug,
-            COALESCE(t.title, t.slug) AS template_title
+            COALESCE(t.title, o.template_slug) AS template_title
           FROM orders o
-          LEFT JOIN templates t ON t.id = o.template_id
+          LEFT JOIN templates t
+            ON t.slug = o.template_slug
           WHERE o.user_id = $1
           ORDER BY o.created_at DESC, o.id DESC
         `,
@@ -561,19 +563,20 @@ function createCabinetPagesRouter() {
 
       let buyCount = 0;
       let rentCount = 0;
-      let totalBuy = 0;
-      let totalRent = 0;
+      let paidBuyTotal = 0;
+      let paidRentTotal = 0;
 
       orders = (rows || []).map((row) => {
-        const type = String(row.kind || '').toUpperCase();
+        const type = String(row.deal_type || '').toUpperCase();
+        const status = String(row.status || '').toLowerCase();
         const cents = Number(row.amount_cents || 0);
 
         if (type === 'BUY') {
           buyCount += 1;
-          totalBuy += cents;
+          if (status === 'paid') paidBuyTotal += cents;
         } else if (type === 'RENT') {
           rentCount += 1;
-          totalRent += cents;
+          if (status === 'paid') paidRentTotal += cents;
         }
 
         return {
@@ -584,7 +587,7 @@ function createCabinetPagesRouter() {
           seller: '—',
           amountEur: formatMoneyEurFromCents(cents),
           status: row.status || '',
-          license: type,
+          license: row.license || '—',
           date: formatDateYMD(row.created_at),
           caseTitle: '—',
         };
@@ -595,7 +598,7 @@ function createCabinetPagesRouter() {
         buyOrders: buyCount,
         rentOrders: rentCount,
         ownRevenueEur: '0.00',
-        procurementEur: formatMoneyEurFromCents(totalBuy + totalRent),
+        procurementEur: formatMoneyEurFromCents(paidBuyTotal + paidRentTotal),
       };
 
       reports = [
@@ -644,10 +647,11 @@ function createCabinetPagesRouter() {
     const userId = getUserId(req);
 
     let profileRow = null;
+    let downloads = [];
     let workspaceError = null;
 
     try {
-      const { rows } = await pool.query(
+      const profileResult = await pool.query(
         `
           SELECT
             user_id,
@@ -664,7 +668,34 @@ function createCabinetPagesRouter() {
         [userId],
       );
 
-      profileRow = rows[0] || null;
+      profileRow = profileResult.rows[0] || null;
+
+      const downloadsResult = await pool.query(
+        `
+          SELECT
+            e.template_slug,
+            e.created_at,
+            o.license,
+            COALESCE(t.title, e.template_slug) AS template_title
+          FROM entitlements e
+          LEFT JOIN orders o
+            ON o.id = e.order_id
+          LEFT JOIN templates t
+            ON t.slug = e.template_slug
+          WHERE e.user_id = $1
+            AND UPPER(COALESCE(e.deal_type, 'BUY')) = 'BUY'
+          ORDER BY e.created_at DESC, e.id DESC
+        `,
+        [userId],
+      );
+
+      downloads = (downloadsResult.rows || []).map((row) => ({
+        template_slug: row.template_slug || '',
+        template_title: row.template_title || row.template_slug || '',
+        license: row.license || '—',
+        created_at_str: formatDateYMD(row.created_at),
+        download_href: `/downloads/${encodeURIComponent(row.template_slug || '')}`,
+      }));
     } catch (e) {
       workspaceError = e;
     }
@@ -689,6 +720,7 @@ function createCabinetPagesRouter() {
             about: profileRow?.about || '',
             email: req?.user?.email || '',
           },
+          downloads,
         },
       },
     });

@@ -64,6 +64,42 @@
         </form>
       </div>
 
+
+      <div class="profile-section card">
+        <h2 class="section-title">Downloads</h2>
+
+        {{#if workspaceData.profile.downloads.length}}
+          <div class="finance-table-wrap">
+            <table class="finance-table">
+              <thead>
+                <tr>
+                  <th>Template</th>
+                  <th>License</th>
+                  <th>Granted</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each workspaceData.profile.downloads}}
+                  <tr>
+                    <td>{{template_title}}</td>
+                    <td>{{license}}</td>
+                    <td>{{created_at_str}}</td>
+                    <td>
+                      <a class="btn primary" href="{{download_href}}">Download</a>
+                    </td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="security-note">
+            No downloadable purchases yet.
+          </div>
+        {{/if}}
+      </div>
+
     </section>
 
     <script>
