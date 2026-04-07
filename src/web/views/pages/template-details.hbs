@@ -75,6 +75,14 @@
               {{/if}}
               <button type="submit" class="c-btn">Buy</button>
             </form>
+
+            <form class="tpl-buyForm" method="POST" action="/cart/add">
+              <input type="hidden" name="template_slug" value="{{template.slug}}" />
+              <input type="hidden" name="deal_type" value="BUY" />
+              <input type="hidden" name="license" value="PU" />
+              <input type="hidden" name="next" value="/templates/{{template.slug}}" />
+              <button type="submit" class="c-btn">Add to cart</button>
+            </form>
           {{/if}}
 
           {{!-- RENT (если есть в контракте) --}}

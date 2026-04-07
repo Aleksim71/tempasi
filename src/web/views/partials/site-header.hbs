@@ -30,11 +30,12 @@
       <!-- RIGHT -->
       <div class="site-header__actions">
 
-        {{#if isAuthed}}
-
-          <!-- cart -->
+        {{#if isAuthed}}          <!-- cart -->
           <a href="/cart" class="header-icon" aria-label="Cart">
             {{> icon-cart}}
+            {{#if cartCount}}
+              <span class="header-cart-count">{{cartCount}}</span>
+            {{/if}}
           </a>
 
           <!-- logout -->

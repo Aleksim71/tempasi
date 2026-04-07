@@ -165,3 +165,17 @@ h6 {
   font-weight: var(--fw-bold);
   letter-spacing: -0.01em;
 }
+
+.header-cart-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid currentColor;
+}

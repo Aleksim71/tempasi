@@ -1,0 +1,78 @@
+/* public/css/pages/cart.css */
+.cart-page {
+  padding: 32px 0 56px;
+}
+
+.cart-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.cart-head {
+  display: grid;
+  gap: 6px;
+}
+
+.cart-title {
+  margin: 0;
+}
+
+.cart-subtitle {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.cart-notice {
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cart-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.cart-summary {
+  max-width: 360px;
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cart-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.cart-summary__hint {
+  margin-top: 12px;
+  opacity: 0.72;
+}
+
+.cart-empty {
+  padding: 20px;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+}
+
+.cart-empty__title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cart-empty__text {
+  margin-bottom: 12px;
+  opacity: 0.72;
+}
+
+.cart-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

@@ -171,12 +171,52 @@ export function createWebApp({ db }) {
   });
   hbs.registerHelper('not', (value) => !value);
 
-  // Header state middleware
+  // Header state middleware + cart counter
   app.use((req, res, next) => {
     const user = req.user || (req.session && req.session.user) || null;
     res.locals.user = user;
-    res.locals.isAuthed = Boolean(user);
-    next();
+    res.locals.isAuthed = Boolean(
+      user ||
+      req?.userId ||
+      req?.session?.userId ||
+      req?.session?.user_id ||
+      req?.user?.id ||
+      req?.user?.user_id ||
+      req?.user?.userId,
+    );
+    res.locals.cartCount = 0;
+
+    const rawUserId =
+      req?.user?.id ??
+      req?.user?.user_id ??
+      req?.user?.userId ??
+      req?.session?.userId ??
+      req?.session?.user_id ??
+      req?.userId ??
+      null;
+
+    const userId = Number(rawUserId);
+    if (!Number.isFinite(userId) || userId <= 0) return next();
+
+    const db = app.locals?.db;
+    if (!db || typeof db.query !== 'function') return next();
+
+    db.query(
+      `
+        SELECT COUNT(*)::int AS count
+        FROM cart_items
+        WHERE user_id = $1
+      `,
+      [userId],
+    )
+      .then(({ rows }) => {
+        res.locals.cartCount = Number(rows?.[0]?.count || 0);
+        next();
+      })
+      .catch(() => {
+        res.locals.cartCount = 0;
+        next();
+      });
   });
 
   app.use(express.static(path.join(__dirname, '..', 'public')));

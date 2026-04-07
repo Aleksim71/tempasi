@@ -1,0 +1,74 @@
+{{!-- src/web/views/pages/cart.hbs --}}
+<section class="cart-page">
+  <div class="l-container">
+    <div class="cart-shell">
+      <div class="cart-head">
+        <h1 class="cart-title">Cart</h1>
+        <p class="cart-subtitle">Selected templates for checkout.</p>
+      </div>
+
+      {{#if notice}}
+        <div class="cart-notice">{{notice}}</div>
+      {{/if}}
+
+      {{#if cart.items.length}}
+        <div class="cart-panel">
+          <div class="finance-table-wrap">
+            <table class="finance-table">
+              <thead>
+                <tr>
+                  <th>Template</th>
+                  <th>Type</th>
+                  <th>License</th>
+                  <th>Added</th>
+                  <th>Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each cart.items}}
+                  <tr>
+                    <td>{{template_title}}</td>
+                    <td>{{deal_type}}</td>
+                    <td>{{license}}</td>
+                    <td>{{created_at_str}}</td>
+                    <td>€{{amountEur}}</td>
+                    <td>
+                      <div class="cart-actions">
+                        <a class="btn alt" href="{{detailsHref}}">Details</a>
+                        <form method="post" action="/cart/remove">
+                          <input type="hidden" name="item_id" value="{{id}}" />
+                          <button type="submit" class="btn alt">Remove</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cart-summary">
+            <div class="cart-summary__row">
+              <span>Items</span>
+              <strong>{{cart.itemCount}}</strong>
+            </div>
+            <div class="cart-summary__row">
+              <span>Subtotal</span>
+              <strong>€{{cart.subtotalEur}}</strong>
+            </div>
+            <div class="cart-summary__hint">
+              Cart checkout will be added in the next cycle.
+            </div>
+          </div>
+        </div>
+      {{else}}
+        <div class="cart-empty">
+          <div class="cart-empty__title">Your cart is empty</div>
+          <div class="cart-empty__text">Add templates from the catalog to start checkout.</div>
+          <a class="btn primary" href="/templates">Browse templates</a>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</section>

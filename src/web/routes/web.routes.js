@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { createTemplatesRouter } from './templates.routes.js';
 import { createTemplatePreviewRouter } from './templatePreview.routes.js';
 import { createAuthPagesRouter } from './auth.pages.routes.js';
+import { createCartRouter } from './cart.routes.js';
 
 export function createWebRouter() {
   const router = Router();
@@ -18,6 +19,8 @@ export function createWebRouter() {
 
   // Public preview endpoint (backward-compatible with /t/<slug>/preview.png)
   router.use('/t', createTemplatePreviewRouter());
+
+  router.use('/cart', createCartRouter());
 
   // Public catalog + details
   router.use('/templates', createTemplatesRouter());
