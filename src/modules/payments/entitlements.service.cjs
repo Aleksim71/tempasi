@@ -86,6 +86,45 @@ async function listUserEntitlements(userIdOrUser) {
 }
 
 /**
+ * BUY-only access control helper for ZIP downloads.
+ *
+ * RENT is a reservation/hold and MUST NOT grant ZIP download access.
+ */
+async function hasDownloadEntitlement({ db, userId, templateSlug } = {}) {
+  if (!db || typeof db.query !== 'function') {
+    db = getPool();
+  }
+
+  const normalizedUserId = normalizeUserId(userId);
+
+  const { rows } = await db.query(
+    `
+    SELECT
+      EXISTS(
+        SELECT 1
+        FROM entitlements
+        WHERE user_id = $1
+          AND template_slug = $2
+          AND (ends_at IS NULL OR ends_at > NOW())
+          AND LOWER(COALESCE(kind, '')) <> 'rent'
+          AND UPPER(COALESCE(NULLIF(deal_type, ''), 'BUY')) = 'BUY'
+      ) AS ok
+    `,
+    [normalizedUserId, templateSlug]
+  );
+
+  return Boolean(rows[0] && rows[0].ok);
+}
+
+/**
+ * Backward-compatible alias used by downloads.service.
+ * Despite the old name, this is intentionally BUY-only for downloads.
+ */
+async function hasValidEntitlement({ db, userId, templateSlug } = {}) {
+  return hasDownloadEntitlement({ db, userId, templateSlug });
+}
+
+/**
  * Access control helper for downloads.
  */
 async function hasActiveEntitlement(userIdOrUser, templateSlug) {
@@ -113,4 +152,6 @@ module.exports = {
   listUserEntitlementsWithTemplates,
   listUserEntitlements,
   hasActiveEntitlement,
+  hasDownloadEntitlement,
+  hasValidEntitlement,
 };
