@@ -1,9 +1,6 @@
 'use strict';
 
-const crypto = require('crypto');
-
-const OrdersRepo = require('../orders/orders.repo.cjs');
-const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
+const PaymentCompletion = require('./paymentCompletion.service.cjs');
 const { PAYMENTS_PROVIDER, STRIPE_WEBHOOK_SECRET } = require('../../config/payments.cjs');
 
 async function handleStripeWebhook(req) {
@@ -39,23 +36,15 @@ async function handleStripeWebhook(req) {
   const session = event.data.object;
   const sessionId = session.id;
 
-  const order = await OrdersRepo.findOrderByProviderSessionId(sessionId);
-  if (!order) {
-    const err = new Error('ORDER_NOT_FOUND_FOR_SESSION');
-    err.status = 404;
-    throw err;
-  }
-
-  const paid = await OrdersRepo.markOrderPaid({
-    orderId: order.id,
+  const completed = await PaymentCompletion.completePaidOrder({
+    providerSessionId: sessionId,
     providerPaymentIntentId: session.payment_intent || null,
   });
 
-  if (paid) {
-    await EntitlementsRepo.ensureEntitlementForOrder(paid);
-  }
-
-  return { ok: true };
+  return {
+    ok: true,
+    orderId: completed?.order?.id || null,
+  };
 }
 
 async function handleFakeWebhook(req) {
@@ -71,23 +60,15 @@ async function handleFakeWebhook(req) {
     throw err;
   }
 
-  const order = await OrdersRepo.findOrderByProviderSessionId(sessionId);
-  if (!order) {
-    const err = new Error('ORDER_NOT_FOUND_FOR_SESSION');
-    err.status = 404;
-    throw err;
-  }
-
-  const paid = await OrdersRepo.markOrderPaid({
-    orderId: order.id,
+  const completed = await PaymentCompletion.completePaidOrder({
+    providerSessionId: sessionId,
     providerPaymentIntentId: body?.data?.object?.payment_intent || 'pi_fake',
   });
 
-  if (paid) {
-    await EntitlementsRepo.ensureEntitlementForOrder(paid);
-  }
-
-  return { ok: true };
+  return {
+    ok: true,
+    orderId: completed?.order?.id || null,
+  };
 }
 
 async function webhook(req, res) {
