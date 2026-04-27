@@ -72,12 +72,21 @@ export async function selectTemplatesForCatalog(db) {
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
+      -- Hide templates already bought exclusively.
       AND NOT EXISTS (
         SELECT 1
         FROM orders o
         WHERE o.template_slug = seller_templates.slug
           AND o.deal_type = 'BUY'
           AND o.status = 'paid'
+      )
+      -- Hide templates currently reserved by active RENT.
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.entitlements e
+        WHERE e.template_slug = seller_templates.slug
+          AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+          AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
     ORDER BY created_at DESC, id DESC
     LIMIT 200
@@ -161,6 +170,22 @@ export async function getTemplateBySlug(db, slug) {
     WHERE slug = $1
       AND status = 'published'
       AND deleted_at IS NULL
+      -- Direct URL must not bypass exclusive BUY.
+      AND NOT EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.template_slug = seller_templates.slug
+          AND o.deal_type = 'BUY'
+          AND o.status = 'paid'
+      )
+      -- Direct URL must not bypass active RENT reservation.
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.entitlements e
+        WHERE e.template_slug = seller_templates.slug
+          AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+          AND (e.ends_at IS NULL OR e.ends_at > NOW())
+      )
     LIMIT 1
   `;
 
