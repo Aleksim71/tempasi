@@ -466,27 +466,84 @@ function createCabinetPagesRouter() {
     });
   });
 
-  router.get('/cases', (req, res) => {
+  router.get('/cases', async (req, res) => {
     const requestedTab = String(req.query.tab || '').trim();
     const allowedTabs = new Set(['list', 'create', 'rents', 'analytics']);
     const tab = allowedTabs.has(requestedTab) ? requestedTab : 'list';
 
+    const pool = getPool();
+    const userId = getUserId(req);
+
+    let workspaceError = null;
+
+    // Cases are still MVP placeholders.
     const demoCases = [
       { id: 1, title: 'Client Alpha', status: 'open', templatesCount: 2 },
       { id: 2, title: 'Client Beta', status: 'open', templatesCount: 0 },
       { id: 3, title: 'Client Gamma', status: 'closed', templatesCount: 1 },
     ];
 
-    const demoRents = [
-      { id: 1, title: 'Landing Pro', source: 'rent', casesCount: 2 },
-      { id: 2, title: 'SaaS Kit', source: 'owner reserve', casesCount: 1 },
-    ];
-
-    const analytics = {
+    let rents = [];
+    let analytics = {
       activeCases: 2,
-      heldTemplates: 3,
-      activeRentCostEur: '24.00',
+      heldTemplates: 0,
+      activeRentCostEur: '0.00',
     };
+
+    try {
+      const rentsResult = await pool.query(
+        `
+          SELECT
+            e.id,
+            e.template_slug,
+            e.starts_at,
+            e.ends_at,
+            e.created_at,
+            o.amount_cents,
+            o.currency,
+            COALESCE(st.title, e.template_slug) AS template_title
+          FROM public.entitlements e
+          LEFT JOIN public.orders o
+            ON o.id = e.order_id
+          LEFT JOIN public.seller_templates st
+            ON st.slug = e.template_slug
+          WHERE e.user_id = $1
+            AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+            AND (e.ends_at IS NULL OR e.ends_at > NOW())
+          ORDER BY e.ends_at ASC NULLS LAST, e.created_at DESC, e.id DESC
+        `,
+        [userId],
+      );
+
+      let activeRentCostCents = 0;
+
+      rents = (rentsResult.rows || []).map((row) => {
+        const amountCents = Number(row.amount_cents || 0);
+        if (Number.isFinite(amountCents)) activeRentCostCents += amountCents;
+
+        const slug = row.template_slug || '';
+
+        return {
+          id: row.id,
+          title: row.template_title || slug,
+          templateSlug: slug,
+          source: 'rent',
+          casesCount: 0,
+          startsAt: formatDateYMD(row.starts_at || row.created_at),
+          endsAt: formatDateYMD(row.ends_at),
+          amountEur: formatMoneyEurFromCents(amountCents),
+          detailsHref: `/templates/${encodeURIComponent(slug)}`,
+        };
+      });
+
+      analytics = {
+        activeCases: demoCases.filter((item) => item.status === 'open').length,
+        heldTemplates: rents.length,
+        activeRentCostEur: formatMoneyEurFromCents(activeRentCostCents),
+      };
+    } catch (e) {
+      workspaceError = e;
+    }
 
     res.render('pages/cabinet', {
       activeSpace: 'cases',
@@ -494,6 +551,7 @@ function createCabinetPagesRouter() {
       pageSubtitle: 'Client shortlists and presentations.',
       panelTitle: 'Cases',
       panelText: '',
+      workspaceError,
       workspaceData: {
         cases: {
           tab,
@@ -504,7 +562,7 @@ function createCabinetPagesRouter() {
             { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: tab === 'analytics' },
           ],
           items: demoCases,
-          rents: demoRents,
+          rents,
           analytics,
         },
       },
