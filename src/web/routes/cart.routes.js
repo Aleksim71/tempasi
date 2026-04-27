@@ -150,7 +150,9 @@ export function createCartRouter() {
 
       if (!userId) return redirectToLogin(res, nextPath);
       if (!templateSlug) return res.redirect(302, '/templates');
-      if (dealType !== 'BUY') return res.redirect(302, `${nextPath}?cart=unsupported`);
+      if (!['BUY', 'RENT'].includes(dealType)) {
+        return res.redirect(302, `${nextPath}?cart=unsupported`);
+      }
       if (!['PU', 'CU', 'EL', 'ML', 'EX'].includes(license)) {
         return res.redirect(302, `${nextPath}?cart=bad_license`);
       }
@@ -162,7 +164,7 @@ export function createCartRouter() {
 
       const templateResult = await db.query(
         `
-          SELECT slug, price_buy_cents
+          SELECT slug, price_buy_cents, price_rent_cents
           FROM seller_templates
           WHERE slug = $1
             AND status = 'published'
@@ -174,8 +176,16 @@ export function createCartRouter() {
 
       const tpl = templateResult.rows?.[0] || null;
       if (!tpl) return res.redirect(302, '/templates');
-      if (!Number.isFinite(Number(tpl.price_buy_cents)) || Number(tpl.price_buy_cents) <= 0) {
+
+      const buyPriceCents = Number(tpl.price_buy_cents || 0);
+      const rentPriceCents = Number(tpl.price_rent_cents || 0);
+
+      if (dealType === 'BUY' && (!Number.isFinite(buyPriceCents) || buyPriceCents <= 0)) {
         return res.redirect(302, `${nextPath}?cart=not_buyable`);
+      }
+
+      if (dealType === 'RENT' && (!Number.isFinite(rentPriceCents) || rentPriceCents <= 0)) {
+        return res.redirect(302, `${nextPath}?cart=not_rentable`);
       }
 
       const soldResult = await db.query(
@@ -191,6 +201,22 @@ export function createCartRouter() {
       );
       if (soldResult.rows?.[0]) {
         return res.redirect(302, `${nextPath}?cart=sold`);
+      }
+
+      const activeRentResult = await db.query(
+        `
+          SELECT 1
+          FROM entitlements
+          WHERE template_slug = $1
+            AND UPPER(COALESCE(deal_type, kind, '')) = 'RENT'
+            AND (ends_at IS NULL OR ends_at > NOW())
+            AND user_id <> $2
+          LIMIT 1
+        `,
+        [templateSlug, userId],
+      );
+      if (activeRentResult.rows?.[0]) {
+        return res.redirect(302, `${nextPath}?cart=reserved`);
       }
 
       const ownedResult = await db.query(

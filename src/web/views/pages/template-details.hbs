@@ -85,13 +85,14 @@
             </form>
           {{/if}}
 
-          {{!-- RENT (если есть в контракте) --}}
+          {{!-- RENT: add reservation to cart, then checkout/payment completes the 24h hold --}}
           {{#if template.prices.rent}}
-            <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/rent">
-              <input type="hidden" name="dealType" value="RENT" />
-              <input type="hidden" name="amount" value="{{template.prices.rent.amount}}" />
-              <input type="hidden" name="currency" value="{{template.prices.rent.currency}}" />
-              <button type="submit" class="c-btn">Rent</button>
+            <form class="tpl-buyForm" method="POST" action="/cart/add">
+              <input type="hidden" name="template_slug" value="{{template.slug}}" />
+              <input type="hidden" name="deal_type" value="RENT" />
+              <input type="hidden" name="license" value="PU" />
+              <input type="hidden" name="next" value="/templates/{{template.slug}}" />
+              <button type="submit" class="c-btn">Add rent to cart</button>
             </form>
           {{/if}}
 
