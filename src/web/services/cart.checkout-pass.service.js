@@ -280,7 +280,9 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
 
       if (orderStatusColumn) {
         columns.push(orderStatusColumn);
-        values.push('paid');
+        // Cart checkout must create pending orders only.
+        // Payment completion is responsible for marking orders as paid.
+        values.push('pending');
       }
 
       if (orderAmountColumn) {
@@ -328,11 +330,8 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
       if (upperDealType === 'RENT') rentCount += 1;
     }
 
-    await client.query(
-      `DELETE FROM cart_items WHERE ${cartUserIdColumn} = $1 AND ${cartIdColumn} = ANY($2::int[])`,
-      [userId, items.map((item) => item.id)],
-    );
-
+    // Do not clear cart before payment is completed.
+    // Cart cleanup must happen after canonical payment completion/webhook.
     await updateUserStatus(client, userId);
     await client.query('COMMIT');
 
