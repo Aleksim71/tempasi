@@ -3,6 +3,7 @@
 
 const OrdersRepo = require('../orders/orders.repo.cjs');
 const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
+const paymentCompletion = require('./paymentCompletion.service.cjs');
 
 function toStr(v) {
   if (v === null || v === undefined) return '';
