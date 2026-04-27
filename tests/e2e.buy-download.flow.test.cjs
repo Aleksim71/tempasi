@@ -100,7 +100,7 @@ async function seedTemplateSeed001() {
 }
 
 describe('E2E: buy → entitlement → download (via real server)', () => {
-  it('API buy → 201; entitlement → download allowed', async () => {
+  it('API buy → checkout success; entitlement → download allowed', async () => {
     await migrateDb();
     await seedTemplateSeed001();
 
@@ -143,7 +143,27 @@ describe('E2E: buy → entitlement → download (via real server)', () => {
       // eslint-disable-next-line no-console
       console.log('[e2e buy]', { status: buy.status, text: buy.text, body: buy.body });
 
-      expect([200, 201]).toContain(buy.status);
+      // follow dev checkout success redirect when buy returns 303
+      if (buy.status === 303) {
+        const location = buy.headers.location;
+        expect(location).toBeTruthy();
+        const successUrl = new URL(location, srv.baseUrl);
+        const successPath = `${successUrl.pathname}${successUrl.search}`;
+
+        const success = await request(srv.baseUrl)
+          .get(successPath)
+          .set('Cookie', sidCookie);
+
+        console.log('[e2e checkout success]', {
+          status: success.status,
+          text: success.text,
+          body: success.body,
+        });
+
+        expect([200, 302, 303]).toContain(success.status);
+      } else {
+        expect([200, 201]).toContain(buy.status);
+      }
 
       // 4) Download should be allowed
       const dl = await request(srv.baseUrl)
