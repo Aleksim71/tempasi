@@ -18,6 +18,13 @@ function getUserId(req) {
   return null;
 }
 
+function downloadStubEnabled() {
+  return (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.TEMPASI_ENABLE_DOWNLOAD_STUB === '1'
+  );
+}
+
 function resolveDownloadFile(templateSlug) {
   // Common places in this repo:
   // - storage/templates/<slug>/template.zip
@@ -81,9 +88,16 @@ async function downloadTemplate(req, res, next) {
 
     const filePath = resolveDownloadFile(templateSlug);
 
-    // ✅ Schema/test-friendly: if there is no real zip yet, don’t 500.
+    // Schema/test-friendly stub is allowed only outside production,
+    // or when explicitly enabled for controlled diagnostics.
     if (!filePath) {
-      return res.status(200).type('text').send(`DOWNLOAD OK (stub): ${templateSlug}`);
+      if (downloadStubEnabled()) {
+        return res.status(200).type('text').send(`DOWNLOAD OK (stub): ${templateSlug}`);
+      }
+
+      return res.status(404).json({
+        error: { code: 'DOWNLOAD_FILE_NOT_FOUND', message: 'Download file not found' },
+      });
     }
 
     // Real download

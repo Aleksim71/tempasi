@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createWebRouter } from './web/routes/web.routes.js';
 
+import cartCheckoutPassRoutes from './web/routes/cart.checkout-pass.routes.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -225,6 +227,13 @@ export function createWebApp({ db }) {
   app.get('/', (_req, res) => res.redirect(302, '/templates'));
 
   app.use(createWebRouter());
+
+  if (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.TEMPASI_ENABLE_CART_CHECKOUT_PASS === '1'
+  ) {
+    app.use(cartCheckoutPassRoutes);
+  }
 
   return app;
 }

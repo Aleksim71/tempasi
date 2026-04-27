@@ -9,6 +9,13 @@ function safeSlug(s) {
     .replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+function legacyPublicDownloadEnabled() {
+  return (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.TEMPASI_ENABLE_LEGACY_PUBLIC_DOWNLOAD === '1'
+  );
+}
+
 async function findZipForSlug(zipsDir, slug) {
   // поддержка:
   // - seed-001.zip
@@ -46,6 +53,14 @@ export function createDownloadRoutes(options = {}) {
   const router = express.Router();
 
   const zipsDir = options.zipsDir || path.join(process.cwd(), 'storage', 'zips');
+
+  if (!legacyPublicDownloadEnabled()) {
+    router.get('/download/:slug', (_req, res) => {
+      return res.status(404).type('text/plain').send('Not found');
+    });
+
+    return router;
+  }
 
   router.get('/download/:slug', async (req, res, next) => {
     try {
