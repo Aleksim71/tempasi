@@ -92,6 +92,7 @@ router.post(['/cart/checkout', '/cart/checkout-pass', '/checkout/pass'], async (
     }
 
     const result = await checkoutCartPass({
+      req,
       userId,
       selectedItemIds: collectSelectedIds(req),
     });
@@ -102,6 +103,10 @@ router.post(['/cart/checkout', '/cart/checkout-pass', '/checkout/pass'], async (
     params.set('rent', String(result.rentCount));
     if (result.orderIds.length > 0) {
       params.set('order_ids', result.orderIds.join(','));
+    }
+
+    if (result.checkoutUrl) {
+      return res.redirect(303, result.checkoutUrl);
     }
 
     return res.redirect(`/checkout/pass/result?${params.toString()}`);

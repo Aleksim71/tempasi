@@ -52,6 +52,13 @@ async function getPool() {
   return pool;
 }
 
+async function resolvePaymentsService() {
+  const mod = await import(
+    new URL('../../modules/payments/payments.service.cjs', import.meta.url).href
+  );
+  return mod.default || mod;
+}
+
 async function getColumns(client, tableName) {
   const { rows } = await client.query(
     `
@@ -181,7 +188,7 @@ async function updateUserStatus(client, userId) {
   }
 }
 
-export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
+export async function checkoutCartPass({ req = null, userId, selectedItemIds = [] }) {
   if (!cartCheckoutPassEnabled()) {
     const error = new Error('Cart checkout pass is disabled in production');
     error.statusCode = 404;
@@ -235,6 +242,12 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
       throw error;
     }
 
+    if (items.length !== 1) {
+      const error = new Error('Cart checkout currently supports one item per checkout');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const orderColumns = await getColumns(client, 'orders');
     const orderUserIdColumn = pickFirst(orderColumns, [
       'buyer_user_id',
@@ -253,6 +266,8 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
     const orderCurrencyColumn = pickFirst(orderColumns, ['currency']);
     const orderSourceColumn = pickFirst(orderColumns, ['source', 'checkout_source']);
     const orderCartItemIdColumn = pickFirst(orderColumns, ['cart_item_id']);
+    const orderProviderSessionIdColumn = pickFirst(orderColumns, ['provider_session_id']);
+    const orderProviderColumn = pickFirst(orderColumns, ['provider']);
     const orderIdColumn = pickFirst(orderColumns, ['id']);
 
     if (!orderUserIdColumn || !orderSlugColumn || !orderDealTypeColumn) {
@@ -301,6 +316,11 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
         values.push('EUR');
       }
 
+      if (orderProviderColumn) {
+        columns.push(orderProviderColumn);
+        values.push('fake');
+      }
+
       if (orderSourceColumn) {
         columns.push(orderSourceColumn);
         values.push('cart_checkout_pass');
@@ -330,9 +350,37 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
       if (upperDealType === 'RENT') rentCount += 1;
     }
 
+    if (insertedOrderIds.length !== 1) {
+      const error = new Error('Cart checkout failed to create one pending order');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    const orderResult = await client.query(
+      `SELECT * FROM orders WHERE ${orderIdColumn} = $1 LIMIT 1`,
+      [insertedOrderIds[0]],
+    );
+    const pendingOrder = orderResult.rows[0];
+
+    const paymentsService = await resolvePaymentsService();
+    const session = await paymentsService.createCheckoutSession(req, { order: pendingOrder });
+
+    if (!session || !session.id || !session.url) {
+      const error = new Error('CHECKOUT_SESSION_CREATE_FAILED');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    if (orderProviderSessionIdColumn) {
+      await client.query(
+        `UPDATE orders SET ${orderProviderSessionIdColumn} = $2 WHERE ${orderIdColumn} = $1`,
+        [pendingOrder.id, session.id],
+      );
+    }
+
     // Do not clear cart before payment is completed.
     // Cart cleanup must happen after canonical payment completion/webhook.
-    await updateUserStatus(client, userId);
+    // Do not update user business status before payment is completed.
     await client.query('COMMIT');
 
     return {
@@ -340,6 +388,8 @@ export async function checkoutCartPass({ userId, selectedItemIds = [] }) {
       buyCount,
       rentCount,
       orderIds: insertedOrderIds,
+      checkoutUrl: session.url,
+      sessionId: session.id,
       items,
     };
   } catch (error) {
