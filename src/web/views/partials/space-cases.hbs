@@ -76,8 +76,10 @@
   {{#if (eq workspaceData.cases.tab "rents")}}
     <div class="cases-panel">
       <div class="cases-panel__header">
-        <h3 class="cases-panel__title">Rents</h3>
-        <p class="cases-panel__text">Templates currently held by the user and available for case assignment.</p>
+        <h3 class="cases-panel__title">Active Rent Reservations</h3>
+        <p class="cases-panel__text">
+          Templates currently reserved by active RENT holds. While active, these templates are hidden from the public catalog and can be bought only by the current renter.
+        </p>
       </div>
 
       {{#if workspaceData.cases.rents.length}}
@@ -85,21 +87,31 @@
           {{#each workspaceData.cases.rents}}
             <article class="cases-rent-card">
               <div class="cases-rent-card__title">{{title}}</div>
+
               <div class="cases-rent-card__meta">
-                <span>Type: {{source}}</span>
+                <span>Status: {{reservationLabel}}</span>
+                <span>Hold type: {{sourceLabel}}</span>
+                <span>Reserved until: {{expiresAtLabel}}</span>
+                <span>Time left: {{timeLeftLabel}}</span>
+                <span>Rent cost: €{{dailyRentPriceEur}} / 24h</span>
                 <span>Cases: {{casesCount}}</span>
               </div>
+
+              <p class="cases-panel__text">{{reservationText}}</p>
+
               <div class="cases-rent-card__actions">
                 <button class="button" type="button">Add to case(s)</button>
-                <button class="button button--ghost" type="button">Buy</button>
+                <button class="button button--ghost" type="button">Buy exclusive</button>
               </div>
             </article>
           {{/each}}
         </div>
       {{else}}
         <div class="cases-empty">
-          <div class="cases-empty__title">No held templates</div>
-          <div class="cases-empty__text">After rent or owner-reserve, templates will appear here.</div>
+          <div class="cases-empty__title">No active rent reservations</div>
+          <div class="cases-empty__text">
+            After a user rents a template, the active reservation will appear here and the template will be unavailable in the public catalog.
+          </div>
           <a class="button button--primary" href="/templates">Browse catalog</a>
         </div>
       {{/if}}

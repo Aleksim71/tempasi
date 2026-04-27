@@ -517,24 +517,7 @@ function createCabinetPagesRouter() {
 
       let activeRentCostCents = 0;
 
-      rents = (rentsResult.rows || []).map((row) => {
-        const amountCents = Number(row.amount_cents || 0);
-        if (Number.isFinite(amountCents)) activeRentCostCents += amountCents;
-
-        const slug = row.template_slug || '';
-
-        return {
-          id: row.id,
-          title: row.template_title || slug,
-          templateSlug: slug,
-          source: 'rent',
-          casesCount: 0,
-          startsAt: formatDateYMD(row.starts_at || row.created_at),
-          endsAt: formatDateYMD(row.ends_at),
-          amountEur: formatMoneyEurFromCents(amountCents),
-          detailsHref: `/templates/${encodeURIComponent(slug)}`,
-        };
-      });
+      rents = (rentsResult.rows || []).map((row) => normalizeCaseRentRow(row));
 
       analytics = {
         activeCases: demoCases.filter((item) => item.status === 'open').length,
@@ -810,5 +793,84 @@ function createCabinetPagesRouter() {
 
   return router;
 }
+
+
+function formatCaseRentDateTime(value) {
+  if (!value) return 'Not set yet';
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not set yet';
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function formatCaseRentMoneyEur(value) {
+  const number = Number(value || 0);
+  return number.toFixed(2);
+}
+
+function formatCaseRentTimeLeft(value) {
+  if (!value) return 'No deadline';
+
+  const expiresAt = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(expiresAt.getTime())) return 'No deadline';
+
+  const diffMs = expiresAt.getTime() - Date.now();
+  if (diffMs <= 0) return 'Expired';
+
+  const totalMinutes = Math.ceil(diffMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+}
+
+function normalizeCaseRentRow(row) {
+  const source = String(row.source || row.hold_source || row.reservation_source || 'rent').toLowerCase();
+  const isActiveRent = source.includes('rent');
+
+  const expiresAt =
+    row.rent_expires_at ||
+    row.expires_at ||
+    row.reserved_until ||
+    row.rented_until ||
+    row.ends_at ||
+    row.hold_until ||
+    null;
+
+  const priceRaw =
+    row.active_rent_price_eur ||
+    row.daily_rent_price_eur ||
+    row.rent_price_eur ||
+    row.price_eur ||
+    row.rentPriceEur ||
+    0;
+
+  return {
+    ...row,
+    id: row.id || row.template_id,
+    title: row.title || row.template_title || 'Untitled template',
+    source,
+    sourceLabel: isActiveRent ? 'RENT' : 'RESERVE',
+    reservationLabel: isActiveRent ? 'Active rent reservation' : 'Owner reserve',
+    reservationText: isActiveRent
+      ? 'Reserved for this user. Hidden from the public catalog while the rent is active.'
+      : 'Held by owner-reserve workflow.',
+    casesCount: Number(row.cases_count || row.casesCount || 0),
+    rentExpiresAt: expiresAt,
+    expiresAtLabel: formatCaseRentDateTime(expiresAt),
+    timeLeftLabel: formatCaseRentTimeLeft(expiresAt),
+    dailyRentPriceEur: formatCaseRentMoneyEur(priceRaw),
+    priceEur: Number(priceRaw || 0),
+    isActiveRent,
+  };
+}
+
 
 module.exports = { createCabinetPagesRouter };
