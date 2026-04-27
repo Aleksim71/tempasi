@@ -32,25 +32,6 @@ async function createUser(client, email) {
   return result.rows[0].id;
 }
 
-async function ensureSellerTemplatesTable(client) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS public.seller_templates (
-      id BIGSERIAL PRIMARY KEY,
-      owner_user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      slug TEXT NOT NULL UNIQUE,
-      short_description TEXT,
-      price_buy_cents INTEGER,
-      price_rent_cents INTEGER,
-      status TEXT NOT NULL DEFAULT 'draft',
-      zip_path TEXT,
-      deleted_at TIMESTAMPTZ NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-}
-
 async function seedSellerTemplate(client, slug) {
   await client.query(
     `
@@ -134,8 +115,7 @@ describe('catalog rent visibility rules', () => {
       const slug = `rent-hidden-${Date.now()}`;
       const renterId = await createUser(client, `renter_${Date.now()}@example.com`);
 
-      await ensureSellerTemplatesTable(client);
-      await seedSellerTemplate(client, slug);
+        await seedSellerTemplate(client, slug);
       await createRentEntitlement(client, {
         userId: renterId,
         slug,
@@ -159,8 +139,7 @@ describe('catalog rent visibility rules', () => {
       const slug = `rent-expired-${Date.now()}`;
       const renterId = await createUser(client, `renter_expired_${Date.now()}@example.com`);
 
-      await ensureSellerTemplatesTable(client);
-      await seedSellerTemplate(client, slug);
+        await seedSellerTemplate(client, slug);
       await createRentEntitlement(client, {
         userId: renterId,
         slug,
