@@ -45,7 +45,8 @@ async function ensureEntitlementForOrder(order) {
   try {
     const kind = defaultKindForDealType(order.deal_type);
     const isRent = upper(order.deal_type) === 'RENT';
-    const endsAtSql = isRent ? `now() + interval '7 days'` : 'NULL';
+    const dealType = upper(order.deal_type) || 'BUY';
+    const endsAtSql = isRent ? `now() + interval '24 hours'` : 'NULL';
 
     // Fast path: return existing
     const existing = await getEntitlementByOrderId(client, order.id);
@@ -53,8 +54,8 @@ async function ensureEntitlementForOrder(order) {
 
     // Preferred insert path (needs UNIQUE on order_id)
     const insertSql = `
-      INSERT INTO public.entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at, created_at)
-      VALUES ($1, $2, $3, $4, now(), ${endsAtSql}, now())
+      INSERT INTO public.entitlements (user_id, template_slug, kind, deal_type, order_id, starts_at, ends_at, created_at)
+      VALUES ($1, $2, $3, $4, $5, now(), ${endsAtSql}, now())
       ON CONFLICT (order_id) DO NOTHING
       RETURNING *
     `;
@@ -64,6 +65,7 @@ async function ensureEntitlementForOrder(order) {
         order.user_id,
         order.template_slug,
         kind,
+        dealType,
         order.id,
       ]);
       if (ins.rows[0]) return ins.rows[0];
@@ -81,10 +83,10 @@ async function ensureEntitlementForOrder(order) {
       try {
         await client.query(
           `
-          INSERT INTO public.entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at, created_at)
-          VALUES ($1, $2, $3, $4, now(), ${endsAtSql}, now())
+          INSERT INTO public.entitlements (user_id, template_slug, kind, deal_type, order_id, starts_at, ends_at, created_at)
+          VALUES ($1, $2, $3, $4, $5, now(), ${endsAtSql}, now())
           `,
-          [order.user_id, order.template_slug, kind, order.id]
+          [order.user_id, order.template_slug, kind, dealType, order.id]
         );
       } catch (_e2) {
         // ignore and select below

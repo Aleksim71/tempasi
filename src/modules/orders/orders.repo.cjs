@@ -67,6 +67,31 @@ async function hasPaidBuyByTemplateSlug(templateSlug) {
   return Boolean(rows && rows[0]);
 }
 
+async function findActiveRentReservationByTemplateSlug(templateSlug) {
+  const sql = `
+    SELECT
+      e.id,
+      e.user_id,
+      e.template_slug,
+      e.kind,
+      e.deal_type,
+      e.order_id,
+      e.starts_at,
+      e.ends_at
+    FROM public.entitlements e
+    WHERE e.template_slug = $1
+      AND (e.ends_at IS NULL OR e.ends_at > now())
+      AND (
+        LOWER(COALESCE(e.kind, '')) = 'rent'
+        OR UPPER(COALESCE(e.deal_type, '')) = 'RENT'
+      )
+    ORDER BY e.created_at DESC, e.id DESC
+    LIMIT 1
+  `;
+  const { rows } = await pool.query(sql, [templateSlug]);
+  return rows[0] || null;
+}
+
 async function markOrderPaid({ orderId, providerPaymentIntentId = null }) {
   const sql = `
     UPDATE orders
@@ -109,6 +134,7 @@ module.exports = {
   attachProviderSession,
   findOrderByProviderSessionId,
   hasPaidBuyByTemplateSlug,
+  findActiveRentReservationByTemplateSlug,
   markOrderPaid,
   markOrderFailed,
 };

@@ -60,6 +60,14 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
       err.code = 'TEMPLATE_ALREADY_SOLD';
       throw err;
     }
+
+    const activeRent = await ordersRepo.findActiveRentReservationByTemplateSlug(templateSlug);
+    if (activeRent && String(activeRent.user_id) !== String(userId)) {
+      const err = new Error('Template is currently reserved by active rent.');
+      err.status = 409;
+      err.code = 'TEMPLATE_RENT_RESERVED';
+      throw err;
+    }
   }
 
   const order = await ordersRepo.createOrder({
