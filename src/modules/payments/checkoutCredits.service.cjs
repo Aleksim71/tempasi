@@ -11,6 +11,20 @@
  * Expected DB adapter: pg Pool/Client compatible object with query(sql, params).
  */
 
+function getQueryClient(db) {
+  if (db && typeof db.query === 'function') return db;
+  if (db && db.pool && typeof db.pool.query === 'function') return db.pool;
+  if (db && db.default && typeof db.default.query === 'function') return db.default;
+  if (db && db.default && db.default.pool && typeof db.default.pool.query === 'function') {
+    return db.default.pool;
+  }
+  throw new Error('DB_QUERY_NOT_AVAILABLE');
+}
+
+async function q(db, sql, params = []) {
+  return getQueryClient(db).query(sql, params);
+}
+
 function toInt(value, fallback = 0) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -41,7 +55,7 @@ function calculateCheckoutAmounts({ grossAmountCents, availableCreditCents = 0 }
 async function getAvailableCreditCents(db, userId) {
   if (!userId) return 0;
 
-  const result = await db.query(
+  const result = await q(db, 
     `
       SELECT
         COALESCE(SUM(c.amount_cents), 0)
@@ -72,7 +86,7 @@ async function reserveCreditForOrder(db, { userId, orderId, grossAmountCents }) 
     return { grossAmountCents: 0, creditAppliedCents: 0, payableAmountCents: 0, usages: [] };
   }
 
-  const credits = await db.query(
+  const credits = await q(db, 
     `
       SELECT
         c.id,
@@ -102,7 +116,7 @@ async function reserveCreditForOrder(db, { userId, orderId, grossAmountCents }) 
     const amount = Math.min(remaining, available);
     if (amount <= 0) continue;
 
-    const inserted = await db.query(
+    const inserted = await q(db, 
       `
         INSERT INTO account_credit_usages (credit_id, order_id, amount_cents, status)
         VALUES ($1, $2, $3, 'reserved')
@@ -118,7 +132,7 @@ async function reserveCreditForOrder(db, { userId, orderId, grossAmountCents }) 
   const creditAppliedCents = gross - remaining;
   const payableAmountCents = remaining;
 
-  await db.query(
+  await q(db, 
     `
       UPDATE orders
       SET
@@ -136,7 +150,7 @@ async function reserveCreditForOrder(db, { userId, orderId, grossAmountCents }) 
 async function applyReservedCreditForOrder(db, orderId) {
   if (!orderId) throw new Error('orderId is required');
 
-  const result = await db.query(
+  const result = await q(db, 
     `
       UPDATE account_credit_usages
       SET status = 'applied', applied_at = now(), updated_at = now()
@@ -153,7 +167,7 @@ async function applyReservedCreditForOrder(db, orderId) {
 async function releaseReservedCreditForOrder(db, orderId) {
   if (!orderId) throw new Error('orderId is required');
 
-  const result = await db.query(
+  const result = await q(db, 
     `
       UPDATE account_credit_usages
       SET status = 'released', released_at = now(), updated_at = now()
@@ -164,7 +178,7 @@ async function releaseReservedCreditForOrder(db, orderId) {
     [orderId]
   );
 
-  await db.query(
+  await q(db, 
     `
       UPDATE orders
       SET credit_applied_cents = 0,

@@ -3,6 +3,8 @@
 
 const ordersRepo = require('./orders.repo.cjs');
 const paymentsService = require('../payments/payments.service.cjs');
+const CheckoutCreditsService = require('../payments/checkoutCredits.service.cjs');
+const db = require('../../config/db.cjs');
 const casesService = require('../cases/cases.service.cjs');
 
 const LICENSE_DEFAULTS = {
@@ -160,8 +162,34 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
 async function createOrderCheckout(req, { userId, templateSlug, payload }) {
   const order = await createPendingOrder({ userId, templateSlug, payload });
 
-  const session = await paymentsService.createCheckoutSession(req, { order });
+  const grossAmountCents = Number(
+    order.amount_cents ?? order.amountCents ?? p?.amountCents ?? payload?.amountCents ?? 0
+  );
+
+  const creditReservation = await CheckoutCreditsService.reserveCreditForOrder(db, {
+    userId: order.user_id || order.userId || userId,
+    orderId: order.id,
+    grossAmountCents,
+  });
+
+  const checkoutOrder = {
+    ...order,
+    amount_cents: grossAmountCents,
+    gross_amount_cents: creditReservation.grossAmountCents,
+    credit_applied_cents: creditReservation.creditAppliedCents,
+    payable_amount_cents: creditReservation.payableAmountCents,
+  };
+
+  let session;
+  try {
+    session = await paymentsService.createCheckoutSession(req, { order: checkoutOrder });
+  } catch (error) {
+    await CheckoutCreditsService.releaseReservedCreditForOrder(db, order.id);
+    throw error;
+  }
+
   if (!session || !session.id || !session.url) {
+    await CheckoutCreditsService.releaseReservedCreditForOrder(db, order.id);
     fail('CHECKOUT_SESSION_CREATE_FAILED', 500);
   }
 
@@ -174,6 +202,9 @@ async function createOrderCheckout(req, { userId, templateSlug, payload }) {
     orderId: order.id,
     sessionId: session.id,
     checkoutUrl: session.url,
+    grossAmountCents: creditReservation.grossAmountCents,
+    creditAppliedCents: creditReservation.creditAppliedCents,
+    payableAmountCents: creditReservation.payableAmountCents,
   };
 }
 

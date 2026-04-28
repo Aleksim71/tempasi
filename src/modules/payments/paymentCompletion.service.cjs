@@ -4,6 +4,7 @@
 const OrdersRepo = require('../orders/orders.repo.cjs');
 const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
 const AccountCreditsService = require('./accountCredits.service.cjs');
+const CheckoutCreditsService = require('./checkoutCredits.service.cjs');
 const db = require('../../config/db.cjs');
 
 function firstDefined(...values) {
@@ -114,6 +115,8 @@ async function completePaidOrder(input = {}) {
     paidOrder = await findOrder({ orderId: order.id, providerSessionId });
   }
 
+  const appliedCredits = await CheckoutCreditsService.applyReservedCreditForOrder(db, paidOrder.id);
+
   let closedRentEntitlements = [];
   if (
     String(paidOrder.deal_type || '').toUpperCase() === 'BUY' &&
@@ -140,6 +143,7 @@ async function completePaidOrder(input = {}) {
     entitlement,
     closedRentEntitlements,
     createdCredits,
+    appliedCredits,
   };
 }
 
