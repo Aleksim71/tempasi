@@ -3,6 +3,35 @@
 
 const { pool } = require('../../config/db.cjs');
 
+async function getColumns(tableName) {
+  const { rows } = await pool.query(
+    `
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = $1
+    `,
+    [tableName]
+  );
+
+  return new Set((rows || []).map((row) => row.column_name));
+}
+
+async function hasTable(tableName) {
+  const { rows } = await pool.query(
+    `
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = $1
+    LIMIT 1
+    `,
+    [tableName]
+  );
+
+  return Boolean(rows && rows[0]);
+}
+
 async function createOrder({
   userId,
   templateSlug,
@@ -11,6 +40,8 @@ async function createOrder({
   amountCents,
   currency,
   provider,
+  rentDays = null,
+  caseIds = [],
 }) {
   if (!license) {
     const err = new Error('LICENSE_REQUIRED');
@@ -19,12 +50,20 @@ async function createOrder({
     throw err;
   }
 
-  const sql = `
-    INSERT INTO orders (user_id, template_slug, deal_type, license, amount_cents, currency, provider, status)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
-    RETURNING *
-  `;
-  const { rows } = await pool.query(sql, [
+  const orderColumns = await getColumns('orders');
+
+  const columns = [
+    'user_id',
+    'template_slug',
+    'deal_type',
+    'license',
+    'amount_cents',
+    'currency',
+    'provider',
+    'status',
+  ];
+
+  const values = [
     userId,
     templateSlug,
     dealType,
@@ -32,8 +71,44 @@ async function createOrder({
     amountCents,
     currency,
     provider,
-  ]);
-  return rows[0];
+    'pending',
+  ];
+
+  if (orderColumns.has('rent_days')) {
+    columns.push('rent_days');
+    values.push(rentDays);
+  }
+
+  if (orderColumns.has('case_ids')) {
+    columns.push('case_ids');
+    values.push(caseIds && caseIds.length ? JSON.stringify(caseIds.map(String)) : null);
+  }
+
+  const placeholders = values.map((_, index) => `$${index + 1}`);
+
+  const sql = `
+    INSERT INTO orders (${columns.join(', ')})
+    VALUES (${placeholders.join(', ')})
+    RETURNING *
+  `;
+
+  const { rows } = await pool.query(sql, values);
+  const order = rows[0];
+
+  if (order && Array.isArray(caseIds) && caseIds.length > 0 && await hasTable('order_case_assignments')) {
+    for (const caseId of [...new Set(caseIds.map((id) => String(id || '').trim()).filter(Boolean))]) {
+      await pool.query(
+        `
+        INSERT INTO public.order_case_assignments(order_id, case_id)
+        VALUES ($1, $2)
+        ON CONFLICT (order_id, case_id) DO NOTHING
+        `,
+        [order.id, caseId]
+      );
+    }
+  }
+
+  return order;
 }
 
 async function attachProviderSession({ orderId, providerSessionId }) {
@@ -92,7 +167,13 @@ async function findActiveRentReservationByTemplateSlug(templateSlug) {
   return rows[0] || null;
 }
 
-async function markOrderPaid({ orderId, providerPaymentIntentId = null }) {
+async function markOrderPaid(input, maybeOptions = {}) {
+  const orderId = typeof input === 'object' && input !== null ? input.orderId : input;
+  const providerPaymentIntentId =
+    typeof input === 'object' && input !== null
+      ? input.providerPaymentIntentId || input.provider_payment_intent_id || null
+      : maybeOptions.providerPaymentIntentId || maybeOptions.provider_payment_intent_id || null;
+
   const sql = `
     UPDATE orders
     SET status = 'paid',
@@ -101,6 +182,7 @@ async function markOrderPaid({ orderId, providerPaymentIntentId = null }) {
     WHERE id = $1 AND status <> 'paid'
     RETURNING *
   `;
+
   try {
     const { rows } = await pool.query(sql, [orderId, providerPaymentIntentId]);
     return rows[0] || null;

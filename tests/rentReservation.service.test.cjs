@@ -98,4 +98,125 @@ describe('rent reservation business rules', () => {
       expect(String(buyOrder.status).toLowerCase()).toBe('pending');
     });
   });
+  test('RENT order requires selected rent days and owned case ids before payment', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const otherUserId = await createTestUser(db);
+      const templateSlug = `rent-selection-${Date.now()}-1`;
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: { license: 'PU', dealType: 'RENT', caseIds: ['missing-days'] },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_DAYS_REQUIRED',
+        status: 400,
+      });
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: { license: 'PU', dealType: 'RENT', rentDays: 3 },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_CASE_IDS_REQUIRED',
+        status: 400,
+      });
+
+      await OrdersService.createPendingOrder({
+        userId: otherUserId,
+        templateSlug: `${templateSlug}-other`,
+        payload: { license: 'PU', dealType: 'RENT', rentDays: 3, caseIds: [] },
+      }).catch(() => null);
+
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      await casesService.ensureDefaultCaseForUser(otherUserId, db);
+      const otherCases = await casesService.getOwnerCases(otherUserId, db);
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: {
+            license: 'PU',
+            dealType: 'RENT',
+            rentDays: 3,
+            caseIds: [otherCases[0].id],
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_CASE_NOT_OWNED',
+        status: 403,
+      });
+    });
+  });
+
+  test('pending RENT stores rent days and case ids but entitlement starts only after payment', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const templateSlug = `rent-selection-${Date.now()}-2`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(userId, db);
+      const cases = await casesService.getOwnerCases(userId, db);
+
+      const order = await OrdersService.createPendingOrder({
+        userId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 3,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      expect(order).toBeTruthy();
+      expect(String(order.status).toLowerCase()).toBe('pending');
+      expect(String(order.deal_type).toUpperCase()).toBe('RENT');
+      expect(Number(order.rent_days)).toBe(3);
+
+      const beforeEntitlement = await db.query(
+        `SELECT * FROM public.entitlements WHERE order_id = $1`,
+        [order.id],
+      );
+      expect(beforeEntitlement.rows).toHaveLength(0);
+
+      const assignments = await db.query(
+        `SELECT * FROM public.order_case_assignments WHERE order_id = $1`,
+        [order.id],
+      );
+      expect(assignments.rows).toHaveLength(1);
+      expect(String(assignments.rows[0].case_id)).toBe(String(cases[0].id));
+
+      const paidOrder = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [order.id, `rent_sess_${Date.now()}`, `rent_pi_${Date.now()}`],
+      );
+
+      const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidOrder.rows[0]);
+      expect(entitlement).toBeTruthy();
+      expect(String(entitlement.kind).toLowerCase()).toBe('rent');
+      expect(String(entitlement.deal_type).toUpperCase()).toBe('RENT');
+      expect(entitlement.starts_at).toBeTruthy();
+      expect(entitlement.ends_at).toBeTruthy();
+
+      const startsAt = new Date(entitlement.starts_at).getTime();
+      const endsAt = new Date(entitlement.ends_at).getTime();
+      const diffDays = Math.round((endsAt - startsAt) / (24 * 60 * 60 * 1000));
+      expect(diffDays).toBe(3);
+    });
+  });
+
 });

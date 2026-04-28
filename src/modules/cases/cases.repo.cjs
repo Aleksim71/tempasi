@@ -101,6 +101,30 @@ async function countByOwner(ownerUserId, db) {
   return Number(rows?.[0]?.count || 0);
 }
 
+async function listOwnedCaseIds(ownerUserId, caseIds, db) {
+  const pool = pickDb(db);
+  const schema = await getCasesSchema(pool);
+  const ownerValue = ownerValueForSchema(ownerUserId, schema);
+  const normalized = Array.isArray(caseIds)
+    ? [...new Set(caseIds.map((id) => String(id || '').trim()).filter(Boolean))]
+    : [];
+
+  if (normalized.length === 0) return [];
+
+  const { rows } = await pool.query(
+    `
+    SELECT id::text AS id
+    FROM cases
+    WHERE ${schema.ownerColumn} = $1
+      AND id::text = ANY($2::text[])
+    ORDER BY updated_at DESC
+    `,
+    [ownerValue, normalized]
+  );
+
+  return (rows || []).map((row) => String(row.id));
+}
+
 async function createCase({ ownerUserId, title, clientName, note }, db) {
   const pool = pickDb(db);
   const schema = await getCasesSchema(pool);
@@ -215,6 +239,7 @@ async function removeTemplate(caseId, templateId, db) {
 module.exports = {
   listByOwner,
   countByOwner,
+  listOwnedCaseIds,
   createCase,
   ensureDefaultCase,
   deleteOwnedCase,

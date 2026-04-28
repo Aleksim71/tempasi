@@ -46,7 +46,9 @@ async function ensureEntitlementForOrder(order) {
     const kind = defaultKindForDealType(order.deal_type);
     const isRent = upper(order.deal_type) === 'RENT';
     const dealType = upper(order.deal_type) || 'BUY';
-    const endsAtSql = isRent ? `now() + interval '24 hours'` : 'NULL';
+    const rentDays = Number.parseInt(String(order.rent_days || '1'), 10);
+    const safeRentDays = Number.isInteger(rentDays) && rentDays >= 1 && rentDays <= 365 ? rentDays : 1;
+    const endsAtSql = isRent ? `now() + (${safeRentDays} * interval '1 day')` : 'NULL';
 
     // Fast path: return existing
     const existing = await getEntitlementByOrderId(client, order.id);

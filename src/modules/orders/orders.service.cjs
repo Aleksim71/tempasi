@@ -3,6 +3,7 @@
 
 const ordersRepo = require('./orders.repo.cjs');
 const paymentsService = require('../payments/payments.service.cjs');
+const casesService = require('../cases/cases.service.cjs');
 
 const LICENSE_DEFAULTS = {
   PU: { amountCents: 0, currency: 'EUR', dealType: 'BUY' },
@@ -12,14 +13,54 @@ const LICENSE_DEFAULTS = {
   EX: { amountCents: 0, currency: 'EUR', dealType: 'BUY' },
 };
 
+function fail(code, status, message = code) {
+  const err = new Error(message);
+  err.status = status;
+  err.code = code;
+  throw err;
+}
+
+function parsePositiveInt(value) {
+  const n = Number.parseInt(String(value ?? ''), 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function collectCaseIds(payload = {}) {
+  const raw = [];
+  const keys = ['caseIds', 'case_ids', 'cases', 'selectedCaseIds', 'selected_case_ids'];
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (Array.isArray(value)) raw.push(...value);
+    else if (value !== undefined && value !== null) raw.push(value);
+  }
+
+  const out = [];
+  for (const item of raw) {
+    if (Array.isArray(item)) {
+      out.push(...item);
+      continue;
+    }
+
+    const text = String(item || '').trim();
+    if (!text) continue;
+
+    if (text.includes(',')) {
+      out.push(...text.split(',').map((part) => part.trim()).filter(Boolean));
+      continue;
+    }
+
+    out.push(text);
+  }
+
+  return [...new Set(out.map((id) => String(id || '').trim()).filter(Boolean))];
+}
+
 function normalizeBuyPayload(payload = {}) {
   const license = String(payload.license || 'PU').trim().toUpperCase();
   const fallback = LICENSE_DEFAULTS[license];
   if (!fallback) {
-    const err = new Error('INVALID_LICENSE');
-    err.status = 400;
-    err.code = 'INVALID_LICENSE';
-    throw err;
+    fail('INVALID_LICENSE', 400);
   }
 
   const amountCents =
@@ -27,46 +68,77 @@ function normalizeBuyPayload(payload = {}) {
     Number.isFinite(Number(payload.amount)) ? Math.round(Number(payload.amount) * 100) :
     fallback.amountCents;
 
+  const dealType = String(payload.dealType || payload.deal_type || fallback.dealType || 'BUY')
+    .trim()
+    .toUpperCase();
+
+  const rentDays = parsePositiveInt(
+    payload.rentDays ?? payload.rent_days ?? payload.rentalDays ?? payload.days
+  );
+
+  const caseIds = collectCaseIds(payload);
+
   return {
     license,
     amountCents,
     currency: String(payload.currency || fallback.currency || 'EUR').trim().toUpperCase(),
-    dealType: String(payload.dealType || fallback.dealType || 'BUY').trim().toUpperCase(),
+    dealType,
+    rentDays,
+    caseIds,
   };
+}
+
+async function validateRentSelection({ userId, payload }) {
+  if (payload.dealType !== 'RENT') return payload;
+
+  if (!payload.rentDays) {
+    fail('RENT_DAYS_REQUIRED', 400, 'Select rental period before payment.');
+  }
+
+  if (payload.rentDays < 1 || payload.rentDays > 365) {
+    fail('RENT_DAYS_INVALID', 400, 'Rental period must be between 1 and 365 days.');
+  }
+
+  if (!payload.caseIds || payload.caseIds.length === 0) {
+    fail('RENT_CASE_IDS_REQUIRED', 400, 'Select at least one Case for this rent.');
+  }
+
+  await casesService.ensureDefaultCaseForUser(userId);
+
+  const ownedCaseIds = await casesService.listOwnedCaseIds(userId, payload.caseIds);
+  const ownedSet = new Set(ownedCaseIds.map(String));
+  const missing = payload.caseIds.filter((id) => !ownedSet.has(String(id)));
+
+  if (missing.length > 0) {
+    fail('RENT_CASE_NOT_OWNED', 403, 'Selected Case does not belong to current user.');
+  }
+
+  return payload;
 }
 
 async function createPendingOrder({ userId, templateSlug, payload }) {
   if (!userId) {
-    const err = new Error('USER_ID_REQUIRED');
-    err.status = 400;
-    err.code = 'USER_ID_REQUIRED';
-    throw err;
+    fail('USER_ID_REQUIRED', 400);
   }
 
   if (!templateSlug) {
-    const err = new Error('TEMPLATE_SLUG_REQUIRED');
-    err.status = 400;
-    err.code = 'TEMPLATE_SLUG_REQUIRED';
-    throw err;
+    fail('TEMPLATE_SLUG_REQUIRED', 400);
   }
 
-  const p = normalizeBuyPayload(payload);
+  const p = await validateRentSelection({
+    userId,
+    payload: normalizeBuyPayload(payload),
+  });
 
   if (p.dealType === 'BUY') {
     const alreadySold = await ordersRepo.hasPaidBuyByTemplateSlug(templateSlug);
     if (alreadySold) {
-      const err = new Error('Template already sold (exclusive sale).');
-      err.status = 409;
-      err.code = 'TEMPLATE_ALREADY_SOLD';
-      throw err;
+      fail('TEMPLATE_ALREADY_SOLD', 409, 'Template already sold (exclusive sale).');
     }
 
     const activeRent = await ordersRepo.findActiveRentReservationByTemplateSlug(templateSlug);
     if (activeRent && String(activeRent.user_id) !== String(userId)) {
-      const err = new Error('Template is currently reserved by active rent.');
-      err.status = 409;
-      err.code = 'TEMPLATE_RENT_RESERVED';
-      throw err;
+      fail('TEMPLATE_RENT_RESERVED', 409, 'Template is currently reserved by active rent.');
     }
   }
 
@@ -78,6 +150,8 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
     amountCents: p.amountCents,
     currency: p.currency,
     provider: 'fake',
+    rentDays: p.dealType === 'RENT' ? p.rentDays : null,
+    caseIds: p.dealType === 'RENT' ? p.caseIds : [],
   });
 
   return order;
@@ -88,10 +162,7 @@ async function createOrderCheckout(req, { userId, templateSlug, payload }) {
 
   const session = await paymentsService.createCheckoutSession(req, { order });
   if (!session || !session.id || !session.url) {
-    const err = new Error('CHECKOUT_SESSION_CREATE_FAILED');
-    err.status = 500;
-    err.code = 'CHECKOUT_SESSION_CREATE_FAILED';
-    throw err;
+    fail('CHECKOUT_SESSION_CREATE_FAILED', 500);
   }
 
   await ordersRepo.attachProviderSession({

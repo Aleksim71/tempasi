@@ -27,6 +27,10 @@ async function ensureDefaultCaseForUser(userId, db) {
   return repo.ensureDefaultCase(userId, db);
 }
 
+async function listOwnedCaseIds(userId, caseIds, db) {
+  return repo.listOwnedCaseIds(userId, caseIds, db);
+}
+
 async function deleteCase(userId, caseId, db) {
   return repo.deleteOwnedCase({ ownerUserId: userId, caseId }, db);
 }
@@ -36,5 +40,6 @@ module.exports = {
   getOwnerCases,
   create,
   ensureDefaultCaseForUser,
+  listOwnedCaseIds,
   deleteCase,
 };
