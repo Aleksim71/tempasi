@@ -75,3 +75,4 @@ artifacts/
 # local tools
 .uri/
 .runner-work/
+outbox/
