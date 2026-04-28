@@ -220,3 +220,18 @@ module.exports = {
   markOrderPaid,
   markOrderFailed,
 };
+
+// === TEMPASI_STEP_5C_CREDIT_CHECKOUT_EXPORTS ===
+// Convenience exports for modules that prefer using orders.repo directly.
+// Main implementation lives in src/modules/payments/checkoutCredits.service.cjs.
+try {
+  const checkoutCredits = require('../payments/checkoutCredits.service.cjs');
+  module.exports.calculateCheckoutAmounts = checkoutCredits.calculateCheckoutAmounts;
+  module.exports.getAvailableCreditCents = checkoutCredits.getAvailableCreditCents;
+  module.exports.reserveCreditForOrder = checkoutCredits.reserveCreditForOrder;
+  module.exports.applyReservedCreditForOrder = checkoutCredits.applyReservedCreditForOrder;
+  module.exports.releaseReservedCreditForOrder = checkoutCredits.releaseReservedCreditForOrder;
+} catch (_) {
+  // Keep repo load-safe in test/bootstrap contexts where relative module graph differs.
+}
+// === /TEMPASI_STEP_5C_CREDIT_CHECKOUT_EXPORTS ===

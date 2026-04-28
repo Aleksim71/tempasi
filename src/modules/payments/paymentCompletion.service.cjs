@@ -147,3 +147,11 @@ module.exports = {
   completePaidOrder,
   findOrder,
 };
+
+// === TEMPASI_STEP_5C_PAYMENT_COMPLETION_NOTE ===
+// Step 5C integration note:
+// After external provider payment succeeds and before/around entitlement creation,
+// call checkoutCredits.applyReservedCreditForOrder(dbOrClient, order.id).
+// If checkout/session fails or expires, call checkoutCredits.releaseReservedCreditForOrder(dbOrClient, order.id).
+// Do not mutate provider payment amount after session creation.
+// === /TEMPASI_STEP_5C_PAYMENT_COMPLETION_NOTE ===
