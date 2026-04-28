@@ -1,7 +1,50 @@
 'use strict';
 
 const PaymentCompletion = require('./paymentCompletion.service.cjs');
+const OrdersRepo = require('../orders/orders.repo.cjs');
+const CheckoutCreditsService = require('./checkoutCredits.service.cjs');
+const db = require('../../config/db.cjs');
 const { PAYMENTS_PROVIDER, STRIPE_WEBHOOK_SECRET } = require('../../config/payments.cjs');
+
+// TEMPASI_STEP_5F_RELEASE_RESERVED_CREDIT
+const RELEASE_RESERVED_CREDIT_EVENT_TYPES = new Set([
+  'checkout.session.expired',
+  'checkout.session.async_payment_failed',
+]);
+
+async function releaseReservedCreditByProviderSessionId(providerSessionId) {
+  if (!providerSessionId) {
+    const err = new Error('PROVIDER_SESSION_ID_REQUIRED');
+    err.status = 400;
+    throw err;
+  }
+
+  const order = await OrdersRepo.findOrderByProviderSessionId(providerSessionId);
+  if (!order) {
+    return {
+      ok: true,
+      released: false,
+      orderId: null,
+      reason: 'ORDER_NOT_FOUND_FOR_PROVIDER_SESSION',
+    };
+  }
+
+  const releasedCredits = await CheckoutCreditsService.releaseReservedCreditForOrder(db, order.id);
+
+  let failedOrder = order;
+  if (String(order.status || '').toLowerCase() === 'pending' && typeof OrdersRepo.markOrderFailed === 'function') {
+    failedOrder = await OrdersRepo.markOrderFailed({ orderId: order.id }) || order;
+  }
+
+  return {
+    ok: true,
+    released: true,
+    orderId: order.id,
+    orderStatus: failedOrder?.status || order.status || null,
+    releasedCredits,
+  };
+}
+
 
 async function handleStripeWebhook(req) {
   let stripe;
@@ -30,21 +73,26 @@ async function handleStripeWebhook(req) {
     throw err;
   }
 
-  // We care about checkout.session.completed (paid)
-  if (event.type !== 'checkout.session.completed') return { ok: true };
-
   const session = event.data.object;
   const sessionId = session.id;
 
-  const completed = await PaymentCompletion.completePaidOrder({
-    providerSessionId: sessionId,
-    providerPaymentIntentId: session.payment_intent || null,
-  });
+  if (event.type === 'checkout.session.completed') {
+    const completed = await PaymentCompletion.completePaidOrder({
+      providerSessionId: sessionId,
+      providerPaymentIntentId: session.payment_intent || null,
+    });
 
-  return {
-    ok: true,
-    orderId: completed?.order?.id || null,
-  };
+    return {
+      ok: true,
+      orderId: completed?.order?.id || null,
+    };
+  }
+
+  if (RELEASE_RESERVED_CREDIT_EVENT_TYPES.has(event.type)) {
+    return releaseReservedCreditByProviderSessionId(sessionId);
+  }
+
+  return { ok: true };
 }
 
 async function handleFakeWebhook(req) {
@@ -54,21 +102,31 @@ async function handleFakeWebhook(req) {
   const type = body.type;
   const sessionId = body?.data?.object?.id;
 
-  if (type !== 'checkout.session.completed' || !sessionId) {
+  if (!sessionId) {
     const err = new Error('INVALID_FAKE_WEBHOOK_PAYLOAD');
     err.status = 400;
     throw err;
   }
 
-  const completed = await PaymentCompletion.completePaidOrder({
-    providerSessionId: sessionId,
-    providerPaymentIntentId: body?.data?.object?.payment_intent || 'pi_fake',
-  });
+  if (type === 'checkout.session.completed') {
+    const completed = await PaymentCompletion.completePaidOrder({
+      providerSessionId: sessionId,
+      providerPaymentIntentId: body?.data?.object?.payment_intent || 'pi_fake',
+    });
 
-  return {
-    ok: true,
-    orderId: completed?.order?.id || null,
-  };
+    return {
+      ok: true,
+      orderId: completed?.order?.id || null,
+    };
+  }
+
+  if (RELEASE_RESERVED_CREDIT_EVENT_TYPES.has(type)) {
+    return releaseReservedCreditByProviderSessionId(sessionId);
+  }
+
+  const err = new Error('INVALID_FAKE_WEBHOOK_PAYLOAD');
+  err.status = 400;
+  throw err;
 }
 
 async function webhook(req, res) {

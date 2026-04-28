@@ -177,4 +177,111 @@ describe('payments webhook controller', () => {
 
     expect(entitlementResult.rows[0].count).toBe(1);
   });
+
+  test('fake checkout.session.expired releases reserved checkout credit', async () => {
+    process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
+    process.env.PAYMENTS_PROVIDER = 'fake';
+    process.env.APP_BASE_URL = 'http://localhost:3000';
+
+    const app = createApp();
+    const ordersService = require('../src/modules/orders/orders.service.cjs');
+
+    const userResult = await query(
+      `
+        INSERT INTO public.users (email, password_hash)
+        VALUES ($1, $2)
+        RETURNING id
+      `,
+      [`webhook-expired-credit-${Date.now()}@example.com`, 'test-password-hash']
+    );
+
+    const userId = userResult.rows[0].id;
+    const templateSlug = `webhook-expired-credit-template-${Date.now()}`;
+
+    await query(
+      `
+        INSERT INTO public.account_credits (
+          user_id,
+          source_type,
+          source_order_id,
+          related_order_id,
+          amount_cents,
+          currency,
+          status,
+          expires_at
+        )
+        VALUES ($1, 'test_webhook_expired_credit', NULL, NULL, 350, 'EUR', 'active', now() + interval '90 days')
+      `,
+      [userId]
+    );
+
+    const checkout = await ordersService.createOrderCheckout(null, {
+      userId,
+      templateSlug,
+      payload: {
+        dealType: 'BUY',
+        license: 'EX',
+        amountCents: 1000,
+        currency: 'EUR',
+      },
+    });
+
+    expect(checkout.payableAmountCents).toBe(650);
+    expect(checkout.checkoutUrl).toContain('payable_amount_cents=650');
+
+    const beforeRelease = await query(
+      `
+        SELECT status, amount_cents
+          FROM public.account_credit_usages
+         WHERE order_id = $1
+      `,
+      [checkout.orderId]
+    );
+
+    expect(beforeRelease.rows).toHaveLength(1);
+    expect(beforeRelease.rows[0].status).toBe('reserved');
+    expect(Number(beforeRelease.rows[0].amount_cents)).toBe(350);
+
+    const res = await request(app)
+      .post('/webhook')
+      .send({
+        type: 'checkout.session.expired',
+        data: {
+          object: {
+            id: checkout.sessionId,
+          },
+        },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.released).toBe(true);
+    expect(String(res.body.orderId)).toBe(String(checkout.orderId));
+
+    const afterRelease = await query(
+      `
+        SELECT status, amount_cents
+          FROM public.account_credit_usages
+         WHERE order_id = $1
+      `,
+      [checkout.orderId]
+    );
+
+    expect(afterRelease.rows).toHaveLength(1);
+    expect(afterRelease.rows[0].status).toBe('released');
+    expect(Number(afterRelease.rows[0].amount_cents)).toBe(350);
+
+    const orderResult = await query(
+      `
+        SELECT status
+          FROM public.orders
+         WHERE id = $1
+      `,
+      [checkout.orderId]
+    );
+
+    expect(orderResult.rows).toHaveLength(1);
+    expect(orderResult.rows[0].status).toBe('failed');
+  });
+
 });
