@@ -292,4 +292,89 @@ describe('rent reservation business rules', () => {
     });
   });
 
+  test('early BUY by renter closes active RENT as converted_to_buy', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const templateSlug = `rent-converted-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const paymentCompletion = require('../src/modules/payments/paymentCompletion.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(renterUserId, db);
+      const cases = await casesService.getOwnerCases(renterUserId, db);
+
+      const rentOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 5,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        `,
+        [rentOrder.id, `rent_convert_sess_${Date.now()}`, `rent_convert_pi_${Date.now()}`],
+      );
+
+      const paidRent = await db.query(`SELECT * FROM public.orders WHERE id = $1`, [rentOrder.id]);
+      const rentEntitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidRent.rows[0]);
+
+      expect(rentEntitlement).toBeTruthy();
+      expect(String(rentEntitlement.deal_type).toUpperCase()).toBe('RENT');
+
+      const buyOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: { license: 'PU', dealType: 'BUY' },
+      });
+
+      const paidBuy = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [buyOrder.id, `buy_convert_sess_${Date.now()}`, `buy_convert_pi_${Date.now()}`],
+      );
+
+      const completed = await paymentCompletion.completePaidOrder({
+        orderId: paidBuy.rows[0].id,
+        providerSessionId: paidBuy.rows[0].provider_session_id,
+        providerPaymentIntentId: paidBuy.rows[0].provider_payment_intent_id,
+      });
+
+      expect(completed.entitlement).toBeTruthy();
+      expect(String(completed.entitlement.deal_type).toUpperCase()).toBe('BUY');
+      expect(completed.closedRentEntitlements.length).toBeGreaterThanOrEqual(1);
+
+      const closedRent = await db.query(
+        `
+        SELECT *
+        FROM public.entitlements
+        WHERE order_id = $1
+        LIMIT 1
+        `,
+        [rentOrder.id],
+      );
+
+      expect(closedRent.rows[0]).toBeTruthy();
+      expect(String(closedRent.rows[0].closed_reason)).toBe('converted_to_buy');
+      expect(closedRent.rows[0].closed_at).toBeTruthy();
+      expect(new Date(closedRent.rows[0].ends_at).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+  });
+
 });

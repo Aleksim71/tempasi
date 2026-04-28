@@ -101,6 +101,32 @@ async function ensureEntitlementForOrder(order) {
   }
 }
 
+async function closeActiveRentForBuyerBuy({ userId, templateSlug, buyOrderId = null }) {
+  const sql = `
+    UPDATE public.entitlements
+       SET ends_at = now(),
+           closed_at = now(),
+           closed_reason = 'converted_to_buy',
+           updated_at = now()
+     WHERE user_id = $1
+       AND template_slug = $2
+       AND (
+         LOWER(COALESCE(kind, '')) = 'rent'
+         OR UPPER(COALESCE(deal_type, '')) = 'RENT'
+       )
+       AND (ends_at IS NULL OR ends_at > now())
+       AND (
+         closed_reason IS NULL
+         OR closed_reason = ''
+       )
+     RETURNING *
+  `;
+
+  const { rows } = await pool.query(sql, [userId, templateSlug]);
+  return rows;
+}
+
+
 async function findActiveEntitlement({ userId, slug }) {
   const sql = `
     SELECT *
@@ -134,6 +160,7 @@ async function listUserEntitlements({ userId }) {
 
 module.exports = {
   ensureEntitlementForOrder,
+  closeActiveRentForBuyerBuy,
   findActiveEntitlement,
   hasEntitlement,
   listUserEntitlements,

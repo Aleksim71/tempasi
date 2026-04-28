@@ -113,11 +113,25 @@ async function completePaidOrder(input = {}) {
     paidOrder = await findOrder({ orderId: order.id, providerSessionId });
   }
 
+  let closedRentEntitlements = [];
+  if (
+    String(paidOrder.deal_type || '').toUpperCase() === 'BUY' &&
+    EntitlementsRepo &&
+    typeof EntitlementsRepo.closeActiveRentForBuyerBuy === 'function'
+  ) {
+    closedRentEntitlements = await EntitlementsRepo.closeActiveRentForBuyerBuy({
+      userId: paidOrder.user_id,
+      templateSlug: paidOrder.template_slug,
+      buyOrderId: paidOrder.id,
+    });
+  }
+
   const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidOrder);
 
   return {
     order: paidOrder,
     entitlement,
+    closedRentEntitlements,
   };
 }
 
