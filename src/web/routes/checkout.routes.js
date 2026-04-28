@@ -7,6 +7,7 @@ const {
 } = require('../../modules/payments/checkoutSuccessDev.controller.cjs');
 
 const router = express.Router();
+const CheckoutCancelController = require('../../modules/payments/checkoutCancel.controller.cjs');
 
 function devCheckoutSuccessEnabled() {
   return (
@@ -25,5 +26,7 @@ router.get('/success', async (req, res, next) => {
     return next(err);
   }
 });
+
+router.get('/cancel', CheckoutCancelController.handleCheckoutCancel);
 
 export default router;
