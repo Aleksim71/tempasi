@@ -103,23 +103,43 @@ async function ensureEntitlementForOrder(order) {
 
 async function closeActiveRentForBuyerBuy({ userId, templateSlug, buyOrderId = null }) {
   const sql = `
-    UPDATE public.entitlements
+    WITH active_rent AS (
+      SELECT
+        e.id AS entitlement_id,
+        e.order_id AS rent_order_id,
+        e.starts_at AS original_starts_at,
+        e.ends_at AS original_ends_at,
+        o.amount_cents AS rent_amount_cents,
+        o.currency AS rent_currency
+      FROM public.entitlements e
+      LEFT JOIN public.orders o
+        ON o.id = e.order_id
+      WHERE e.user_id = $1
+        AND e.template_slug = $2
+        AND (
+          LOWER(COALESCE(e.kind, '')) = 'rent'
+          OR UPPER(COALESCE(e.deal_type, '')) = 'RENT'
+        )
+        AND (e.ends_at IS NULL OR e.ends_at > now())
+        AND (
+          e.closed_reason IS NULL
+          OR e.closed_reason = ''
+        )
+    )
+    UPDATE public.entitlements e
        SET ends_at = now(),
            closed_at = now(),
            closed_reason = 'converted_to_buy',
            updated_at = now()
-     WHERE user_id = $1
-       AND template_slug = $2
-       AND (
-         LOWER(COALESCE(kind, '')) = 'rent'
-         OR UPPER(COALESCE(deal_type, '')) = 'RENT'
-       )
-       AND (ends_at IS NULL OR ends_at > now())
-       AND (
-         closed_reason IS NULL
-         OR closed_reason = ''
-       )
-     RETURNING *
+      FROM active_rent ar
+     WHERE e.id = ar.entitlement_id
+     RETURNING
+       e.*,
+       ar.rent_order_id,
+       ar.original_starts_at,
+       ar.original_ends_at,
+       ar.rent_amount_cents,
+       ar.rent_currency
   `;
 
   const { rows } = await pool.query(sql, [userId, templateSlug]);

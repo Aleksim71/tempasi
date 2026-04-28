@@ -3,6 +3,7 @@
 
 const OrdersRepo = require('../orders/orders.repo.cjs');
 const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
+const AccountCreditsService = require('./accountCredits.service.cjs');
 const db = require('../../config/db.cjs');
 
 function firstDefined(...values) {
@@ -126,12 +127,19 @@ async function completePaidOrder(input = {}) {
     });
   }
 
+  const createdCredits = await AccountCreditsService.createCreditsFromConvertedRents({
+    userId: paidOrder.user_id,
+    convertedRentEntitlements: closedRentEntitlements,
+    buyOrderId: paidOrder.id,
+  });
+
   const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidOrder);
 
   return {
     order: paidOrder,
     entitlement,
     closedRentEntitlements,
+    createdCredits,
   };
 }
 

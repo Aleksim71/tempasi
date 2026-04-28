@@ -377,4 +377,67 @@ describe('rent reservation business rules', () => {
     });
   });
 
+  test('early BUY creates internal credit for unused prepaid rent value', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const templateSlug = `rent-credit-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const paymentCompletion = require('../src/modules/payments/paymentCompletion.service.cjs');
+      const accountCreditsService = require('../src/modules/payments/accountCredits.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(renterUserId, db);
+      const cases = await casesService.getOwnerCases(renterUserId, db);
+
+      const rentOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 5,
+          amountCents: 1000,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        `,
+        [rentOrder.id, `rent_credit_sess_${Date.now()}`, `rent_credit_pi_${Date.now()}`],
+      );
+
+      const paidRent = await db.query(`SELECT * FROM public.orders WHERE id = $1`, [rentOrder.id]);
+      await EntitlementsRepo.ensureEntitlementForOrder(paidRent.rows[0]);
+
+      const buyOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: { license: 'PU', dealType: 'BUY', amountCents: 5000 },
+      });
+
+      const completed = await paymentCompletion.completePaidOrder({
+        orderId: buyOrder.id,
+        providerSessionId: `buy_credit_sess_${Date.now()}`,
+        providerPaymentIntentId: `buy_credit_pi_${Date.now()}`,
+      });
+
+      expect(completed.createdCredits).toBeTruthy();
+      expect(completed.createdCredits.length).toBe(1);
+      expect(completed.createdCredits[0].source_type).toBe('rent_converted_to_buy');
+      expect(Number(completed.createdCredits[0].amount_cents)).toBeGreaterThan(900);
+      expect(Number(completed.createdCredits[0].amount_cents)).toBeLessThanOrEqual(1000);
+      expect(String(completed.createdCredits[0].status)).toBe('active');
+      expect(completed.createdCredits[0].expires_at).toBeTruthy();
+
+      const balance = await accountCreditsService.getActiveCreditBalance({ userId: renterUserId });
+      expect(balance.amountCents).toBe(Number(completed.createdCredits[0].amount_cents));
+    });
+  });
+
 });

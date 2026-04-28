@@ -11,6 +11,7 @@ const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.rep
 const analyticsService = require('../modules/analytics/analytics.cabinet.service.cjs');
 const casesService = require('../../modules/cases/cases.service.cjs');
 const rentAssignmentsService = require('../../modules/cases/rentAssignments.service.cjs');
+const accountCreditsService = require('../../modules/payments/accountCredits.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 
@@ -678,6 +679,7 @@ function createCabinetPagesRouter() {
       rentOrders: 0,
       ownRevenueEur: '0.00',
       procurementEur: '0.00',
+      creditBalanceEur: '0.00',
     };
     let orders = [];
     let reports = [
@@ -747,12 +749,15 @@ function createCabinetPagesRouter() {
         };
       });
 
+      const creditBalance = await accountCreditsService.getActiveCreditBalance({ userId });
+
       overview = {
         totalOrders: buyCount + rentCount,
         buyOrders: buyCount,
         rentOrders: rentCount,
         ownRevenueEur: '0.00',
         procurementEur: formatMoneyEurFromCents(paidBuyTotal + paidRentTotal),
+        creditBalanceEur: formatMoneyEurFromCents(creditBalance.amountCents),
       };
 
       reports = [
