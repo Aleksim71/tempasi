@@ -77,74 +77,119 @@ async function getAvailableCreditCents(db, userId) {
   return Math.max(0, toInt(result.rows?.[0]?.available_cents, 0));
 }
 
-async function reserveCreditForOrder(db, { userId, orderId, grossAmountCents }) {
+async function reserveCreditForOrder(db, {
+  userId,
+  orderId,
+  grossAmountCents,
+} = {}) {
   if (!userId) throw new Error('userId is required');
   if (!orderId) throw new Error('orderId is required');
 
-  const gross = normalizeAmountCents(grossAmountCents);
-  if (gross === 0) {
-    return { grossAmountCents: 0, creditAppliedCents: 0, payableAmountCents: 0, usages: [] };
-  }
+  const gross = toInt(grossAmountCents, 0);
+  if (gross < 0) throw new Error('grossAmountCents must be non-negative');
 
-  const credits = await q(db, 
-    `
-      SELECT
-        c.id,
-        c.amount_cents,
-        c.created_at,
-        COALESCE(SUM(u.amount_cents) FILTER (WHERE u.status IN ('reserved', 'applied')), 0) AS used_cents
-      FROM account_credits c
-      LEFT JOIN account_credit_usages u ON u.credit_id = c.id
-      WHERE c.user_id = $1
-        AND c.status = 'active'
-        AND (c.expires_at IS NULL OR c.expires_at > now())
-      GROUP BY c.id
-      HAVING c.amount_cents > COALESCE(SUM(u.amount_cents) FILTER (WHERE u.status IN ('reserved', 'applied')), 0)
-      ORDER BY c.expires_at ASC NULLS LAST, c.created_at ASC, c.id ASC
-      FOR UPDATE OF c
-    `,
-    [userId]
+  const existing = await q(db, `
+    SELECT id, credit_id, order_id, amount_cents, status
+      FROM account_credit_usages
+     WHERE order_id = $1
+       AND status = 'reserved'
+     ORDER BY id ASC
+  `, [orderId]);
+
+  const existingReserved = (existing.rows || []).reduce(
+    (sum, row) => sum + toInt(row.amount_cents, 0),
+    0,
   );
 
-  let remaining = gross;
-  const usages = [];
+  if (existingReserved > 0) {
+    const amounts = calculateCheckoutAmounts({
+      grossAmountCents: gross,
+      availableCreditCents: existingReserved,
+    });
 
-  for (const credit of credits.rows || []) {
-    if (remaining <= 0) break;
-
-    const available = Math.max(0, toInt(credit.amount_cents, 0) - toInt(credit.used_cents, 0));
-    const amount = Math.min(remaining, available);
-    if (amount <= 0) continue;
-
-    const inserted = await q(db, 
-      `
-        INSERT INTO account_credit_usages (credit_id, order_id, amount_cents, status)
-        VALUES ($1, $2, $3, 'reserved')
-        RETURNING id, credit_id, order_id, amount_cents, status
-      `,
-      [credit.id, orderId, amount]
-    );
-
-    usages.push(inserted.rows[0]);
-    remaining -= amount;
-  }
-
-  const creditAppliedCents = gross - remaining;
-  const payableAmountCents = remaining;
-
-  await q(db, 
-    `
+    await q(db, `
       UPDATE orders
-      SET
-        gross_amount_cents = $2,
-        credit_applied_cents = $3,
-        payable_amount_cents = $4
-      WHERE id = $1
-    `,
-    [orderId, gross, creditAppliedCents, payableAmountCents]
-  );
+         SET gross_amount_cents = $2,
+             credit_applied_cents = $3,
+             payable_amount_cents = $4
+       WHERE id = $1
+    `, [
+      orderId,
+      amounts.grossAmountCents,
+      amounts.creditAppliedCents,
+      amounts.payableAmountCents,
+    ]);
 
-  return { grossAmountCents: gross, creditAppliedCents, payableAmountCents, usages };
+    return {
+      ...amounts,
+      usages: existing.rows || [],
+    };
+  }
+
+  const lockedCredits = await q(db, `
+    SELECT id, amount_cents, currency, expires_at, status
+      FROM account_credits
+     WHERE user_id = $1
+       AND status = 'active'
+       AND expires_at > now()
+     ORDER BY expires_at ASC, id ASC
+     FOR UPDATE
+  `, [userId]);
+
+  let remainingToApply = gross;
+  const usages = [];
+  let appliedTotal = 0;
+
+  for (const credit of lockedCredits.rows || []) {
+    if (remainingToApply <= 0) break;
+
+    const used = await q(db, `
+      SELECT COALESCE(SUM(amount_cents), 0)::int AS used_cents
+        FROM account_credit_usages
+       WHERE credit_id = $1
+         AND status IN ('reserved', 'applied')
+    `, [credit.id]);
+
+    const usedCents = toInt(used.rows?.[0]?.used_cents, 0);
+    const available = Math.max(0, toInt(credit.amount_cents, 0) - usedCents);
+    if (available <= 0) continue;
+
+    const amount = Math.min(available, remainingToApply);
+    const inserted = await q(db, `
+      INSERT INTO account_credit_usages (credit_id, order_id, amount_cents, status)
+      VALUES ($1, $2, $3, 'reserved')
+      RETURNING id, credit_id, order_id, amount_cents, status
+    `, [credit.id, orderId, amount]);
+
+    if (inserted.rows[0]) {
+      usages.push(inserted.rows[0]);
+      appliedTotal += amount;
+      remainingToApply -= amount;
+    }
+  }
+
+  const amounts = calculateCheckoutAmounts({
+    grossAmountCents: gross,
+    availableCreditCents: appliedTotal,
+  });
+
+  await q(db, `
+    UPDATE orders
+       SET gross_amount_cents = $2,
+           credit_applied_cents = $3,
+           payable_amount_cents = $4
+     WHERE id = $1
+  `, [
+    orderId,
+    amounts.grossAmountCents,
+    amounts.creditAppliedCents,
+    amounts.payableAmountCents,
+  ]);
+
+  return {
+    ...amounts,
+    usages,
+  };
 }
 
 async function applyReservedCreditForOrder(db, orderId) {
