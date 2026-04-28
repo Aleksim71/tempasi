@@ -219,4 +219,77 @@ describe('rent reservation business rules', () => {
     });
   });
 
+  test('active RENT assignments can be added and removed but not removed from the last case', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const templateSlug = `rent-assignment-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const rentAssignmentsService = require('../src/modules/cases/rentAssignments.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(userId, db);
+      const firstCase = (await casesService.getOwnerCases(userId, db))[0];
+      const secondCase = await casesService.create(userId, { title: 'Second presentation case' }, db);
+
+      const order = await OrdersService.createPendingOrder({
+        userId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 2,
+          caseIds: [firstCase.id],
+        },
+      });
+
+      const paidOrder = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [order.id, `rent_assign_sess_${Date.now()}`, `rent_assign_pi_${Date.now()}`],
+      );
+
+      await EntitlementsRepo.ensureEntitlementForOrder(paidOrder.rows[0]);
+
+      let assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String)).toEqual([String(firstCase.id)]);
+
+      await expect(
+        rentAssignmentsService.removeAssignment({
+          userId,
+          orderId: order.id,
+          caseId: firstCase.id,
+        }, db),
+      ).rejects.toMatchObject({
+        code: 'LAST_RENT_CASE_ASSIGNMENT_BLOCKED',
+        status: 409,
+      });
+
+      await rentAssignmentsService.addAssignment({
+        userId,
+        orderId: order.id,
+        caseId: secondCase.id,
+      }, db);
+
+      assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String).sort()).toEqual(
+        [String(firstCase.id), String(secondCase.id)].sort(),
+      );
+
+      await rentAssignmentsService.removeAssignment({
+        userId,
+        orderId: order.id,
+        caseId: firstCase.id,
+      }, db);
+
+      assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String)).toEqual([String(secondCase.id)]);
+    });
+  });
+
 });

@@ -10,6 +10,7 @@ const sellerTemplatesService = require('../../modules/templates/sellerTemplates.
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
 const analyticsService = require('../modules/analytics/analytics.cabinet.service.cjs');
 const casesService = require('../../modules/cases/cases.service.cjs');
+const rentAssignmentsService = require('../../modules/cases/rentAssignments.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 
@@ -504,21 +505,26 @@ function createCabinetPagesRouter() {
         `
           SELECT
             e.id,
+            e.order_id,
             e.template_slug,
             e.starts_at,
             e.ends_at,
             e.created_at,
             o.amount_cents,
             o.currency,
-            COALESCE(st.title, e.template_slug) AS template_title
+            COALESCE(st.title, e.template_slug) AS template_title,
+            COUNT(oca.case_id)::int AS cases_count
           FROM public.entitlements e
           LEFT JOIN public.orders o
             ON o.id = e.order_id
           LEFT JOIN public.seller_templates st
             ON st.slug = e.template_slug
+          LEFT JOIN public.order_case_assignments oca
+            ON oca.order_id = e.order_id
           WHERE e.user_id = $1
             AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
             AND (e.ends_at IS NULL OR e.ends_at > NOW())
+          GROUP BY e.id, o.id, st.title
           ORDER BY e.ends_at ASC NULLS LAST, e.created_at DESC, e.id DESC
         `,
         [userId],
@@ -526,7 +532,29 @@ function createCabinetPagesRouter() {
 
       let activeRentCostCents = 0;
 
-      rents = (rentsResult.rows || []).map((row) => normalizeCaseRentRow(row));
+      const caseTitleById = new Map(caseItems.map((item) => [String(item.id), item.title]));
+
+      rents = [];
+      for (const row of rentsResult.rows || []) {
+        const assignedIds = await rentAssignmentsService.listAssignments(row.order_id, pool);
+        const assignedSet = new Set(assignedIds.map(String));
+        const assignedCases = assignedIds.map((caseId) => ({
+          id: caseId,
+          title: caseTitleById.get(String(caseId)) || `Case ${caseId}`,
+        }));
+        const availableCases = caseItems
+          .filter((item) => !assignedSet.has(String(item.id)))
+          .map((item) => ({ id: item.id, title: item.title }));
+
+        rents.push(normalizeCaseRentRow({
+          ...row,
+          assignedCases,
+          availableCases,
+          cases_count: assignedCases.length,
+          canRemoveAssignments: assignedCases.length > 1,
+          lastAssignmentMessage: rentAssignmentsService.LAST_RENT_CASE_ASSIGNMENT_MESSAGE,
+        }));
+      }
 
       analytics = {
         activeCases: caseItems.length,
@@ -602,6 +630,38 @@ function createCabinetPagesRouter() {
 
       console.error('[cabinet] cases/:id/delete error:', err);
       return res.redirect('/cabinet/cases?tab=list&error=case_delete_failed');
+    }
+  });
+
+  router.post('/cases/rents/:orderId/assign', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const orderId = Number(req.params.orderId);
+    const caseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.addAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect('/cabinet/cases?tab=rents');
+    } catch (err) {
+      console.error('[cabinet] cases/rents/:orderId/assign error:', err);
+      const code = err && err.code ? String(err.code) : 'rent_assignment_failed';
+      return res.redirect(`/cabinet/cases?tab=rents&error=${encodeURIComponent(code)}`);
+    }
+  });
+
+  router.post('/cases/rents/:orderId/remove-case', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const orderId = Number(req.params.orderId);
+    const caseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.removeAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect('/cabinet/cases?tab=rents');
+    } catch (err) {
+      console.error('[cabinet] cases/rents/:orderId/remove-case error:', err);
+      const code = err && err.code ? String(err.code) : 'rent_assignment_remove_failed';
+      return res.redirect(`/cabinet/cases?tab=rents&error=${encodeURIComponent(code)}`);
     }
   });
 
@@ -916,6 +976,11 @@ function normalizeCaseRentRow(row) {
       ? 'Reserved for this user. Hidden from the public catalog while the rent is active.'
       : 'Held by owner-reserve workflow.',
     casesCount: Number(row.cases_count || row.casesCount || 0),
+    assignedCases: Array.isArray(row.assignedCases) ? row.assignedCases : [],
+    availableCases: Array.isArray(row.availableCases) ? row.availableCases : [],
+    canRemoveAssignments: Boolean(row.canRemoveAssignments),
+    lastAssignmentMessage: row.lastAssignmentMessage || '',
+    orderId: row.order_id || row.orderId || null,
     rentExpiresAt: expiresAt,
     expiresAtLabel: formatCaseRentDateTime(expiresAt),
     timeLeftLabel: formatCaseRentTimeLeft(expiresAt),

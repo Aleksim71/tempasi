@@ -98,11 +98,60 @@
               </div>
 
               <p class="cases-panel__text">{{reservationText}}</p>
+              <p class="cases-panel__text">
+                You can show this rented template in multiple cases. This does not create multiple purchases.
+                If you buy it later, you buy the template only once.
+              </p>
 
-              <div class="cases-rent-card__actions">
-                <button class="button" type="button">Add to case(s)</button>
-                <button class="button button--ghost" type="button">Buy exclusive</button>
+              <div class="cases-rent-card__assignments">
+                <strong>Assigned cases</strong>
+
+                {{#if assignedCases.length}}
+                  <div class="cases-list">
+                    {{#each assignedCases}}
+                      <form class="cases-card" method="post" action="/cabinet/cases/rents/{{../orderId}}/remove-case">
+                        <input type="hidden" name="caseId" value="{{id}}" />
+                        <div class="cases-card__main">
+                          <div class="cases-card__title">{{title}}</div>
+                          <div class="cases-card__meta">
+                            <span>Presentation placement</span>
+                          </div>
+                        </div>
+                        <div class="cases-card__actions">
+                          <button class="button button--ghost" type="submit">Remove</button>
+                        </div>
+                      </form>
+                    {{/each}}
+                  </div>
+
+                  {{#unless canRemoveAssignments}}
+                    <p class="cases-panel__text">{{lastAssignmentMessage}}</p>
+                  {{/unless}}
+                {{else}}
+                  <p class="cases-panel__text">No Case assignments found for this active rent.</p>
+                {{/if}}
               </div>
+
+              {{#if availableCases.length}}
+                <form class="form cases-create-form" method="post" action="/cabinet/cases/rents/{{orderId}}/assign">
+                  <div class="form__row">
+                    <label class="form__label" for="caseAssign{{orderId}}">Add to another Case</label>
+                    <select class="input" id="caseAssign{{orderId}}" name="caseId">
+                      {{#each availableCases}}
+                        <option value="{{id}}">{{title}}</option>
+                      {{/each}}
+                    </select>
+                  </div>
+                  <div class="cases-rent-card__actions">
+                    <button class="button" type="submit">Add to case</button>
+                    <button class="button button--ghost" type="button">Buy exclusive</button>
+                  </div>
+                </form>
+              {{else}}
+                <div class="cases-rent-card__actions">
+                  <button class="button button--ghost" type="button">Buy exclusive</button>
+                </div>
+              {{/if}}
             </article>
           {{/each}}
         </div>
