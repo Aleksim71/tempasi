@@ -9,6 +9,7 @@ const multer = require('multer');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
 const analyticsService = require('../modules/analytics/analytics.cabinet.service.cjs');
+const casesService = require('../../modules/cases/cases.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 
@@ -476,12 +477,7 @@ function createCabinetPagesRouter() {
 
     let workspaceError = null;
 
-    // Cases are still MVP placeholders.
-    const demoCases = [
-      { id: 1, title: 'Client Alpha', status: 'open', templatesCount: 2 },
-      { id: 2, title: 'Client Beta', status: 'open', templatesCount: 0 },
-      { id: 3, title: 'Client Gamma', status: 'closed', templatesCount: 1 },
-    ];
+    let caseItems = [];
 
     let rents = [];
     let analytics = {
@@ -491,6 +487,19 @@ function createCabinetPagesRouter() {
     };
 
     try {
+      await casesService.ensureDefaultCaseForUser(userId, pool);
+
+      const ownerCases = await casesService.getOwnerCases(userId, pool);
+      caseItems = (ownerCases || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        clientName: item.client_name || '',
+        status: 'open',
+        templatesCount: Number(item.templates_count || 0),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      }));
+
       const rentsResult = await pool.query(
         `
           SELECT
@@ -520,7 +529,7 @@ function createCabinetPagesRouter() {
       rents = (rentsResult.rows || []).map((row) => normalizeCaseRentRow(row));
 
       analytics = {
-        activeCases: demoCases.filter((item) => item.status === 'open').length,
+        activeCases: caseItems.length,
         heldTemplates: rents.length,
         activeRentCostEur: formatMoneyEurFromCents(activeRentCostCents),
       };
@@ -544,12 +553,56 @@ function createCabinetPagesRouter() {
             { key: 'rents', label: 'Rents', href: '/cabinet/cases?tab=rents', isActive: tab === 'rents' },
             { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: tab === 'analytics' },
           ],
-          items: demoCases,
+          items: caseItems,
+          lastCaseDeleteMessage: casesService.LAST_CASE_DELETE_MESSAGE,
           rents,
           analytics,
         },
       },
     });
+  });
+
+  router.post('/cases', express.urlencoded({ extended: false }), async (req, res, next) => {
+    try {
+      const pool = getPool();
+      const userId = getUserId(req);
+      const title = String(req.body?.title || '').trim() || 'New client case';
+      const clientName = String(req.body?.clientName || '').trim();
+
+      await casesService.create(
+        userId,
+        {
+          title,
+          clientName,
+          note: '',
+        },
+        pool
+      );
+
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/cases/:id/delete', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    try {
+      await casesService.deleteCase(userId, caseId, pool);
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      if (err && err.code === 'LAST_CASE_DELETE_BLOCKED') {
+        return res.redirect(
+          '/cabinet/cases?tab=list&error=last_case_delete_blocked'
+        );
+      }
+
+      console.error('[cabinet] cases/:id/delete error:', err);
+      return res.redirect('/cabinet/cases?tab=list&error=case_delete_failed');
+    }
   });
 
   router.get('/finance', async (req, res) => {

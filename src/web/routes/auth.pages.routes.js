@@ -18,6 +18,7 @@ const {
   resendEmailVerificationForUser,
   verifyEmailToken,
 } = require('../../modules/auth/emailVerification.service.cjs');
+const casesService = require('../../modules/cases/cases.service.cjs');
 
 let getPool;
 try {
@@ -370,6 +371,7 @@ export function createAuthPagesRouter() {
           [email, passwordHash],
         );
         userId = rows?.[0]?.id;
+        await casesService.ensureDefaultCaseForUser(userId, pool);
       } catch (err) {
         if (err && err.code === '23505')
           return redirectWithError(
