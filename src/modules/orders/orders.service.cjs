@@ -4,6 +4,7 @@
 const ordersRepo = require('./orders.repo.cjs');
 const paymentsService = require('../payments/payments.service.cjs');
 const CheckoutCreditsService = require('../payments/checkoutCredits.service.cjs');
+const PaymentCompletionService = require('../payments/paymentCompletion.service.cjs');
 const db = require('../../config/db.cjs');
 const casesService = require('../cases/cases.service.cjs');
 
@@ -179,6 +180,42 @@ async function createOrderCheckout(req, { userId, templateSlug, payload }) {
     credit_applied_cents: creditReservation.creditAppliedCents,
     payable_amount_cents: creditReservation.payableAmountCents,
   };
+
+  // TEMPASI_STEP_5D_ZERO_PAY_FLOW
+  // If internal Tempasi credit fully covers checkout, do not create an external provider session.
+  // Complete the order internally and consume the reserved credit through the normal payment completion path.
+  if (Number(creditReservation.payableAmountCents ?? checkoutOrder.payable_amount_cents ?? 0) === 0) {
+    if (!PaymentCompletionService || typeof PaymentCompletionService.completePaidOrder !== 'function') {
+      await CheckoutCreditsService.releaseReservedCreditForOrder(db, order.id);
+      fail('ZERO_PAY_COMPLETION_SERVICE_UNAVAILABLE', 500);
+    }
+
+    const providerSessionId = `internal_credit_zero_pay:${order.id}`;
+    const providerPaymentIntentId = `internal_credit_zero_pay:${order.id}`;
+
+    await ordersRepo.attachProviderSession({
+      orderId: order.id,
+      providerSessionId,
+    });
+
+    const completion = await PaymentCompletionService.completePaidOrder({
+      orderId: order.id,
+      providerSessionId,
+      providerPaymentIntentId,
+      provider: 'internal_credit',
+    });
+
+    return {
+      orderId: order.id,
+      sessionId: providerSessionId,
+      checkoutUrl: `/checkout/success?order_id=${encodeURIComponent(order.id)}&source=internal_credit_zero_pay`,
+      grossAmountCents: creditReservation.grossAmountCents,
+      creditAppliedCents: creditReservation.creditAppliedCents,
+      payableAmountCents: creditReservation.payableAmountCents,
+      zeroPay: true,
+      completion,
+    };
+  }
 
   let session;
   try {
