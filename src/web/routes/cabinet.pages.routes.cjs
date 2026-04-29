@@ -667,6 +667,7 @@ function createCabinetPagesRouter() {
     }
   });
 
+  router.get('/finance/credit-ledger/export.csv', requireAuthPage, CreditLedgerController.handleCreditLedgerCsv);
   router.get('/finance/credit-ledger', requireAuthPage, CreditLedgerController.handleCreditLedger);
 
   router.get('/finance', async (req, res) => {

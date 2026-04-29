@@ -259,8 +259,85 @@ async function handleCreditLedger(req, res, next) {
   }
 }
 
+
+// Step 5T — Finance credit ledger CSV export
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  if (!/[",\n\r]/.test(text)) return text;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function buildCreditLedgerCsv(rows) {
+  const items = buildCreditLedgerViewModel(rows);
+  const header = [
+    "Date",
+    "Movement",
+    "Status",
+    "Amount EUR",
+    "Reason",
+    "Order ID",
+    "Rent ID",
+    "Row type",
+    "Credit ID",
+    "Usage ID",
+  ];
+
+  const body = items.map((item) => [
+    item.created_label,
+    item.movement_label,
+    item.status_text,
+    item.amount_label,
+    item.reason_label,
+    item.order_id || "",
+    item.rent_id || "",
+    item.type_label,
+    item.credit_id || "",
+    item.usage_id || "",
+  ]);
+
+  return [header, ...body]
+    .map((row) => row.map(csvEscape).join(","))
+    .join("\n") + "\n";
+}
+
+async function handleCreditLedgerCsv(req, res, next) {
+  try {
+    const userId = extractUserId(req);
+    const db = getDb(req);
+
+    if (!userId) {
+      if (typeof res.status === "function") res.status(401);
+      return res.type("text/plain").send("Please sign in to export your Tempasi credit ledger.\n");
+    }
+
+    if (!db) {
+      if (typeof res.status === "function") res.status(503);
+      return res.type("text/plain").send("Credit ledger is not connected to the database pool yet.\n");
+    }
+
+    const rows = await listAccountCreditLedger(db, userId);
+    const csv = buildCreditLedgerCsv(rows);
+    const filename = `tempasi-credit-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    if (typeof res.setHeader === "function") {
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    } else if (typeof res.type === "function") {
+      res.type("text/csv");
+    }
+
+    return res.send(csv);
+  } catch (error) {
+    if (typeof next === "function") return next(error);
+    throw error;
+  }
+}
+
 module.exports = {
   handleCreditLedger,
+  handleCreditLedgerCsv,
   buildCreditLedgerViewModel,
   buildCreditLedgerSummary,
+  buildCreditLedgerCsv,
 };

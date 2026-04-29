@@ -7,9 +7,10 @@
       Audit trail for Tempasi credit created from unused rent value, checkout reservations,
       payment applications, and released reservations.
     </p>
-    <p>
+    <div class="finance-ledger-actions" aria-label="Credit ledger actions">
       <a class="button" href="/cabinet/finance">Back to Finance overview</a>
-    </p>
+      <a class="button button--secondary" href="/cabinet/finance/credit-ledger/export.csv">Export CSV</a>
+    </div>
   </section>
 
   {{#if error}}
@@ -49,6 +50,7 @@
             applied to payment, or released back to the account.
           </p>
         </div>
+        <a class="button button--secondary" href="/cabinet/finance/credit-ledger/export.csv">Export CSV</a>
       </div>
 
       <table class="ledger-table">

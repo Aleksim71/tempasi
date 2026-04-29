@@ -10,6 +10,7 @@ function readProjectFile(relativePath) {
 
 afterAll(async () => {
   await closeDbAfterTest();
+
 });
 
 describe("Finance credit ledger UI", () => {
@@ -217,4 +218,65 @@ describe("Finance credit ledger UI", () => {
       "controller should pass locals to the ledger view"
     );
   });
+
+
+  test("credit ledger exposes CSV export route, CTA and export builder", () => {
+    const routes = readProjectFile("src/web/routes/cabinet.pages.routes.cjs");
+    const view = readProjectFile("src/web/views/finance/credit-ledger.hbs");
+    const css = readProjectFile("public/css/pages/cabinet-finance.css");
+    const controller = require("../src/modules/finance/creditLedger.controller.cjs");
+
+    assert.match(
+      routes,
+      /\/finance\/credit-ledger\/export\.csv/i,
+      "cabinet routes should expose a CSV export endpoint for the credit ledger"
+    );
+
+    assert.match(
+      view,
+      /Export CSV|\/cabinet\/finance\/credit-ledger\/export\.csv/i,
+      "credit ledger view should expose a clear CSV export CTA"
+    );
+
+    assert.match(
+      css,
+      /finance-ledger-actions/i,
+      "Finance CSS should style credit ledger export actions"
+    );
+
+    assert.equal(
+      typeof controller.buildCreditLedgerCsv,
+      "function",
+      "credit ledger controller should export buildCreditLedgerCsv"
+    );
+
+    const csv = controller.buildCreditLedgerCsv([
+      {
+        ledger_row_type: "created",
+        status: "created",
+        amount_cents: 1200,
+        reason: "rent_conversion",
+        credit_id: 77,
+        usage_id: null,
+        created_at: new Date("2026-04-29T12:00:00Z"),
+      },
+      {
+        ledger_row_type: "usage",
+        status: "applied",
+        amount_cents: 500,
+        reason: "checkout, with comma",
+        order_id: 9001,
+        credit_id: 77,
+        usage_id: 88,
+        created_at: new Date("2026-04-29T12:05:00Z"),
+      },
+    ]);
+
+    assert.match(csv, /Date,Movement,Status,Amount EUR,Reason,Order ID,Rent ID,Row type,Credit ID,Usage ID/);
+    assert.match(csv, /Credit created/);
+    assert.match(csv, /Payment application/);
+    assert.match(csv, /€12\.00/);
+    assert.match(csv, /"checkout, with comma"/);
+  });
+
 });
