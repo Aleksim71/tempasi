@@ -29,6 +29,28 @@ describe("Finance credit ledger UI", () => {
     );
   });
 
+  test("finance overview exposes credit ledger CTA", () => {
+    const view = readProjectFile("src/web/views/partials/space-finance.hbs");
+
+    assert.match(
+      view,
+      /Open credit ledger/i,
+      "Finance overview should expose a clear CTA to the credit ledger"
+    );
+
+    assert.match(
+      view,
+      /\/cabinet\/finance\/credit-ledger/i,
+      "Finance overview should link directly to the credit ledger route"
+    );
+
+    assert.match(
+      view,
+      /Reserved, applied, and released credit movements|checkout reservation|payment application|release/i,
+      "Finance overview should explain why the credit ledger matters"
+    );
+  });
+
   test("credit ledger view exposes user-facing UX copy and statuses", () => {
     const view = readProjectFile("src/web/views/finance/credit-ledger.hbs");
 
@@ -46,8 +68,14 @@ describe("Finance credit ledger UI", () => {
 
     assert.match(
       view,
-      /No Tempasi credit movements yet|No credit movements yet|Credits from unused converted rents will appear here|empty/i,
+      /No Tempasi credit movements yet|Credits from unused converted rents will appear here|checkout reservations|released reservations/i,
       "credit ledger view should have an understandable empty state"
+    );
+
+    assert.match(
+      view,
+      /Back to Finance overview|\/cabinet\/finance/i,
+      "credit ledger view should let users return to Finance overview"
     );
   });
 

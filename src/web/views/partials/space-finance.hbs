@@ -44,7 +44,19 @@
         <div class="finance-kpi">
           <div class="finance-kpi__label">Tempasi credit</div>
           <div class="finance-kpi__value">€{{workspaceData.finance.overview.creditBalanceEur}}</div>
+          <div class="finance-kpi__hint">Reserved, applied, and released credit movements.</div>
         </div>
+      </div>
+
+      <div class="finance-credit-ledger-cta card">
+        <div>
+          <h4 class="finance-credit-ledger-cta__title">Credit ledger</h4>
+          <p class="finance-credit-ledger-cta__text">
+            Review Tempasi credit created from unused rent value and follow every checkout reservation,
+            payment application, and release.
+          </p>
+        </div>
+        <a class="button button--primary" href="/cabinet/finance/credit-ledger">Open credit ledger</a>
       </div>
     </div>
   {{/if}}

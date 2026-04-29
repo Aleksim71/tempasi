@@ -3,7 +3,13 @@
   <section class="cabinet-header">
     <p class="eyebrow">Finance</p>
     <h1>Credit ledger</h1>
-    <p class="muted">History of Tempasi credit reservations, applications and releases.</p>
+    <p class="muted">
+      Audit trail for Tempasi credit created from unused rent value, checkout reservations,
+      payment applications, and released reservations.
+    </p>
+    <p>
+      <a class="button" href="/cabinet/finance">Back to Finance overview</a>
+    </p>
   </section>
 
   {{#if error}}
@@ -39,8 +45,14 @@
     </section>
   {{else}}
     <section class="empty-state card">
-      <h2>No credit entries yet</h2>
-      <p>Your Tempasi credit history will appear here after rent conversion, checkout reservation, payment completion or checkout cancellation.</p>
+      <h2>No Tempasi credit movements yet</h2>
+      <p>
+        Credits from unused converted rents will appear here first. After that, checkout reservations,
+        payment applications, and released reservations will be listed as audit rows.
+      </p>
+      <p>
+        <a class="button button--primary" href="/cabinet/finance">Back to Finance overview</a>
+      </p>
     </section>
   {{/if}}
 </main>
