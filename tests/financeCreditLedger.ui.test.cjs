@@ -226,10 +226,10 @@ describe("Finance credit ledger UI", () => {
     const css = readProjectFile("public/css/pages/cabinet-finance.css");
     const controller = require("../src/modules/finance/creditLedger.controller.cjs");
 
-    assert.match(
-      routes,
-      /\/finance\/credit-ledger\/export\.csv/i,
-      "cabinet routes should expose a CSV export endpoint for the credit ledger"
+    assert.ok(
+      routes.includes("router.get('/finance/credit-ledger/export.csv', requireAuthPage, CreditLedgerController.handleCreditLedgerCsv);")
+        || routes.includes('router.get("/finance/credit-ledger/export.csv", requireAuthPage, CreditLedgerController.handleCreditLedgerCsv);'),
+      "cabinet routes should expose a protected CSV export endpoint for the credit ledger"
     );
 
     assert.match(
@@ -276,7 +276,97 @@ describe("Finance credit ledger UI", () => {
     assert.match(csv, /Credit created/);
     assert.match(csv, /Payment application/);
     assert.match(csv, /€12\.00/);
+
     assert.match(csv, /"checkout, with comma"/);
+  });
+
+  test("credit ledger CSV export escapes risky values and exposes hardened headers", () => {
+    const controller = require("../src/modules/finance/creditLedger.controller.cjs");
+
+    assert.equal(
+      typeof controller.buildCreditLedgerExportFilename,
+      "function",
+      "credit ledger controller should export deterministic CSV filename builder"
+    );
+
+    assert.equal(
+      typeof controller.setCreditLedgerCsvHeaders,
+      "function",
+      "credit ledger controller should export CSV header setter"
+    );
+
+    const filename = controller.buildCreditLedgerExportFilename(new Date("2026-04-29T17:00:00Z"));
+    assert.equal(filename, "tempasi-credit-ledger-2026-04-29.csv");
+
+    const headers = {};
+    controller.setCreditLedgerCsvHeaders({
+      setHeader(name, value) {
+        headers[name.toLowerCase()] = value;
+      },
+    }, filename);
+
+    assert.equal(headers["content-type"], "text/csv; charset=utf-8");
+    assert.equal(headers["content-disposition"], 'attachment; filename="tempasi-credit-ledger-2026-04-29.csv"');
+    assert.equal(headers["cache-control"], "no-store");
+    assert.equal(headers["x-content-type-options"], "nosniff");
+
+    const csv = controller.buildCreditLedgerCsv([
+      {
+        ledger_row_type: "usage",
+        status: "released",
+        amount_cents: 300,
+        reason: 'quote "inside" and\nnew line',
+        order_id: "  spaced-order  ",
+        rent_id: "rent-1",
+        credit_id: 10,
+        usage_id: 11,
+        created_at: new Date("2026-04-29T18:00:00Z"),
+      },
+    ]);
+
+    assert.match(csv, /"quote ""inside"" and\nnew line"/);
+    assert.match(csv, /"  spaced-order  "/);
+    assert.ok(csv.endsWith("\n"), "CSV export should end with a final newline");
+  });
+
+  test("credit ledger CSV export rejects anonymous access before database lookup", async () => {
+    const controller = require("../src/modules/finance/creditLedger.controller.cjs");
+
+    const calls = [];
+    const req = {
+      db: {
+        query() {
+          throw new Error("anonymous export must not query the database");
+        },
+      },
+    };
+    const res = {
+      statusCode: 200,
+      status(code) {
+        this.statusCode = code;
+        calls.push(["status", code]);
+        return this;
+      },
+      type(value) {
+        calls.push(["type", value]);
+        return this;
+      },
+      send(body) {
+        calls.push(["send", body]);
+        return body;
+      },
+    };
+
+    let nextError = null;
+    await controller.handleCreditLedgerCsv(req, res, (err) => {
+      nextError = err;
+    });
+
+    assert.equal(nextError, null);
+    assert.equal(res.statusCode, 401);
+    assert.deepEqual(calls[0], ["status", 401]);
+    assert.deepEqual(calls[1], ["type", "text/plain"]);
+    assert.match(calls[2][1], /Please sign in/i);
   });
 
 });

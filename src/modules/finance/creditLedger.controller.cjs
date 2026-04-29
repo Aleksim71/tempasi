@@ -260,72 +260,87 @@ async function handleCreditLedger(req, res, next) {
 }
 
 
-// Step 5T — Finance credit ledger CSV export
+
+// Step 5U — Finance credit ledger CSV export hardening
+const CREDIT_LEDGER_CSV_COLUMNS = Object.freeze([
+  { header: "Date", key: "created_label" },
+  { header: "Movement", key: "movement_label" },
+  { header: "Status", key: "status_text" },
+  { header: "Amount EUR", key: "amount_label" },
+  { header: "Reason", key: "reason_label" },
+  { header: "Order ID", key: "order_id" },
+  { header: "Rent ID", key: "rent_id" },
+  { header: "Row type", key: "type_label" },
+  { header: "Credit ID", key: "credit_id" },
+  { header: "Usage ID", key: "usage_id" },
+]);
+
 function csvEscape(value) {
   if (value === null || value === undefined) return "";
+
   const text = String(value);
-  if (!/[",\n\r]/.test(text)) return text;
+  const mustQuote = /[",\n\r]/.test(text) || /^\s|\s$/.test(text);
+
+  if (!mustQuote) return text;
   return `"${text.replaceAll('"', '""')}"`;
 }
 
 function buildCreditLedgerCsv(rows) {
   const items = buildCreditLedgerViewModel(rows);
-  const header = [
-    "Date",
-    "Movement",
-    "Status",
-    "Amount EUR",
-    "Reason",
-    "Order ID",
-    "Rent ID",
-    "Row type",
-    "Credit ID",
-    "Usage ID",
-  ];
-
-  const body = items.map((item) => [
-    item.created_label,
-    item.movement_label,
-    item.status_text,
-    item.amount_label,
-    item.reason_label,
-    item.order_id || "",
-    item.rent_id || "",
-    item.type_label,
-    item.credit_id || "",
-    item.usage_id || "",
-  ]);
+  const header = CREDIT_LEDGER_CSV_COLUMNS.map((column) => column.header);
+  const body = items.map((item) => CREDIT_LEDGER_CSV_COLUMNS.map((column) => item[column.key] || ""));
 
   return [header, ...body]
     .map((row) => row.map(csvEscape).join(","))
     .join("\n") + "\n";
 }
 
+function buildCreditLedgerExportFilename(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+  const stamp = Number.isNaN(date.getTime())
+    ? new Date().toISOString().slice(0, 10)
+    : date.toISOString().slice(0, 10);
+
+  return `tempasi-credit-ledger-${stamp}.csv`;
+}
+
+function setCreditLedgerCsvHeaders(res, filename) {
+  if (typeof res.setHeader === "function") {
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    return;
+  }
+
+  if (typeof res.type === "function") {
+    res.type("text/csv");
+  }
+}
+
 async function handleCreditLedgerCsv(req, res, next) {
   try {
     const userId = extractUserId(req);
-    const db = getDb(req);
 
     if (!userId) {
       if (typeof res.status === "function") res.status(401);
-      return res.type("text/plain").send("Please sign in to export your Tempasi credit ledger.\n");
+      if (typeof res.type === "function") res.type("text/plain");
+      return res.send("Please sign in to export your Tempasi credit ledger.\n");
     }
+
+    const db = getDb(req);
 
     if (!db) {
       if (typeof res.status === "function") res.status(503);
-      return res.type("text/plain").send("Credit ledger is not connected to the database pool yet.\n");
+      if (typeof res.type === "function") res.type("text/plain");
+      return res.send("Credit ledger is not connected to the database pool yet.\n");
     }
 
     const rows = await listAccountCreditLedger(db, userId);
     const csv = buildCreditLedgerCsv(rows);
-    const filename = `tempasi-credit-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = buildCreditLedgerExportFilename();
 
-    if (typeof res.setHeader === "function") {
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    } else if (typeof res.type === "function") {
-      res.type("text/csv");
-    }
+    setCreditLedgerCsvHeaders(res, filename);
 
     return res.send(csv);
   } catch (error) {
@@ -340,4 +355,6 @@ module.exports = {
   buildCreditLedgerViewModel,
   buildCreditLedgerSummary,
   buildCreditLedgerCsv,
+  buildCreditLedgerExportFilename,
+  setCreditLedgerCsvHeaders,
 };
