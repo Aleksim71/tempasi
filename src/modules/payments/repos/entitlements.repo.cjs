@@ -119,6 +119,8 @@ async function closeActiveRentForBuyerBuy({ userId, templateSlug, buyOrderId = n
         AND (
           LOWER(COALESCE(e.kind, '')) = 'rent'
           OR UPPER(COALESCE(e.deal_type, '')) = 'RENT'
+          AND e.closed_at IS NULL
+          AND (e.ends_at IS NULL OR e.ends_at > now())
         )
         AND (e.ends_at IS NULL OR e.ends_at > now())
         AND (

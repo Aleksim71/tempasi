@@ -159,6 +159,8 @@ async function findActiveRentReservationByTemplateSlug(templateSlug) {
       AND (
         LOWER(COALESCE(e.kind, '')) = 'rent'
         OR UPPER(COALESCE(e.deal_type, '')) = 'RENT'
+          AND e.closed_at IS NULL
+          AND (e.ends_at IS NULL OR e.ends_at > now())
       )
     ORDER BY e.created_at DESC, e.id DESC
     LIMIT 1

@@ -49,6 +49,8 @@ async function getActiveRentOrderForUser({ userId, orderId }, db) {
     WHERE o.id = $1
       AND o.user_id::text = $2::text
       AND UPPER(COALESCE(o.deal_type, e.deal_type, '')) = 'RENT'
+      AND e.closed_at IS NULL
+      AND (e.ends_at IS NULL OR e.ends_at > NOW())
       AND LOWER(COALESCE(o.status, '')) = 'paid'
       AND (e.ends_at IS NULL OR e.ends_at > now())
     LIMIT 1

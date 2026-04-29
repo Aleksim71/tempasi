@@ -86,6 +86,8 @@ export async function selectTemplatesForCatalog(db) {
         FROM public.entitlements e
         WHERE e.template_slug = seller_templates.slug
           AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+          AND e.closed_at IS NULL
+          AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
     ORDER BY created_at DESC, id DESC
@@ -184,6 +186,8 @@ export async function getTemplateBySlug(db, slug) {
         FROM public.entitlements e
         WHERE e.template_slug = seller_templates.slug
           AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+          AND e.closed_at IS NULL
+          AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
     LIMIT 1
