@@ -51,6 +51,40 @@ describe("Finance credit ledger UI", () => {
     );
   });
 
+  test("finance credit ledger CSS covers CTA, table, status pills and empty state", () => {
+    const css = readProjectFile("public/css/pages/cabinet-finance.css");
+
+    assert.match(
+      css,
+      /finance-credit-ledger-cta/,
+      "Finance CSS should style the credit ledger CTA"
+    );
+
+    assert.match(
+      css,
+      /finance-kpi__hint/,
+      "Finance CSS should style the Tempasi credit KPI hint"
+    );
+
+    assert.match(
+      css,
+      /ledger-table/,
+      "Finance CSS should style the credit ledger table"
+    );
+
+    assert.match(
+      css,
+      /status-pill|status-created|status-reserved|status-applied|status-released/,
+      "Finance CSS should style ledger status pills"
+    );
+
+    assert.match(
+      css,
+      /empty-state/,
+      "Finance CSS should style the ledger empty state"
+    );
+  });
+
   test("credit ledger view exposes user-facing UX copy and statuses", () => {
     const view = readProjectFile("src/web/views/finance/credit-ledger.hbs");
 

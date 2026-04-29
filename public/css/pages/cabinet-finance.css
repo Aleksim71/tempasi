@@ -149,3 +149,116 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Step 5R — Finance credit ledger visual polish */
+
+.finance-kpi__hint {
+  margin-top: 0.35rem;
+  color: var(--muted, #6b7280);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.finance-credit-ledger-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.finance-credit-ledger-cta__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.finance-credit-ledger-cta__text {
+  margin: 0;
+  color: var(--muted, #6b7280);
+  line-height: 1.45;
+}
+
+.cabinet-finance .cabinet-header {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cabinet-finance .table-card {
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ledger-table th {
+  color: var(--muted, #6b7280);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  background: var(--surface-muted, #f3f4f6);
+  color: var(--text, #111827);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.status-created {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.status-reserved {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.status-applied {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-released {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.cabinet-finance .empty-state.card {
+  padding: 1.25rem;
+}
+
+.cabinet-finance .empty-state h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .finance-credit-ledger-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ledger-table th,
+  .ledger-table td {
+    padding: 0.65rem 0.6rem;
+  }
+}
