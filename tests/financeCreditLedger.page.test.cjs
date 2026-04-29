@@ -234,6 +234,28 @@ async function seedFinanceLedgerRows(client, userId) {
   }
 }
 
+
+async function registerAndLogin(srv, email, password) {
+  const register = await request(srv.baseUrl)
+    .post('/api/auth/register')
+    .set(srv.headers)
+    .send({ email, password });
+
+  expect([200, 201, 302, 303]).toContain(register.status);
+
+  const login = await request(srv.baseUrl)
+    .post('/api/auth/login')
+    .set(srv.headers)
+    .send({ email, password });
+
+  expect(login.status).toBe(200);
+
+  const cookie = pickSidCookie(login.headers['set-cookie']);
+  expect(cookie).toBeTruthy();
+
+  return cookie;
+}
+
 describe('Finance credit ledger page smoke (via real server)', () => {
   it('redirects unauthenticated users to login', async () => {
     await migrateDb();
@@ -245,6 +267,50 @@ describe('Finance credit ledger page smoke (via real server)', () => {
 
       expect([302, 303]).toContain(response.status);
       expect(String(response.headers.location || '')).toMatch(/login/i);
+    });
+  });
+
+  it('renders Finance overview with a real Credit ledger CTA for authenticated users', async () => {
+    await migrateDb();
+
+    await withRealServer(async (srv) => {
+      const email = `finance_overview_${Date.now()}@example.com`;
+      const password = 'Passw0rd__OK';
+      const cookie = await registerAndLogin(srv, email, password);
+
+      const response = await request(srv.baseUrl)
+        .get('/cabinet/finance')
+        .set(srv.headers)
+        .set('Cookie', cookie);
+
+      expect(response.status).toBe(200);
+      expect(response.text).toMatch(/Finance/i);
+      expect(response.text).toMatch(/Tempasi credit/i);
+      expect(response.text).toMatch(/Open credit ledger/i);
+      expect(response.text).toMatch(/\/cabinet\/finance\/credit-ledger/i);
+      expect(response.text).toMatch(/Reserved, applied, and released credit movements|checkout reservation|payment application|release/i);
+    });
+  });
+
+  it('renders an empty Credit ledger page for authenticated users without credit rows', async () => {
+    await migrateDb();
+
+    await withRealServer(async (srv) => {
+      const email = `finance_empty_ledger_${Date.now()}@example.com`;
+      const password = 'Passw0rd__OK';
+      const cookie = await registerAndLogin(srv, email, password);
+
+      const response = await request(srv.baseUrl)
+        .get('/cabinet/finance/credit-ledger')
+        .set(srv.headers)
+        .set('Cookie', cookie);
+
+      expect(response.status).toBe(200);
+      expect(response.text).toMatch(/Credit ledger/i);
+      expect(response.text).toMatch(/No Tempasi credit movements yet/i);
+      expect(response.text).toMatch(/Credits from unused converted rents will appear here/i);
+      expect(response.text).toMatch(/Back to Finance overview/i);
+      expect(response.text).toMatch(/\/cabinet\/finance/i);
     });
   });
 
