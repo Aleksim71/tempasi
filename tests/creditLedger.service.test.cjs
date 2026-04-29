@@ -165,4 +165,101 @@ describe("creditLedger.service", () => {
     assert.deepEqual(rows, []);
     assert.equal(db.calls.length, 0, "service should not query DB without a user id");
   });
+
+  test("includes credit creation rows even before credit usage exists", async () => {
+    const calls = [];
+
+    const db = {
+      calls,
+
+      async query(sql, params = []) {
+        calls.push({ sql, params });
+
+        if (/information_schema\.columns/i.test(sql)) {
+          const tableName = params[0];
+
+          const columns = {
+            account_credits: [
+              "id",
+              "user_id",
+              "amount_cents",
+              "remaining_amount_cents",
+              "status",
+              "reason",
+              "created_at",
+            ],
+            account_credit_usages: [
+              "id",
+              "credit_id",
+              "amount_cents",
+              "status",
+              "reason",
+              "order_id",
+              "created_at",
+            ],
+          };
+
+          return {
+            rows: (columns[tableName] || []).map((column_name) => ({
+              column_name,
+            })),
+          };
+        }
+
+        if (/UNION\s+ALL/i.test(sql) && /'created'\s+AS\s+ledger_row_type/i.test(sql)) {
+          assert.match(
+            sql,
+            /FROM\s+account_credits\s+c/i,
+            "ledger query should include account_credits creation rows"
+          );
+
+          assert.match(
+            sql,
+            /WHERE\s+c\.user_id\s+=\s+\$1/i,
+            "created ledger rows should be filtered by user"
+          );
+
+          assert.deepEqual(params, [42]);
+
+          return {
+            rows: [
+              {
+                ledger_row_type: "created",
+                credit_id: 20,
+                credit_amount_cents: 1500,
+                credit_remaining_cents: 1500,
+                credit_status: "active",
+                credit_reason: "rent_conversion",
+                credit_created_at: new Date("2026-04-29T11:00:00Z"),
+                usage_id: null,
+                credit_relation_id: 20,
+                usage_amount_cents: 1500,
+                usage_status: "created",
+                usage_reason: "rent_conversion",
+                order_id: null,
+                usage_created_at: new Date("2026-04-29T11:00:00Z"),
+                usage_updated_at: null,
+                usage_applied_at: null,
+                usage_released_at: null,
+              },
+            ],
+          };
+        }
+
+        throw new Error(`Unexpected SQL in created-row fake db: ${sql}`);
+      },
+    };
+
+    const rows = await listAccountCreditLedger(db, 42);
+
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].status, "created");
+    assert.equal(rows[0].amount_cents, 1500);
+    assert.equal(rows[0].amount_eur, 15);
+    assert.equal(rows[0].credit_id, 20);
+    assert.equal(rows[0].usage_id, null);
+    assert.equal(rows[0].order_id, null);
+    assert.equal(rows[0].reason, "rent_conversion");
+  });
+
 });

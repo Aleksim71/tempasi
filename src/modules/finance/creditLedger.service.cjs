@@ -186,18 +186,63 @@ async function listAccountCreditLedger(firstArg, secondArg) {
   const creditSelect = buildCreditSelect(creditColumns);
   const usageSelect = buildUsageSelect(usageColumns, relationColumn);
 
-  const orderByColumn =
+  const createdAmountColumn = pickColumn(creditColumns, [
+    "amount_cents",
+    "original_amount_cents",
+    "total_amount_cents",
+  ]);
+  const createdAmountExpression = createdAmountColumn
+    ? `c.${createdAmountColumn}`
+    : "0";
+
+  const createdReasonColumn = pickColumn(creditColumns, [
+    "reason",
+    "source",
+    "source_type",
+    "kind",
+  ]);
+  const createdReasonExpression = createdReasonColumn
+    ? `c.${createdReasonColumn}`
+    : "NULL";
+
+  const usageOrderByColumn =
     pickColumn(usageColumns, ["created_at", "updated_at", "applied_at", "released_at"]) ||
     "id";
 
+  const creditOrderByColumn =
+    pickColumn(creditColumns, ["created_at", "updated_at"]) ||
+    "id";
+
   const sql = `
-    SELECT
-      ${[...creditSelect, ...usageSelect].join(",\n      ")}
-    FROM account_credit_usages u
-    JOIN account_credits c
-      ON c.id = u.${relationColumn}
-    WHERE c.${userColumn} = $1
-    ORDER BY u.${orderByColumn} DESC, u.id DESC
+    SELECT *
+    FROM (
+      SELECT
+        'usage' AS ledger_row_type,
+        ${[...creditSelect, ...usageSelect].join(",\n        ")}
+      FROM account_credit_usages u
+      JOIN account_credits c
+        ON c.id = u.${relationColumn}
+      WHERE c.${userColumn} = $1
+
+      UNION ALL
+
+      SELECT
+        'created' AS ledger_row_type,
+        ${creditSelect.join(",\n        ")},
+        NULL AS usage_id,
+        c.id AS credit_relation_id,
+        ${createdAmountExpression} AS usage_amount_cents,
+        'created' AS usage_status,
+        ${createdReasonExpression} AS usage_reason,
+        NULL AS order_id,
+        c.${creditOrderByColumn} AS usage_created_at,
+        NULL AS usage_updated_at,
+        NULL AS usage_applied_at,
+        NULL AS usage_released_at
+      FROM account_credits c
+      WHERE c.${userColumn} = $1
+    ) ledger
+    ORDER BY usage_created_at DESC NULLS LAST, usage_id DESC NULLS LAST, credit_id DESC
   `;
 
   const result = await query(client, sql, [userId]);
