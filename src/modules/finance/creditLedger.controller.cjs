@@ -44,6 +44,15 @@ function getDb(req) {
   return candidates.find((candidate) => candidate && typeof candidate.query === "function") || null;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function formatDateLabel(value) {
   if (!value) return "—";
 
@@ -72,6 +81,36 @@ function formatReasonLabel(value) {
   return text || "—";
 }
 
+function humanizeToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildMovementLabel(row, status) {
+  const rowType = String(row.ledger_row_type || "").toLowerCase();
+
+  if (rowType === "created" || status === "created") {
+    return "Credit created";
+  }
+
+  if (status === "reserved") {
+    return "Checkout reservation";
+  }
+
+  if (status === "applied" || status === "used" || status === "completed") {
+    return "Payment application";
+  }
+
+  if (status === "released" || status === "cancelled" || status === "canceled") {
+    return "Reservation release";
+  }
+
+  return humanizeToken(status || rowType || "movement") || "Credit movement";
+}
+
 function toCreditLedgerViewModel(row) {
   const status = formatStatusLabel(row.status || row.usage_status || row.credit_status);
   const amountCents =
@@ -91,10 +130,16 @@ function toCreditLedgerViewModel(row) {
     row.credit_created_at ||
     null;
 
+  const ledgerRowType = row.ledger_row_type || (row.usage_id ? "usage" : "created");
+
   return {
     ...row,
+    ledger_row_type: ledgerRowType,
+    type_label: humanizeToken(ledgerRowType),
     status,
     status_label: row.status_label || status,
+    status_text: row.status_text || humanizeToken(status),
+    movement_label: row.movement_label || buildMovementLabel(row, status),
     amount_cents: amountCents,
     amountCents,
     amount_label: row.amount_label || formatAmountLabel(amountCents),
@@ -111,11 +156,32 @@ function buildCreditLedgerViewModel(rows) {
   return Array.isArray(rows) ? rows.map(toCreditLedgerViewModel) : [];
 }
 
+function buildCreditLedgerSummary(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const totalCreatedCents = items
+    .filter((item) => item.status === "created" || item.ledger_row_type === "created")
+    .reduce((sum, item) => sum + Number(item.amount_cents || 0), 0);
+
+  const reservedCount = items.filter((item) => item.status === "reserved").length;
+  const appliedCount = items.filter((item) => ["applied", "used", "completed"].includes(item.status)).length;
+  const releasedCount = items.filter((item) => ["released", "cancelled", "canceled"].includes(item.status)).length;
+
+  return {
+    hasRows: items.length > 0,
+    totalRows: items.length,
+    totalCreatedLabel: formatAmountLabel(totalCreatedCents),
+    reservedCount,
+    appliedCount,
+    releasedCount,
+  };
+}
+
 function renderFallbackHtml(res, data) {
   const rows = data.creditLedger.map((item) => `
     <tr>
       <td>${escapeHtml(item.created_label)}</td>
-      <td>${escapeHtml(item.status_label)}</td>
+      <td>${escapeHtml(item.movement_label)}</td>
+      <td>${escapeHtml(item.status_text)}</td>
       <td>${escapeHtml(item.amount_label)}</td>
       <td>${escapeHtml(item.reason_label)}</td>
       <td>${escapeHtml(item.order_id || "—")}</td>
@@ -131,9 +197,12 @@ function renderFallbackHtml(res, data) {
   <title>Tempasi Credit Ledger</title>
   <style>
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f5ef;color:#1f2933}
-    main{max-width:1040px;margin:0 auto;padding:32px 20px}
+    main{max-width:1120px;margin:0 auto;padding:32px 20px}
     .card{background:#fff;border:1px solid #e6dfcf;border-radius:18px;padding:24px;box-shadow:0 12px 32px rgba(31,41,51,.08)}
     h1{margin:0 0 8px;font-size:30px}.muted{color:#64748b;margin-bottom:22px}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
+    .summary div{background:#fff;border:1px solid #e6dfcf;border-radius:14px;padding:14px}
+    .summary strong{display:block;font-size:22px}
     table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
     th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b}.empty{padding:20px;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b}
   </style>
@@ -142,17 +211,16 @@ function renderFallbackHtml(res, data) {
   <h1>Credit ledger</h1>
   <p class="muted">History of Tempasi credit reservations, applications and releases.</p>
   ${data.error ? `<p class="empty">${escapeHtml(data.error)}</p>` : ""}
-  ${rows ? `<table><thead><tr><th>Date</th><th>Status</th><th>Amount</th><th>Reason</th><th>Order</th><th>Rent</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">No credit ledger entries yet.</div>`}
+  ${data.creditLedgerSummary.hasRows ? `
+    <div class="summary">
+      <div><span>Total rows</span><strong>${data.creditLedgerSummary.totalRows}</strong></div>
+      <div><span>Credit created</span><strong>${escapeHtml(data.creditLedgerSummary.totalCreatedLabel)}</strong></div>
+      <div><span>Reserved</span><strong>${data.creditLedgerSummary.reservedCount}</strong></div>
+      <div><span>Applied</span><strong>${data.creditLedgerSummary.appliedCount}</strong></div>
+    </div>
+    <table><thead><tr><th>Date</th><th>Movement</th><th>Status</th><th>Amount</th><th>Reason</th><th>Order</th><th>Rent</th></tr></thead><tbody>${rows}</tbody></table>
+  ` : `<div class="empty">No credit ledger entries yet.</div>`}
 </section></main></body></html>`);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 async function handleCreditLedger(req, res, next) {
@@ -164,6 +232,7 @@ async function handleCreditLedger(req, res, next) {
       activeCabinetSpace: "finance",
       userId,
       creditLedger: [],
+      creditLedgerSummary: buildCreditLedgerSummary([]),
       error: null,
     };
 
@@ -173,6 +242,7 @@ async function handleCreditLedger(req, res, next) {
       data.error = "Credit ledger is not connected to the database pool yet.";
     } else {
       data.creditLedger = buildCreditLedgerViewModel(await listAccountCreditLedger(db, userId));
+      data.creditLedgerSummary = buildCreditLedgerSummary(data.creditLedger);
     }
 
     if (typeof res.render === "function") {
@@ -191,4 +261,6 @@ async function handleCreditLedger(req, res, next) {
 
 module.exports = {
   handleCreditLedger,
+  buildCreditLedgerViewModel,
+  buildCreditLedgerSummary,
 };

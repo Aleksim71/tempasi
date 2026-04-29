@@ -113,6 +113,47 @@ describe("Finance credit ledger UI", () => {
     );
   });
 
+
+  test("credit ledger view exposes summary cards and movement labels", () => {
+    const view = readProjectFile("src/web/views/finance/credit-ledger.hbs");
+
+    assert.match(
+      view,
+      /Credit ledger summary|finance-ledger-summary|Total rows|Credit created|Reserved|Applied|Released/i,
+      "credit ledger view should expose summary cards for audit readability"
+    );
+
+    assert.match(
+      view,
+      /Movement|movement_label|ledger_row_type|data-ledger-status/i,
+      "credit ledger view should expose movement labels and row metadata"
+    );
+  });
+
+  test("credit ledger controller exports summary builder for finance audit rows", () => {
+    const controller = require("../src/modules/finance/creditLedger.controller.cjs");
+
+    assert.equal(
+      typeof controller.buildCreditLedgerSummary,
+      "function",
+      "credit ledger controller should export buildCreditLedgerSummary"
+    );
+
+    const summary = controller.buildCreditLedgerSummary([
+      { status: "created", ledger_row_type: "created", amount_cents: 500 },
+      { status: "reserved", ledger_row_type: "usage", amount_cents: 200 },
+      { status: "applied", ledger_row_type: "usage", amount_cents: 200 },
+      { status: "released", ledger_row_type: "usage", amount_cents: 100 },
+    ]);
+
+    assert.equal(summary.hasRows, true);
+    assert.equal(summary.totalRows, 4);
+    assert.equal(summary.reservedCount, 1);
+    assert.equal(summary.appliedCount, 1);
+    assert.equal(summary.releasedCount, 1);
+    assert.equal(summary.totalCreatedLabel, "€5.00");
+  });
+
   test("credit ledger controller renders the Finance ledger page for an authenticated user", async () => {
     const controller = require("../src/modules/finance/creditLedger.controller.cjs");
 

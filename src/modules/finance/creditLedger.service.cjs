@@ -123,6 +123,7 @@ function normalizeLedgerRow(row) {
 
   return {
     id: row.usage_id || row.credit_id,
+    ledger_row_type: row.ledger_row_type || (row.usage_id ? "usage" : "created"),
     credit_id: row.credit_id,
     usage_id: row.usage_id || null,
     account_credit_id: row.credit_relation_id || row.credit_id,

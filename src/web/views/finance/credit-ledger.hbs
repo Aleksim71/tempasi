@@ -16,12 +16,46 @@
     <section class="notice notice-warning">{{error}}</section>
   {{/if}}
 
-  {{#if creditLedger.length}}
+  {{#if creditLedgerSummary.hasRows}}
+    <section class="finance-ledger-summary card" aria-label="Credit ledger summary">
+      <article class="finance-ledger-summary__item">
+        <span>Total rows</span>
+        <strong>{{creditLedgerSummary.totalRows}}</strong>
+      </article>
+      <article class="finance-ledger-summary__item">
+        <span>Credit created</span>
+        <strong>{{creditLedgerSummary.totalCreatedLabel}}</strong>
+      </article>
+      <article class="finance-ledger-summary__item">
+        <span>Reserved</span>
+        <strong>{{creditLedgerSummary.reservedCount}}</strong>
+      </article>
+      <article class="finance-ledger-summary__item">
+        <span>Applied</span>
+        <strong>{{creditLedgerSummary.appliedCount}}</strong>
+      </article>
+      <article class="finance-ledger-summary__item">
+        <span>Released</span>
+        <strong>{{creditLedgerSummary.releasedCount}}</strong>
+      </article>
+    </section>
+
     <section class="card table-card">
+      <div class="finance-ledger-table-head">
+        <div>
+          <h2>Credit movements</h2>
+          <p class="muted">
+            Use this table to audit when credit was created, reserved for checkout,
+            applied to payment, or released back to the account.
+          </p>
+        </div>
+      </div>
+
       <table class="ledger-table">
         <thead>
           <tr>
             <th>Date</th>
+            <th>Movement</th>
             <th>Status</th>
             <th>Amount</th>
             <th>Reason</th>
@@ -31,9 +65,13 @@
         </thead>
         <tbody>
           {{#each creditLedger}}
-            <tr>
+            <tr data-ledger-row-type="{{this.ledger_row_type}}" data-ledger-status="{{this.status_label}}">
               <td>{{this.created_label}}</td>
-              <td><span class="status-pill status-{{this.status_label}}">{{this.status_label}}</span></td>
+              <td>
+                <strong>{{this.movement_label}}</strong>
+                <span class="ledger-row-type">{{this.type_label}}</span>
+              </td>
+              <td><span class="status-pill status-{{this.status_label}}">{{this.status_text}}</span></td>
               <td>{{this.amount_label}}</td>
               <td>{{this.reason_label}}</td>
               <td>{{#if this.order_id}}{{this.order_id}}{{else}}—{{/if}}</td>

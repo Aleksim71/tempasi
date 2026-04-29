@@ -262,3 +262,90 @@
     padding: 0.65rem 0.6rem;
   }
 }
+
+/* Step 5S — Finance credit ledger hardening */
+.finance-ledger-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.finance-ledger-summary__item {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 1rem;
+}
+
+.finance-ledger-summary__item span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.finance-ledger-summary__item strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #172033;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.finance-ledger-table-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.finance-ledger-table-head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.ledger-row-type {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.ledger-table tr[data-ledger-row-type='created'] td:first-child {
+  border-left: 3px solid rgba(34, 197, 94, 0.55);
+}
+
+.ledger-table tr[data-ledger-status='reserved'] td:first-child {
+  border-left: 3px solid rgba(59, 130, 246, 0.55);
+}
+
+.ledger-table tr[data-ledger-status='applied'] td:first-child,
+.ledger-table tr[data-ledger-status='used'] td:first-child,
+.ledger-table tr[data-ledger-status='completed'] td:first-child {
+  border-left: 3px solid rgba(16, 185, 129, 0.55);
+}
+
+.ledger-table tr[data-ledger-status='released'] td:first-child,
+.ledger-table tr[data-ledger-status='cancelled'] td:first-child,
+.ledger-table tr[data-ledger-status='canceled'] td:first-child {
+  border-left: 3px solid rgba(245, 158, 11, 0.6);
+}
+
+@media (max-width: 900px) {
+  .finance-ledger-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .finance-ledger-table-head {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .finance-ledger-summary {
+    grid-template-columns: 1fr;
+  }
+}
