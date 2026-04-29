@@ -16,7 +16,9 @@
     "format:check": "prettier . --check",
     "prepare": "husky",
     "dev:buy": "bash scripts/dev-buy.sh",
-    "test": "node -e \"if(!process.env.DATABASE_URL_TEST){console.error('Set DATABASE_URL_TEST');process.exit(1)}\" && NODE_OPTIONS=--experimental-vm-modules jest --config ./jest.config.cjs"
+    "test": "node -e \"if(!process.env.DATABASE_URL_TEST){console.error('Set DATABASE_URL_TEST');process.exit(1)}\" && NODE_OPTIONS=--experimental-vm-modules jest --config ./jest.config.cjs",
+    "test:db:check": "node scripts/db-test-preflight.cjs",
+    "test:db": "npm run test:db:check && npm test"
   },
   "author": "",
   "license": "ISC",
