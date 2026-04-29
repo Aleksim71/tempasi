@@ -1,3 +1,4 @@
+const { closeDbAfterTest } = require("./helpers/closeDbAfterTest.cjs");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -6,30 +7,6 @@ function readProjectFile(relativePath) {
   return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
-
-async function closeDbAfterTest() {
-  let dbModule = null;
-
-  try {
-    dbModule = require("../src/config/db.cjs");
-  } catch {
-    return;
-  }
-
-  const candidates = [
-    dbModule,
-    dbModule && dbModule.pool,
-    dbModule && dbModule.db,
-    dbModule && dbModule.default,
-  ];
-
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate.end === "function") {
-      await candidate.end();
-      return;
-    }
-  }
-}
 
 afterAll(async () => {
   await closeDbAfterTest();

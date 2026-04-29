@@ -1,5 +1,7 @@
 'use strict';
 
+const { closeDbAfterTest } = require('./helpers/closeDbAfterTest.cjs');
+
 // tests/cases.service.test.cjs
 
 const { getPool } = require('../scripts/db.pool.cjs');
@@ -16,9 +18,7 @@ describe('cases.service', () => {
   });
 
   afterAll(async () => {
-    if (db && typeof db.end === 'function') {
-      await db.end();
-    }
+    await closeDbAfterTest(db);
   });
 
   test('ensureDefaultCaseForUser creates the first case only once', async () => {

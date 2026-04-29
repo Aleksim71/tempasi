@@ -1,3 +1,4 @@
+const { closeDbAfterTest } = require('./helpers/closeDbAfterTest.cjs');
 // path: tests/creditLedger.integration.test.cjs
 const crypto = require("node:crypto");
 
@@ -434,29 +435,9 @@ async function cleanupUserRows(userId) {
   }
 }
 
-async function closeDb() {
-  const closeCandidates = [
-    () => dbModule && typeof dbModule.close === "function" && dbModule.close(),
-    () => dbModule && typeof dbModule.end === "function" && dbModule.end(),
-    () => dbModule && dbModule.pool && typeof dbModule.pool.end === "function" && dbModule.pool.end(),
-    () => dbModule && dbModule.db && typeof dbModule.db.end === "function" && dbModule.db.end(),
-    () => dbModule && dbModule.default && typeof dbModule.default.end === "function" && dbModule.default.end(),
-    () => db && typeof db.end === "function" && db.end(),
-  ];
-
-  for (const close of closeCandidates) {
-    try {
-      const result = await close();
-      if (result !== false) return;
-    } catch (_) {
-      // Try next closer.
-    }
-  }
-}
-
 describe("creditLedger real DB integration", () => {
   afterAll(async () => {
-    await closeDb();
+    await closeDbAfterTest(dbModule, db);
   });
 
   test("returns created credit and reserved/applied/released movements from real DB rows", async () => {
