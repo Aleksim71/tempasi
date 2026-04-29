@@ -667,8 +667,9 @@ function createCabinetPagesRouter() {
     }
   });
 
+  router.get('/finance/credit-ledger', requireAuthPage, CreditLedgerController.handleCreditLedger);
+
   router.get('/finance', async (req, res) => {
-router.get("/finance/credit-ledger", CreditLedgerController.handleCreditLedger);
     const requestedTab = String(req.query.tab || '').trim();
     const allowedTabs = new Set(['overview', 'orders', 'reports']);
     const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';

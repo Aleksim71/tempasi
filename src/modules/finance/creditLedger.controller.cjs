@@ -44,6 +44,73 @@ function getDb(req) {
   return candidates.find((candidate) => candidate && typeof candidate.query === "function") || null;
 }
 
+function formatDateLabel(value) {
+  if (!value) return "—";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toISOString().slice(0, 10);
+}
+
+function formatAmountLabel(value) {
+  const cents = Number(value || 0);
+  const eur = cents / 100;
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+  }).format(eur);
+}
+
+function formatStatusLabel(value) {
+  return String(value || "created").trim().toLowerCase();
+}
+
+function formatReasonLabel(value) {
+  const text = String(value || "").trim();
+  return text || "—";
+}
+
+function toCreditLedgerViewModel(row) {
+  const status = formatStatusLabel(row.status || row.usage_status || row.credit_status);
+  const amountCents =
+    row.amount_cents ??
+    row.amountCents ??
+    row.usage_amount_cents ??
+    row.credit_amount_cents ??
+    0;
+
+  const createdAt =
+    row.created_at ||
+    row.createdAt ||
+    row.usage_created_at ||
+    row.usage_updated_at ||
+    row.usage_applied_at ||
+    row.usage_released_at ||
+    row.credit_created_at ||
+    null;
+
+  return {
+    ...row,
+    status,
+    status_label: row.status_label || status,
+    amount_cents: amountCents,
+    amountCents,
+    amount_label: row.amount_label || formatAmountLabel(amountCents),
+    created_at: createdAt,
+    createdAt,
+    created_label: row.created_label || formatDateLabel(createdAt),
+    reason_label: row.reason_label || formatReasonLabel(row.reason || row.usage_reason || row.credit_reason),
+    order_id: row.order_id || null,
+    rent_id: row.rent_id || row.rent_order_id || null,
+  };
+}
+
+function buildCreditLedgerViewModel(rows) {
+  return Array.isArray(rows) ? rows.map(toCreditLedgerViewModel) : [];
+}
+
 function renderFallbackHtml(res, data) {
   const rows = data.creditLedger.map((item) => `
     <tr>
@@ -105,7 +172,7 @@ async function handleCreditLedger(req, res, next) {
     } else if (!db) {
       data.error = "Credit ledger is not connected to the database pool yet.";
     } else {
-      data.creditLedger = await listAccountCreditLedger(db, userId);
+      data.creditLedger = buildCreditLedgerViewModel(await listAccountCreditLedger(db, userId));
     }
 
     if (typeof res.render === "function") {
