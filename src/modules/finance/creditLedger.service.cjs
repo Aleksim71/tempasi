@@ -1,12 +1,61 @@
 // path: src/modules/finance/creditLedger.service.cjs
-"use strict";
+const dbModule = require("../../config/db.cjs");
 
-function quoteIdent(value) {
-  return '"' + String(value).replace(/"/g, '""') + '"';
+function isQueryClient(value) {
+  return Boolean(value && typeof value.query === "function");
 }
 
-async function getTableColumns(db, tableName) {
-  const result = await db.query(
+function getDefaultDbClient() {
+  if (isQueryClient(dbModule)) {
+    return dbModule;
+  }
+
+  if (dbModule && isQueryClient(dbModule.pool)) {
+    return dbModule.pool;
+  }
+
+  if (dbModule && isQueryClient(dbModule.db)) {
+    return dbModule.db;
+  }
+
+  if (dbModule && isQueryClient(dbModule.default)) {
+    return dbModule.default;
+  }
+
+  throw new TypeError("Tempasi DB module does not expose a supported query client.");
+}
+
+function resolveArgs(firstArg, secondArg) {
+  if (isQueryClient(firstArg)) {
+    return {
+      client: firstArg,
+      userId: secondArg,
+    };
+  }
+
+  return {
+    client: getDefaultDbClient(),
+    userId: firstArg,
+  };
+}
+
+function normalizeUserId(value) {
+  if (value && typeof value === "object") {
+    if (value.id != null) return value.id;
+    if (value.user_id != null) return value.user_id;
+    if (value.userId != null) return value.userId;
+  }
+
+  return value;
+}
+
+async function query(client, sql, params = []) {
+  return client.query(sql, params);
+}
+
+async function getTableColumns(client, tableName) {
+  const result = await query(
+    client,
     `SELECT column_name
        FROM information_schema.columns
       WHERE table_schema = 'public'
@@ -14,88 +63,145 @@ async function getTableColumns(db, tableName) {
       ORDER BY ordinal_position`,
     [tableName]
   );
-  return new Set(result.rows.map((row) => row.column_name));
+
+  return result.rows.map((row) => row.column_name);
 }
 
 function pickColumn(columns, candidates) {
-  for (const name of candidates) {
-    if (columns.has(name)) return name;
-  }
-  return null;
+  return candidates.find((name) => columns.includes(name)) || null;
 }
 
-function selectExpr(columns, candidates, alias, fallbackSql = "NULL") {
-  const col = pickColumn(columns, candidates);
-  if (!col) return `${fallbackSql} AS ${quoteIdent(alias)}`;
-  return `${quoteIdent(col)} AS ${quoteIdent(alias)}`;
+function sqlNullOrColumn(aliasPrefix, columns, candidates, alias) {
+  const column = pickColumn(columns, candidates);
+  return column ? `${aliasPrefix}.${column} AS ${alias}` : `NULL AS ${alias}`;
 }
 
-async function listAccountCreditLedger(db, userId, options = {}) {
-  if (!db || typeof db.query !== "function") {
-    throw new Error("Credit ledger requires a db/pool object with query(sql, params).");
-  }
-  if (!userId) return [];
+function buildCreditSelect(columns) {
+  return [
+    "c.id AS credit_id",
+    sqlNullOrColumn("c", columns, ["amount_cents", "original_amount_cents", "total_amount_cents"], "credit_amount_cents"),
+    sqlNullOrColumn("c", columns, ["remaining_amount_cents", "available_amount_cents", "balance_cents"], "credit_remaining_cents"),
+    sqlNullOrColumn("c", columns, ["status"], "credit_status"),
+    sqlNullOrColumn("c", columns, ["reason", "source", "source_type", "kind"], "credit_reason"),
+    sqlNullOrColumn("c", columns, ["created_at"], "credit_created_at"),
+  ];
+}
 
-  const limit = Math.max(1, Math.min(Number(options.limit || 100), 500));
+function buildUsageSelect(columns, relationColumn) {
+  return [
+    "u.id AS usage_id",
+    `u.${relationColumn} AS credit_relation_id`,
+    sqlNullOrColumn("u", columns, ["amount_cents", "used_amount_cents", "reserved_amount_cents"], "usage_amount_cents"),
+    sqlNullOrColumn("u", columns, ["status"], "usage_status"),
+    sqlNullOrColumn("u", columns, ["reason", "source", "source_type", "kind"], "usage_reason"),
+    sqlNullOrColumn("u", columns, ["order_id"], "order_id"),
+    sqlNullOrColumn("u", columns, ["created_at"], "usage_created_at"),
+    sqlNullOrColumn("u", columns, ["updated_at"], "usage_updated_at"),
+    sqlNullOrColumn("u", columns, ["applied_at"], "usage_applied_at"),
+    sqlNullOrColumn("u", columns, ["released_at"], "usage_released_at"),
+  ];
+}
 
-  const usagesColumns = await getTableColumns(db, "account_credit_usages");
-  if (!usagesColumns.size) {
+function normalizeLedgerRow(row) {
+  const status =
+    row.usage_status ||
+    row.credit_status ||
+    "created";
+
+  const amountCents =
+    row.usage_amount_cents ??
+    row.credit_amount_cents ??
+    0;
+
+  const createdAt =
+    row.usage_created_at ||
+    row.usage_updated_at ||
+    row.usage_applied_at ||
+    row.usage_released_at ||
+    row.credit_created_at ||
+    null;
+
+  return {
+    id: row.usage_id || row.credit_id,
+    credit_id: row.credit_id,
+    usage_id: row.usage_id || null,
+    account_credit_id: row.credit_relation_id || row.credit_id,
+    order_id: row.order_id || null,
+    status,
+    amount_cents: amountCents,
+    amountCents,
+    amount_eur: Number(amountCents || 0) / 100,
+    reason: row.usage_reason || row.credit_reason || null,
+    created_at: createdAt,
+    createdAt,
+    credit_status: row.credit_status || null,
+    credit_remaining_cents: row.credit_remaining_cents ?? null,
+  };
+}
+
+async function listAccountCreditLedger(firstArg, secondArg) {
+  const { client, userId: rawUserId } = resolveArgs(firstArg, secondArg);
+  const userId = normalizeUserId(rawUserId);
+
+  if (!userId) {
     return [];
   }
 
-  const userColumn = pickColumn(usagesColumns, [
+  const creditColumns = await getTableColumns(client, "account_credits");
+  const usageColumns = await getTableColumns(client, "account_credit_usages");
+
+  if (!creditColumns.includes("id")) {
+    throw new Error("Cannot build credit ledger: account_credits.id is missing.");
+  }
+
+  if (!usageColumns.includes("id")) {
+    throw new Error("Cannot build credit ledger: account_credit_usages.id is missing.");
+  }
+
+  const userColumn = pickColumn(creditColumns, [
     "user_id",
-    "buyer_user_id",
+    "owner_user_id",
     "buyer_id",
     "account_user_id",
-    "owner_user_id",
-    "customer_user_id",
+    "created_by_user_id",
   ]);
 
   if (!userColumn) {
+    throw new Error("Cannot build credit ledger: account_credits has no known user column.");
+  }
+
+  const relationColumn = pickColumn(usageColumns, [
+    "account_credit_id",
+    "credit_id",
+    "account_credit_ref_id",
+    "source_account_credit_id",
+  ]);
+
+  if (!relationColumn) {
     throw new Error(
-      "Cannot build credit ledger: account_credit_usages has no known user column."
+      `Cannot build credit ledger: account_credit_usages has no known credit relation column. Columns: ${usageColumns.join(", ")}`
     );
   }
 
-  const createdColumn = pickColumn(usagesColumns, ["created_at", "inserted_at", "created_on"]);
-  const updatedColumn = pickColumn(usagesColumns, ["updated_at", "modified_at", "released_at", "applied_at"]);
-  const orderByColumn = updatedColumn || createdColumn || "id";
+  const creditSelect = buildCreditSelect(creditColumns);
+  const usageSelect = buildUsageSelect(usageColumns, relationColumn);
 
-  const select = [
-    selectExpr(usagesColumns, ["id"], "id"),
-    selectExpr(usagesColumns, ["status", "state"], "status", "'unknown'"),
-    selectExpr(usagesColumns, ["amount_cents", "credit_amount_cents", "used_amount_cents", "reserved_amount_cents"], "amount_cents", "0"),
-    selectExpr(usagesColumns, ["reason", "source", "kind", "type"], "reason", "''"),
-    selectExpr(usagesColumns, ["order_id", "payment_order_id"], "order_id"),
-    selectExpr(usagesColumns, ["rent_id", "rental_id", "reservation_id"], "rent_id"),
-    selectExpr(usagesColumns, ["template_id"], "template_id"),
-    selectExpr(usagesColumns, ["provider_session_id", "stripe_session_id"], "provider_session_id"),
-    selectExpr(usagesColumns, ["created_at", "inserted_at", "created_on"], "created_at"),
-    selectExpr(usagesColumns, ["updated_at", "modified_at", "released_at", "applied_at"], "updated_at"),
-  ].join(",\n        ");
+  const orderByColumn =
+    pickColumn(usageColumns, ["created_at", "updated_at", "applied_at", "released_at"]) ||
+    "id";
 
   const sql = `
-    SELECT ${select}
-      FROM account_credit_usages
-     WHERE ${quoteIdent(userColumn)} = $1
-     ORDER BY ${quoteIdent(orderByColumn)} DESC NULLS LAST, id DESC
-     LIMIT $2
+    SELECT
+      ${[...creditSelect, ...usageSelect].join(",\n      ")}
+    FROM account_credit_usages u
+    JOIN account_credits c
+      ON c.id = u.${relationColumn}
+    WHERE c.${userColumn} = $1
+    ORDER BY u.${orderByColumn} DESC, u.id DESC
   `;
 
-  const result = await db.query(sql, [userId, limit]);
-  return result.rows.map((row) => {
-    const amountCents = Number(row.amount_cents || 0);
-    return {
-      ...row,
-      amount_cents: amountCents,
-      amount_label: `${(amountCents / 100).toFixed(2)} €`,
-      created_label: row.created_at ? new Date(row.created_at).toISOString().slice(0, 16).replace("T", " ") : "—",
-      updated_label: row.updated_at ? new Date(row.updated_at).toISOString().slice(0, 16).replace("T", " ") : "—",
-      reason_label: row.reason || "—",
-      status_label: row.status || "unknown",
-    };
-  });
+  const result = await query(client, sql, [userId]);
+  return result.rows.map(normalizeLedgerRow);
 }
 
 module.exports = {
