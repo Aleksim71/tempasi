@@ -18,7 +18,8 @@
     "dev:buy": "bash scripts/dev-buy.sh",
     "test": "node -e \"if(!process.env.DATABASE_URL_TEST){console.error('Set DATABASE_URL_TEST');process.exit(1)}\" && NODE_OPTIONS=--experimental-vm-modules jest --config ./jest.config.cjs",
     "test:db:check": "node scripts/db-test-preflight.cjs",
-    "test:db": "npm run test:db:check && npm test"
+    "test:db": "npm run test:db:check && npm test",
+    "test:db:local": "DATABASE_URL_TEST=postgres://tempasi:tempasi@127.0.0.1:5433/tempasi_test npm test"
   },
   "author": "",
   "license": "ISC",
