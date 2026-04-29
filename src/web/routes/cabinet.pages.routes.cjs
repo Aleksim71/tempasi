@@ -14,6 +14,7 @@ const rentAssignmentsService = require('../../modules/cases/rentAssignments.serv
 const accountCreditsService = require('../../modules/payments/accountCredits.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
+const CreditLedgerController = require("../../modules/finance/creditLedger.controller.cjs");
 
 function requireAuthPage(req, res, next) {
   if (req.user && (req.user.id || req.user.user_id || req.user.userId)) return next();
@@ -667,6 +668,7 @@ function createCabinetPagesRouter() {
   });
 
   router.get('/finance', async (req, res) => {
+router.get("/finance/credit-ledger", CreditLedgerController.handleCreditLedger);
     const requestedTab = String(req.query.tab || '').trim();
     const allowedTabs = new Set(['overview', 'orders', 'reports']);
     const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';

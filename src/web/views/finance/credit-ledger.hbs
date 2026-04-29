@@ -1,0 +1,46 @@
+{{!-- path: src/web/views/finance/credit-ledger.hbs --}}
+<main class="cabinet cabinet-finance">
+  <section class="cabinet-header">
+    <p class="eyebrow">Finance</p>
+    <h1>Credit ledger</h1>
+    <p class="muted">History of Tempasi credit reservations, applications and releases.</p>
+  </section>
+
+  {{#if error}}
+    <section class="notice notice-warning">{{error}}</section>
+  {{/if}}
+
+  {{#if creditLedger.length}}
+    <section class="card table-card">
+      <table class="ledger-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Reason</th>
+            <th>Order</th>
+            <th>Rent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each creditLedger}}
+            <tr>
+              <td>{{this.created_label}}</td>
+              <td><span class="status-pill status-{{this.status_label}}">{{this.status_label}}</span></td>
+              <td>{{this.amount_label}}</td>
+              <td>{{this.reason_label}}</td>
+              <td>{{#if this.order_id}}{{this.order_id}}{{else}}—{{/if}}</td>
+              <td>{{#if this.rent_id}}{{this.rent_id}}{{else}}—{{/if}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </section>
+  {{else}}
+    <section class="empty-state card">
+      <h2>No credit entries yet</h2>
+      <p>Your Tempasi credit history will appear here after rent conversion, checkout reservation, payment completion or checkout cancellation.</p>
+    </section>
+  {{/if}}
+</main>

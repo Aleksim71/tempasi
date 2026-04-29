@@ -769,3 +769,56 @@ h1.page-title,
 p.page-subtitle {
   display: none !important;
 }
+
+/* Step 5H: Finance credit ledger */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ledger-table th,
+.ledger-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  text-align: left;
+}
+.ledger-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #334155;
+}
+.status-reserved {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.status-applied {
+  background: #ecfdf5;
+  color: #047857;
+}
+.status-released {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.status-expired,
+.status-failed {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.notice-warning {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
