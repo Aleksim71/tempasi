@@ -209,6 +209,7 @@ export function createCartRouter() {
           FROM entitlements
           WHERE template_slug = $1
             AND UPPER(COALESCE(deal_type, kind, '')) = 'RENT'
+            AND closed_at IS NULL
             AND (ends_at IS NULL OR ends_at > NOW())
             AND user_id <> $2
           LIMIT 1

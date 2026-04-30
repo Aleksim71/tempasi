@@ -525,6 +525,7 @@ function createCabinetPagesRouter() {
             ON oca.order_id = e.order_id
           WHERE e.user_id = $1
             AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+            AND e.closed_at IS NULL
             AND (e.ends_at IS NULL OR e.ends_at > NOW())
           GROUP BY e.id, o.id, st.title
           ORDER BY e.ends_at ASC NULLS LAST, e.created_at DESC, e.id DESC
