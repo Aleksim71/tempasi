@@ -3,6 +3,31 @@ const db = require("../../config/db.cjs");
 const OrdersRepo = require("../orders/orders.repo.cjs");
 const CheckoutCreditsService = require("./checkoutCredits.service.cjs");
 
+function getQueryableDbAdapter(candidate) {
+  if (candidate && typeof candidate.query === "function") {
+    return candidate;
+  }
+
+  if (candidate && candidate.pool && typeof candidate.pool.query === "function") {
+    return candidate.pool;
+  }
+
+  if (candidate && candidate.default && typeof candidate.default.query === "function") {
+    return candidate.default;
+  }
+
+  if (
+    candidate &&
+    candidate.default &&
+    candidate.default.pool &&
+    typeof candidate.default.pool.query === "function"
+  ) {
+    return candidate.default.pool;
+  }
+
+  throw new Error("DB_QUERY_ADAPTER_UNAVAILABLE");
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -45,9 +70,10 @@ async function releaseReservedCreditByProviderSessionId(providerSessionId) {
     };
   }
 
-  const releasedCredits = await CheckoutCreditsService.releaseReservedCreditForOrder(db, order.id);
+  const queryableDb = getQueryableDbAdapter(db);
+  const releasedCredits = await CheckoutCreditsService.releaseReservedCreditForOrder(queryableDb, order.id);
 
-  const updateResult = await db.query(
+  const updateResult = await queryableDb.query(
     `
       UPDATE public.orders
       SET status = 'failed',
