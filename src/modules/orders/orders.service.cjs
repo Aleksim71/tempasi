@@ -133,12 +133,14 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
     payload: normalizeBuyPayload(payload),
   });
 
-  if (p.dealType === 'BUY') {
-    const alreadySold = await ordersRepo.hasPaidBuyByTemplateSlug(templateSlug);
-    if (alreadySold) {
-      fail('TEMPLATE_ALREADY_SOLD', 409, 'Template already sold (exclusive sale).');
-    }
+  // TEMPASI_STEP_6D_BUY_EXCLUSIVITY_GUARD
+  // A completed BUY is permanent exclusivity: no later BUY or RENT checkout may be created.
+  const alreadySold = await ordersRepo.hasPaidBuyByTemplateSlug(templateSlug);
+  if (alreadySold) {
+    fail('TEMPLATE_ALREADY_SOLD', 409, 'Template already sold (exclusive sale).');
+  }
 
+  if (p.dealType === 'BUY') {
     const activeRent = await ordersRepo.findActiveRentReservationByTemplateSlug(templateSlug);
     if (activeRent && String(activeRent.user_id) !== String(userId)) {
       fail('TEMPLATE_RENT_RESERVED', 409, 'Template is currently reserved by active rent.');
