@@ -5,18 +5,46 @@ const bcrypt = require('bcryptjs');
 const EntitlementsService = require('../payments/entitlements.service.cjs');
 
 function mustGetDb(req) {
+  const locals = req && req.app && req.app.locals ? req.app.locals : {};
+
   const db =
     (req && req.db) ||
-    (req && req.app && req.app.locals && req.app.locals.db);
+    (req && req.pool) ||
+    locals.db ||
+    locals.pool ||
+    locals.pgPool ||
+    locals.dbPool;
 
   if (!db || typeof db.query !== 'function') {
-    const err = new Error('[profile] DB is not attached (expected req.db or app.locals.db)');
+    const err = new Error('[profile] DB is not attached (expected req.db, req.pool, app.locals.db or app.locals.pool)');
     err.status = 500;
     err.code = 'DB_NOT_READY';
     throw err;
   }
 
   return db;
+}
+
+function getCurrentUserId(req) {
+  const candidates = [
+    req && req.user && req.user.id,
+    req && req.userId,
+    req && req.session && req.session.user && req.session.user.id,
+    req && req.session && req.session.userId,
+    req && req.session && req.session.auth && req.session.auth.user && req.session.auth.user.id,
+    req && req.auth && req.auth.userId,
+  ];
+
+  const userId = candidates.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
+
+  if (!userId) {
+    const err = new Error('[profile] Authenticated user id is missing');
+    err.status = 401;
+    err.code = 'PROFILE_USER_ID_MISSING';
+    throw err;
+  }
+
+  return userId;
 }
 
 function normalizeProfilePayload(body) {
@@ -41,11 +69,15 @@ function normalizeProfilePayload(body) {
 function validateProfilePayload(payload) {
   const errors = [];
 
-  if ('full_name' in payload && payload.full_name && payload.full_name.length > 120) {
+  if (!payload.full_name) {
+    errors.push('full_name is required');
+  } else if (payload.full_name.length > 120) {
     errors.push('full_name must be at most 120 characters');
   }
 
-  if ('nickname' in payload && payload.nickname) {
+  if (!payload.nickname) {
+    errors.push('nickname is required');
+  } else {
     if (payload.nickname.length < 2) {
       errors.push('nickname must be at least 2 characters');
     }
@@ -57,7 +89,9 @@ function validateProfilePayload(payload) {
     }
   }
 
-  if ('about' in payload && payload.about && payload.about.length > 300) {
+  if (!payload.about) {
+    errors.push('about is required');
+  } else if (payload.about.length > 300) {
     errors.push('about must be at most 300 characters');
   }
 
@@ -90,7 +124,7 @@ async function getProfileRow(db, userId) {
 }
 
 async function getMyProfileJson(req, res) {
-  const userId = req.user.id;
+  const userId = getCurrentUserId(req);
   const db = mustGetDb(req);
 
   const row = await getProfileRow(db, userId);
@@ -105,7 +139,7 @@ async function getMyProfileJson(req, res) {
 }
 
 async function updateMyProfileJson(req, res) {
-  const userId = req.user.id;
+  const userId = getCurrentUserId(req);
   const db = mustGetDb(req);
 
   const payload = normalizeProfilePayload(req.body);
@@ -172,7 +206,7 @@ async function updateMyProfileJson(req, res) {
 }
 
 async function changeMyPasswordJson(req, res) {
-  const userId = req.user.id;
+  const userId = getCurrentUserId(req);
   const db = mustGetDb(req);
 
   const currentPassword = String(req.body?.current_password || '');
@@ -246,7 +280,7 @@ async function changeMyPasswordJson(req, res) {
 }
 
 async function getMyDownloadsJson(req, res) {
-  const userId = req.user.id;
+  const userId = getCurrentUserId(req);
   const db = mustGetDb(req);
 
   const rows = await EntitlementsService.listUserEntitlements({ db, userId });

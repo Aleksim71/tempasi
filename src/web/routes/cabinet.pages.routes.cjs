@@ -17,12 +17,18 @@ const { getPool } = require('../../../scripts/db.pool.cjs');
 const CreditLedgerController = require("../../modules/finance/creditLedger.controller.cjs");
 
 function requireAuthPage(req, res, next) {
-  if (req.user && (req.user.id || req.user.user_id || req.user.userId)) return next();
+  if (
+    req.userId ||
+    (req.user && (req.user.id || req.user.user_id || req.user.userId))
+  ) {
+    return next();
+  }
+
   return res.redirect('/login');
 }
 
 function getUserId(req) {
-  return req?.user?.id || req?.user?.user_id || req?.user?.userId || null;
+  return req?.user?.id || req?.user?.user_id || req?.user?.userId || req?.userId || null;
 }
 
 function formatMoneyEurFromCents(cents) {
