@@ -27,6 +27,19 @@ function safeNextPath(input) {
   return raw;
 }
 
+function normalizeRentDays(input) {
+  const n = Number.parseInt(String(input || '1'), 10);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(n, 30);
+}
+
+function formatRentDurationLabel(license) {
+  const match = String(license || '').match(/^PU:(\d+)d$/i);
+  const days = match ? Number.parseInt(match[1], 10) : 1;
+  const safeDays = Number.isFinite(days) && days > 0 ? days : 1;
+  return `${safeDays} ${safeDays === 1 ? 'day' : 'days'} reservation`;
+}
+
 function redirectToLogin(res, nextPath) {
   const qs = new URLSearchParams();
   const safeNext = safeNextPath(nextPath);
@@ -84,7 +97,10 @@ async function loadCartItems(db, userId) {
   return (rows || []).map((row) => {
     const dealType = String(row.deal_type || 'BUY').toUpperCase();
     const amountCents =
-      dealType === 'RENT' ? Number(row.price_rent_cents || 0) : Number(row.price_buy_cents || 0);
+      dealType === 'RENT'
+        ? Number(row.price_rent_cents || 0) *
+          (Number.parseInt(String(row.license || '').match(/^PU:(\d+)d$/i)?.[1] || '1', 10) || 1)
+        : Number(row.price_buy_cents || 0);
 
     return {
       id: row.id,
@@ -95,6 +111,7 @@ async function loadCartItems(db, userId) {
       created_at_str: formatDateYMD(row.created_at),
       amountCents,
       amountEur: formatMoneyEurFromCents(amountCents),
+      durationLabel: dealType === 'RENT' ? formatRentDurationLabel(row.license) : '',
       detailsHref: `/templates/${encodeURIComponent(row.template_slug || '')}`,
     };
   });
@@ -143,9 +160,12 @@ export function createCartRouter() {
       const dealType = String(req.body?.deal_type || 'BUY')
         .trim()
         .toUpperCase();
-      const license = String(req.body?.license || 'PU')
+      const rawLicense = String(req.body?.license || 'PU')
         .trim()
         .toUpperCase();
+      const rentDays = dealType === 'RENT' ? normalizeRentDays(req.body?.rent_days) : null;
+      const license = dealType === 'RENT' && rentDays ? `PU:${rentDays}d` : rawLicense;
+      const licenseForValidation = rawLicense;
       const nextPath = safeNextPath(req.body?.next || `/templates/${templateSlug}`) || '/templates';
 
       if (!userId) return redirectToLogin(res, nextPath);
@@ -153,8 +173,12 @@ export function createCartRouter() {
       if (!['BUY', 'RENT'].includes(dealType)) {
         return res.redirect(302, `${nextPath}?cart=unsupported`);
       }
-      if (!['PU', 'CU', 'EL', 'ML', 'EX'].includes(license)) {
+      if (!['PU', 'CU', 'EL', 'ML', 'EX'].includes(licenseForValidation)) {
         return res.redirect(302, `${nextPath}?cart=bad_license`);
+      }
+
+      if (dealType === 'RENT' && !rentDays) {
+        return res.redirect(302, `${nextPath}?cart=rent_days_required`);
       }
 
       const db = req.app.locals?.db;
@@ -164,7 +188,7 @@ export function createCartRouter() {
 
       const templateResult = await db.query(
         `
-          SELECT slug, price_buy_cents, price_rent_cents
+          SELECT slug, owner_user_id, price_buy_cents, price_rent_cents
           FROM seller_templates
           WHERE slug = $1
             AND status = 'published'
@@ -176,6 +200,10 @@ export function createCartRouter() {
 
       const tpl = templateResult.rows?.[0] || null;
       if (!tpl) return res.redirect(302, '/templates');
+
+      if (Number(tpl.owner_user_id) === Number(userId)) {
+        return res.redirect(302, `${nextPath}?cart=owner_template`);
+      }
 
       const buyPriceCents = Number(tpl.price_buy_cents || 0);
       const rentPriceCents = Number(tpl.price_rent_cents || 0);
@@ -233,6 +261,36 @@ export function createCartRouter() {
       );
       if (ownedResult.rows?.[0]) {
         return res.redirect(302, `${nextPath}?cart=owned`);
+      }
+
+      if (dealType === 'BUY') {
+        await db.query(
+          `
+            DELETE FROM cart_items
+            WHERE user_id = $1
+              AND template_slug = $2
+              AND UPPER(deal_type) = 'RENT'
+          `,
+          [userId, templateSlug],
+        );
+      }
+
+      if (dealType === 'RENT') {
+        const buyCartResult = await db.query(
+          `
+            SELECT 1
+            FROM cart_items
+            WHERE user_id = $1
+              AND template_slug = $2
+              AND UPPER(deal_type) = 'BUY'
+            LIMIT 1
+          `,
+          [userId, templateSlug],
+        );
+
+        if (buyCartResult.rows?.[0]) {
+          return res.redirect(302, `${nextPath}?cart=buy_already_in_cart`);
+        }
       }
 
       const insertResult = await db.query(

@@ -29,7 +29,12 @@
                 {{#each cart.items}}
                   <tr>
                     <td>{{template_title}}</td>
-                    <td>{{deal_type}}</td>
+                    <td>
+                      {{deal_type}}
+                      {{#if durationLabel}}
+                        <div class="cart-muted">{{durationLabel}}</div>
+                      {{/if}}
+                    </td>
                     <td>{{license}}</td>
                     <td>{{created_at_str}}</td>
                     <td>€{{amountEur}}</td>
