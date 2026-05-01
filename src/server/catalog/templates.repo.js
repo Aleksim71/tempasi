@@ -237,3 +237,8 @@ export default {
   selectTemplatesForCatalog,
   getTemplateBySlug,
 };
+
+// TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT
+// Catalog visibility contract:
+// Templates with a completed BUY must not be presented as normally available for BUY or RENT.
+// Public gallery/details should expose a sold/unavailable state instead of active BUY/RENT CTAs.

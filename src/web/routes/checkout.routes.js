@@ -30,3 +30,9 @@ router.get('/success', async (req, res, next) => {
 router.get('/cancel', CheckoutCancelController.handleCheckoutCancel);
 
 export default router;
+
+// TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT
+// Checkout route contract:
+// If orders.service rejects BUY/RENT because the template already has a completed BUY,
+// the route must keep the response user-safe: conflict/unavailable/sold message or safe redirect.
+// Do not silently create provider checkout sessions for sold templates.

@@ -252,3 +252,10 @@ module.exports = {
   createPendingOrder,
   createOrderCheckout,
 };
+
+
+// TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT
+// Route/UI contract:
+// A completed BUY is a permanent exclusive state.
+// Any BUY or RENT checkout attempt after completed BUY must fail safely before provider checkout.
+// User-facing layers must treat this state as sold/unavailable, not as a generic server error.
