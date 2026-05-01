@@ -79,6 +79,45 @@ function pickBySlugFnSafe() {
   }
 }
 
+async function loadPublicSellerProfile(db, ownerUserId) {
+  if (!db || typeof db.query !== 'function' || !ownerUserId) {
+    return null;
+  }
+
+  const { rows } = await db.query(
+    `
+      SELECT
+        full_name,
+        nickname,
+        about,
+        public_email
+      FROM user_profiles
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [ownerUserId],
+  );
+
+  const row = rows && rows[0] ? rows[0] : null;
+  if (!row) return null;
+
+  const name = String(row.full_name || '').trim();
+  const nickname = String(row.nickname || '').trim();
+  const bio = String(row.about || '').trim();
+  const publicEmail = String(row.public_email || '').trim();
+
+  if (!name && !nickname && !bio && !publicEmail) {
+    return null;
+  }
+
+  return {
+    name,
+    nickname,
+    bio,
+    public_email: publicEmail,
+  };
+}
+
 function toStr(v) {
   return v == null ? '' : String(v);
 }
@@ -292,6 +331,7 @@ export function createTemplatesRouter() {
       }
 
       const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
+      template.author = await loadPublicSellerProfile(db, raw.ownerUserId || raw.owner_user_id);
 
       return res.status(200).render('pages/template-details', {
         title: `${template.title} — Tempasi`,

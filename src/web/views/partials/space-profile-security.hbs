@@ -17,44 +17,65 @@
 
         <form class="profile-form" id="profileForm">
           <div class="form-row">
-            <label for="profile_full_name">Full Name</label>
+            <label for="profile_full_name">Full Name <span aria-hidden="true">*</span></label>
             <input
               id="profile_full_name"
               name="full_name"
               type="text"
               value="{{workspaceData.profile.form.full_name}}"
               required
+              oninvalid="this.setCustomValidity('Full Name is required.')"
+              oninput="this.setCustomValidity('')"
             />
           </div>
 
           <div class="form-row">
-            <label for="profile_nickname">Username</label>
+            <label for="profile_nickname">Username <span aria-hidden="true">*</span></label>
             <input
               id="profile_nickname"
               name="nickname"
               type="text"
               value="{{workspaceData.profile.form.nickname}}"
               required
+              oninvalid="this.setCustomValidity('Username is required.')"
+              oninput="this.setCustomValidity('')"
             />
           </div>
 
           <div class="form-row">
-            <label for="profile_email">Email</label>
+            <label for="profile_email">Email <span aria-hidden="true">*</span></label>
             <input
               id="profile_email"
               name="email"
               type="email"
               value="{{workspaceData.profile.form.email}}"
               readonly
+              required
+              oninvalid="this.setCustomValidity('Email is required.')"
+              oninput="this.setCustomValidity('')"
             />
           </div>
 
           <div class="form-row">
-            <label for="profile_about">About</label>
+            <label for="profile_public_email">Public contact email</label>
+            <input
+              id="profile_public_email"
+              name="public_email"
+              type="email"
+              value="{{workspaceData.profile.form.public_email}}"
+              placeholder="contact@example.com"
+            />
+            <small class="form-help">Shown on your public template pages. Leave empty to hide.</small>
+          </div>
+
+          <div class="form-row">
+            <label for="profile_about">About <span aria-hidden="true">*</span></label>
             <textarea
               id="profile_about"
               name="about"
               required
+              oninvalid="this.setCustomValidity('About is required.')"
+              oninput="this.setCustomValidity('')"
             >{{workspaceData.profile.form.about}}</textarea>
           </div>
 
@@ -86,6 +107,7 @@
             full_name: form.elements.full_name.value,
             nickname: form.elements.nickname.value,
             about: form.elements.about.value,
+            public_email: form.elements.public_email.value,
           };
 
           try {

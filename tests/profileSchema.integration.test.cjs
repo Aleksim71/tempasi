@@ -43,6 +43,7 @@ describe('profile schema integration contract', () => {
       'location',
       'website_url',
       'public_profile',
+      'public_email',
       'created_at',
       'updated_at',
     ]));

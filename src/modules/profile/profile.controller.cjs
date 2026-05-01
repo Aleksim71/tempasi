@@ -63,6 +63,11 @@ function normalizeProfilePayload(body) {
     out.about = src.about == null ? null : String(src.about).trim();
   }
 
+  if (Object.prototype.hasOwnProperty.call(src, 'public_email')) {
+    const value = src.public_email == null ? '' : String(src.public_email).trim();
+    out.public_email = value || null;
+  }
+
   return out;
 }
 
@@ -95,6 +100,10 @@ function validateProfilePayload(payload) {
     errors.push('about must be at most 300 characters');
   }
 
+  if (payload.public_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.public_email)) {
+    errors.push('public_email must be a valid email address');
+  }
+
   return errors;
 }
 
@@ -111,6 +120,7 @@ async function getProfileRow(db, userId) {
         location,
         website_url,
         public_profile,
+        public_email,
         created_at,
         updated_at
       FROM user_profiles
@@ -134,6 +144,7 @@ async function getMyProfileJson(req, res) {
       full_name: row ? row.full_name : null,
       nickname: row ? row.nickname : null,
       about: row ? row.about : null,
+      public_email: row ? row.public_email : null,
     },
   });
 }
@@ -169,29 +180,37 @@ async function updateMyProfileJson(req, res) {
       ? payload.about
       : existing?.about ?? null;
 
+  const publicEmail =
+    Object.prototype.hasOwnProperty.call(payload, 'public_email')
+      ? payload.public_email
+      : existing?.public_email ?? null;
+
   const { rows } = await db.query(
     `
       INSERT INTO user_profiles (
         user_id,
         full_name,
         nickname,
-        about
+        about,
+        public_email
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (user_id)
       DO UPDATE SET
         full_name = EXCLUDED.full_name,
         nickname = EXCLUDED.nickname,
         about = EXCLUDED.about,
+        public_email = EXCLUDED.public_email,
         updated_at = now()
       RETURNING
         user_id,
         full_name,
         nickname,
         about,
+        public_email,
         updated_at
     `,
-    [userId, fullName, nickname, about],
+    [userId, fullName, nickname, about, publicEmail],
   );
 
   return res.json({
@@ -200,6 +219,7 @@ async function updateMyProfileJson(req, res) {
       full_name: rows[0].full_name,
       nickname: rows[0].nickname,
       about: rows[0].about,
+      public_email: rows[0].public_email,
     },
     updated_at: rows[0].updated_at,
   });

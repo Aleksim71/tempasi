@@ -828,6 +828,7 @@ function createCabinetPagesRouter() {
             full_name,
             nickname,
             about,
+            public_email,
             website_url,
             public_profile,
             updated_at
@@ -888,6 +889,7 @@ function createCabinetPagesRouter() {
             full_name: profileRow?.full_name || '',
             nickname: profileRow?.nickname || '',
             about: profileRow?.about || '',
+            public_email: profileRow?.public_email || '',
             email: req?.user?.email || '',
           },
           downloads,

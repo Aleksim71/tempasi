@@ -46,6 +46,7 @@ export async function selectTemplatesForCatalog(db) {
   const q = `
     SELECT
       id,
+      owner_user_id,
       title,
       slug,
       short_description,
@@ -105,6 +106,7 @@ export async function selectTemplatesForCatalog(db) {
     return {
       // keep real DB id (useful for other logic)
       id,
+      ownerUserId: r.owner_user_id || null,
 
       slug,
       title: toStr(r.title || '').trim() || slug,
@@ -145,6 +147,7 @@ export async function getTemplateBySlug(db, slug) {
   const q = `
     SELECT
       id,
+      owner_user_id,
       title,
       slug,
       short_description,
@@ -205,6 +208,7 @@ export async function getTemplateBySlug(db, slug) {
 
   return {
     id,
+    ownerUserId: r.owner_user_id || null,
     slug: slugStr,
     title: toStr(r.title || '').trim() || slugStr,
     name: toStr(r.title || '').trim() || slugStr,

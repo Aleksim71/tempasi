@@ -16,123 +16,12 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
 {{!-- src/web/views/pages/template-details.hbs --}}
 
 <section class="tpl-details">
-  <div class="tpl-head">
-    <div class="tpl-head__left">
-      <h1 class="tpl-title">{{template.title}}</h1>
-
-      <div class="tpl-meta">
-        {{#if template.isSold}}
-          <span class="badge badge--sold">SOLD</span>
-        {{/if}}
-        {{#if template.category}}
-          <span class="tpl-muted">{{template.category}}</span>
-        {{/if}}
-
-        {{#if template.license}}
-          <span class="tpl-muted">· {{template.license}}</span>
-        {{/if}}
-
-        {{#if template.type}}
-          <span class="tpl-muted">· {{template.type}}</span>
-        {{/if}}
-
-        {{#if template.version}}
-          <span class="tpl-muted">· v{{template.version}}</span>
-        {{/if}}
-      </div>
-
-      {{#if template.description}}
-        <p class="tpl-desc">{{template.description}}</p>
-      {{/if}}
-    </div>
-
-    <div class="tpl-head__right">
-      <div class="tpl-price">
-        {{#if template.prices.buy}}
-          Buy: {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
-        {{else}}
-          {{#if template.price}}
-            Buy: {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
-          {{else}}
-            —
-          {{/if}}
-        {{/if}}
-      </div>
-
-      <div class="tpl-cta">
-        <div class="tpl-ctaRow">
-          {{#if template.demoUrl}}
-            <a class="c-btn c-btn--primary" href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">
-              Demo
-            </a>
-          {{else}}
-            <a class="c-btn c-btn--primary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">
-              Demo
-            </a>
-          {{/if}}
-
-          <a class="c-btn" href="/templates">← Back</a>
-        </div>
-
-        <div class="tpl-ctaRow">
-          {{!-- BUY --}}
-          {{#if template.isSold}}
-            <button type="button" class="c-btn" disabled>Already sold</button>
-          {{else}}
-            {{#if template.canBuy}}
-<form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
-              <input type="hidden" name="dealType" value="BUY" />
-              {{#if template.prices.buy}}
-                <input type="hidden" name="amount" value="{{template.prices.buy.amount}}" />
-                <input type="hidden" name="currency" value="{{template.prices.buy.currency}}" />
-              {{else}}
-                <input type="hidden" name="amount" value="{{template.price}}" />
-                <input type="hidden" name="currency" value="EUR" />
-              {{/if}}
-              <button type="submit" class="c-btn">Buy</button>
-            </form>
-{{else}}
-<button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
-{{/if}}
-
-            {{#if template.canRent}}
-<form class="tpl-buyForm" method="POST" action="/cart/add">
-              <input type="hidden" name="template_slug" value="{{template.slug}}" />
-              <input type="hidden" name="deal_type" value="BUY" />
-              <input type="hidden" name="license" value="PU" />
-              <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-              <button type="submit" class="c-btn">Add to cart</button>
-            </form>
-{{else}}
-<button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
-{{/if}}
-          {{/if}}
-
-          {{!-- RENT: add reservation to cart, then checkout/payment completes the 24h hold --}}
-          {{#if template.prices.rent}}
-            <form class="tpl-buyForm" method="POST" action="/cart/add">
-              <input type="hidden" name="template_slug" value="{{template.slug}}" />
-              <input type="hidden" name="deal_type" value="RENT" />
-              <input type="hidden" name="license" value="PU" />
-              <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-              <button type="submit" class="c-btn">Add rent to cart</button>
-            </form>
-          {{/if}}
-
-          {{!-- Download (если zip готов) --}}
-          {{#if template.hasZip}}
-            <a class="c-btn" href="/downloads/{{template.slug}}">Download</a>
-          {{/if}}
-        </div>
-
-        <div class="tpl-hint">
-          Secure checkout · instant access after purchase
-          <br />
-          Buying is one-time and exclusive, regardless of how many cases use this template.
-        </div>
-      </div>
-    </div>
-  </div>
+  {{#if template.isSold}}
+    <section class="template-availability template-availability--sold" data-testid="template-sold-unavailable">
+      <strong>Sold</strong>
+      <span>No longer available for BUY or RENT.</span>
+    </section>
+  {{/if}}
 
   <div class="tpl-layout">
     <div>
@@ -157,13 +46,47 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
 
     <aside class="tpl-side">
       <div class="tpl-box">
-        <div class="tpl-box__title">Template info</div>
+        <div class="tpl-box__title">Template summary</div>
+
+        <h1 class="tpl-title">{{template.title}}</h1>
+
+        {{#if template.description}}
+          <p class="tpl-desc">{{template.description}}</p>
+        {{/if}}
 
         <dl class="tpl-dl">
           <div class="tpl-dl__row">
             <dt>Slug</dt>
             <dd>{{template.slug}}</dd>
           </div>
+
+          {{#if template.category}}
+            <div class="tpl-dl__row">
+              <dt>Category</dt>
+              <dd>{{template.category}}</dd>
+            </div>
+          {{/if}}
+
+          {{#if template.license}}
+            <div class="tpl-dl__row">
+              <dt>License</dt>
+              <dd>{{template.license}}</dd>
+            </div>
+          {{/if}}
+
+          {{#if template.type}}
+            <div class="tpl-dl__row">
+              <dt>Type</dt>
+              <dd>{{template.type}}</dd>
+            </div>
+          {{/if}}
+
+          {{#if template.version}}
+            <div class="tpl-dl__row">
+              <dt>Version</dt>
+              <dd>v{{template.version}}</dd>
+            </div>
+          {{/if}}
 
           {{#if template.tech}}
             <div class="tpl-dl__row">
@@ -175,6 +98,32 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
               </dd>
             </div>
           {{/if}}
+
+          <div class="tpl-dl__row">
+            <dt>Buy price</dt>
+            <dd>
+              {{#if template.prices.buy}}
+                {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
+              {{else}}
+                {{#if template.price}}
+                  {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
+                {{else}}
+                  —
+                {{/if}}
+              {{/if}}
+            </dd>
+          </div>
+
+          <div class="tpl-dl__row">
+            <dt>Rent price</dt>
+            <dd>
+              {{#if template.prices.rent}}
+                {{template.prices.rent.amount}}{{#if (eq template.prices.rent.currency "EUR")}}€{{else}} {{template.prices.rent.currency}}{{/if}}
+              {{else}}
+                —
+              {{/if}}
+            </dd>
+          </div>
 
           {{#if template.updatedAt}}
             <div class="tpl-dl__row">
@@ -200,22 +149,82 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
       </div>
 
       <div class="tpl-box">
-        <div class="tpl-box__title">Author</div>
+        <div class="tpl-box__title">Actions</div>
+
+        <div class="tpl-cta">
+          <div class="tpl-ctaRow">
+            {{#if template.demoUrl}}
+              <a class="c-btn c-btn--primary" href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">Demo</a>
+            {{else}}
+              <a class="c-btn c-btn--primary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
+            {{/if}}
+
+            <a class="c-btn" href="/templates">← Back</a>
+          </div>
+
+          <div class="tpl-ctaRow">
+            {{#if template.isSold}}
+              <button type="button" class="c-btn" disabled>Already sold</button>
+            {{else}}
+              {{#if template.canBuy}}
+                <form class="tpl-buyForm" method="POST" action="/cart/add">
+                  <input type="hidden" name="template_slug" value="{{template.slug}}" />
+                  <input type="hidden" name="deal_type" value="BUY" />
+                  <input type="hidden" name="license" value="PU" />
+                  <input type="hidden" name="next" value="/templates/{{template.slug}}" />
+                  <button type="submit" class="c-btn">Buy</button>
+                </form>
+              {{else}}
+                <button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
+              {{/if}}
+
+              {{#if template.canRent}}
+                {{#if template.prices.rent}}
+                  <form class="tpl-buyForm" method="POST" action="/cart/add">
+                    <input type="hidden" name="template_slug" value="{{template.slug}}" />
+                    <input type="hidden" name="deal_type" value="RENT" />
+                    <input type="hidden" name="license" value="PU" />
+                    <input type="hidden" name="next" value="/templates/{{template.slug}}" />
+                    <button type="submit" class="c-btn">Rent</button>
+                  </form>
+                {{/if}}
+              {{else}}
+                <button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
+              {{/if}}
+            {{/if}}
+          </div>
+
+          <div class="tpl-hint">
+            Secure checkout · buying is one-time and exclusive.
+            <br />
+            Renting reserves the template for a client presentation.
+          </div>
+        </div>
+      </div>
+
+      <div class="tpl-box">
+        <div class="tpl-box__title">Seller</div>
 
         {{#if template.author}}
           {{#if template.author.name}}
             <div><strong>{{template.author.name}}</strong></div>
           {{/if}}
+
+          {{#if template.author.nickname}}
+            <div class="tpl-note">@{{template.author.nickname}}</div>
+          {{/if}}
+
           {{#if template.author.bio}}
             <div class="tpl-note">{{template.author.bio}}</div>
           {{/if}}
-          {{#if template.author.url}}
+
+          {{#if template.author.public_email}}
             <div class="tpl-note">
-              <a class="c-btn" href="{{template.author.url}}" target="_blank" rel="noopener">Profile</a>
+              Contact: <a href="mailto:{{template.author.public_email}}">{{template.author.public_email}}</a>
             </div>
           {{/if}}
         {{else}}
-          <div class="tpl-muted">—</div>
+          <div class="tpl-muted">Seller profile is not public yet.</div>
         {{/if}}
       </div>
     </aside>

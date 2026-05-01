@@ -38,13 +38,14 @@ function createProfileDb() {
       }
 
       if (/INSERT INTO user_profiles/i.test(sql)) {
-        const [userId, fullName, nickname, about] = params;
+        const [userId, fullName, nickname, about, publicEmail] = params;
 
         state.profile = {
           user_id: userId,
           full_name: fullName,
           nickname,
           about,
+          public_email: publicEmail || null,
           updated_at: new Date('2026-05-01T00:00:00.000Z'),
         };
 
@@ -98,6 +99,71 @@ describe('profile persistence API', () => {
     });
   });
 
+  test('POST /api/profile accepts empty optional public_email', async () => {
+    const db = createProfileDb();
+
+    const req = {
+      userId: 43,
+      app: {
+        locals: {
+          db,
+        },
+      },
+      body: {
+        full_name: 'Optional Email User',
+        nickname: 'optional-email',
+        about: 'Profile without public email.',
+        public_email: '',
+      },
+    };
+
+    const res = createJsonRes();
+
+    await updateMyProfileJson(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toMatchObject({
+      ok: true,
+      profile: {
+        full_name: 'Optional Email User',
+        nickname: 'optional-email',
+        about: 'Profile without public email.',
+        public_email: null,
+      },
+    });
+  });
+
+  test('POST /api/profile rejects invalid optional public_email when filled', async () => {
+    const db = createProfileDb();
+
+    const req = {
+      userId: 44,
+      app: {
+        locals: {
+          db,
+        },
+      },
+      body: {
+        full_name: 'Invalid Email User',
+        nickname: 'invalid-email',
+        about: 'Profile with invalid public email.',
+        public_email: 'not-an-email',
+      },
+    };
+
+    const res = createJsonRes();
+
+    await updateMyProfileJson(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.payload).toMatchObject({
+      error: 'PROFILE_VALIDATION_FAILED',
+    });
+    expect(res.payload.details).toEqual(expect.arrayContaining([
+      'public_email must be a valid email address',
+    ]));
+  });
+
   test('POST /api/profile rejects missing required profile fields', async () => {
     const db = createProfileDb();
 
@@ -141,6 +207,9 @@ describe('profile persistence API', () => {
           full_name: 'Saved User',
           nickname: 'saved-user',
           about: 'Persisted profile text.',
+          public_email: 'public-seller@example.com',
+          public_email: 'public-seller@example.com',
+          public_email: 'public-seller@example.com',
         },
       },
       createJsonRes(),
