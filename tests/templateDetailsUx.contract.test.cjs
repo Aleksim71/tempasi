@@ -10,11 +10,14 @@ function read(relPath) {
 }
 
 describe('template details product-card UX contract', () => {
-  test('template details page uses simplified marketplace actions', () => {
+  test('template details page uses a wide product card and simplified marketplace actions', () => {
     const view = read('src/web/views/pages/template-details.hbs');
 
-    expect(view).toContain('Template summary');
-    expect(view).toContain('Actions');
+    expect(view).toContain('tpl-product-card');
+    expect(view).toContain('tpl-product-card__prices');
+    expect(view).toContain('tpl-layout');
+    expect(view).toContain('tpl-actions-card');
+    expect(view).toContain('tpl-seller-card');
 
     expect(view).toContain('>Demo<');
     expect(view).toContain('>Buy<');
@@ -24,7 +27,9 @@ describe('template details product-card UX contract', () => {
     expect(view).not.toContain('Add to cart');
     expect(view).not.toContain('Add rent to cart');
     expect(view).not.toContain('>Download<');
-    expect(view).not.toContain('Template info');
+    expect(view).not.toContain('Template summary');
+    expect(view).not.toContain('<dt>ZIP</dt>');
+    expect(view).not.toContain('Ready{{else}}Not ready');
   });
 
   test('Buy and Rent actions keep existing cart flow endpoints', () => {
@@ -35,6 +40,7 @@ describe('template details product-card UX contract', () => {
     expect(view).toContain('name="deal_type" value="RENT"');
     expect(view).not.toContain('action="/api/orders/{{template.slug}}/buy"');
   });
+
   test('template details page supports public seller profile fields without private login email fallback', () => {
     const view = read('src/web/views/pages/template-details.hbs');
     const route = read('src/web/routes/templates.routes.js');
@@ -46,7 +52,7 @@ describe('template details product-card UX contract', () => {
     expect(route).toContain('public_email');
     expect(route).toContain('template.author = await loadPublicSellerProfile');
 
-    expect(view).toContain('Seller');
+    expect(view).toContain('Created by');
     expect(view).toContain('{{template.author.name}}');
     expect(view).toContain('@{{template.author.nickname}}');
     expect(view).toContain('{{template.author.bio}}');
@@ -56,5 +62,4 @@ describe('template details product-card UX contract', () => {
     expect(route).not.toContain('email AS public_email');
     expect(route).not.toContain('users.email');
   });
-
 });

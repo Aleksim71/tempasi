@@ -15,13 +15,73 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
 
 {{!-- src/web/views/pages/template-details.hbs --}}
 
-<section class="tpl-details">
+<section class="tpl-details tpl-details--product-layout">
   {{#if template.isSold}}
     <section class="template-availability template-availability--sold" data-testid="template-sold-unavailable">
       <strong>Sold</strong>
       <span>No longer available for BUY or RENT.</span>
     </section>
   {{/if}}
+
+  <article class="tpl-product-card">
+    <div class="tpl-product-card__main">
+      <h1 class="tpl-title">{{template.title}}</h1>
+
+      {{#if template.description}}
+        <p class="tpl-desc tpl-product-card__desc">{{template.description}}</p>
+      {{/if}}
+
+      <div class="tpl-product-card__meta">
+        {{#if template.category}}
+          <span>{{template.category}}</span>
+        {{/if}}
+
+        {{#if template.slug}}
+          <span>{{template.slug}}</span>
+        {{/if}}
+
+        {{#if template.license}}
+          <span>{{template.license}}</span>
+        {{/if}}
+
+        {{#if template.type}}
+          <span>{{template.type}}</span>
+        {{/if}}
+
+        {{#if template.version}}
+          <span>v{{template.version}}</span>
+        {{/if}}
+      </div>
+    </div>
+
+    <div class="tpl-product-card__prices">
+      <div class="tpl-price-line">
+        <span>Buy</span>
+        <strong>
+          {{#if template.prices.buy}}
+            {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
+          {{else}}
+            {{#if template.price}}
+              {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
+            {{else}}
+              —
+            {{/if}}
+          {{/if}}
+        </strong>
+      </div>
+
+      <div class="tpl-price-line">
+        <span>Rent</span>
+        <strong>
+          {{#if template.prices.rent}}
+            {{template.prices.rent.amount}}{{#if (eq template.prices.rent.currency "EUR")}}€{{else}} {{template.prices.rent.currency}}{{/if}}
+          {{else}}
+            —
+          {{/if}}
+        </strong>
+      </div>
+    </div>
+  </article>
 
   <div class="tpl-layout">
     <div>
@@ -41,114 +101,22 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
             <p class="tpl-desc">{{template.longDescription}}</p>
           </div>
         {{/if}}
+
+        {{#if template.features}}
+          <div class="tpl-box">
+            <div class="tpl-box__title">Highlights</div>
+            <ul class="tpl-list">
+              {{#each template.features}}
+                <li>{{this}}</li>
+              {{/each}}
+            </ul>
+          </div>
+        {{/if}}
       </div>
     </div>
 
     <aside class="tpl-side">
-      <div class="tpl-box">
-        <div class="tpl-box__title">Template summary</div>
-
-        <h1 class="tpl-title">{{template.title}}</h1>
-
-        {{#if template.description}}
-          <p class="tpl-desc">{{template.description}}</p>
-        {{/if}}
-
-        <dl class="tpl-dl">
-          <div class="tpl-dl__row">
-            <dt>Slug</dt>
-            <dd>{{template.slug}}</dd>
-          </div>
-
-          {{#if template.category}}
-            <div class="tpl-dl__row">
-              <dt>Category</dt>
-              <dd>{{template.category}}</dd>
-            </div>
-          {{/if}}
-
-          {{#if template.license}}
-            <div class="tpl-dl__row">
-              <dt>License</dt>
-              <dd>{{template.license}}</dd>
-            </div>
-          {{/if}}
-
-          {{#if template.type}}
-            <div class="tpl-dl__row">
-              <dt>Type</dt>
-              <dd>{{template.type}}</dd>
-            </div>
-          {{/if}}
-
-          {{#if template.version}}
-            <div class="tpl-dl__row">
-              <dt>Version</dt>
-              <dd>v{{template.version}}</dd>
-            </div>
-          {{/if}}
-
-          {{#if template.tech}}
-            <div class="tpl-dl__row">
-              <dt>Tech</dt>
-              <dd>
-                {{#each template.tech}}
-                  <span class="tpl-muted">{{this}}</span>{{#unless @last}}, {{/unless}}
-                {{/each}}
-              </dd>
-            </div>
-          {{/if}}
-
-          <div class="tpl-dl__row">
-            <dt>Buy price</dt>
-            <dd>
-              {{#if template.prices.buy}}
-                {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
-              {{else}}
-                {{#if template.price}}
-                  {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
-                {{else}}
-                  —
-                {{/if}}
-              {{/if}}
-            </dd>
-          </div>
-
-          <div class="tpl-dl__row">
-            <dt>Rent price</dt>
-            <dd>
-              {{#if template.prices.rent}}
-                {{template.prices.rent.amount}}{{#if (eq template.prices.rent.currency "EUR")}}€{{else}} {{template.prices.rent.currency}}{{/if}}
-              {{else}}
-                —
-              {{/if}}
-            </dd>
-          </div>
-
-          {{#if template.updatedAt}}
-            <div class="tpl-dl__row">
-              <dt>Updated</dt>
-              <dd>{{template.updatedAt}}</dd>
-            </div>
-          {{/if}}
-
-          <div class="tpl-dl__row">
-            <dt>ZIP</dt>
-            <dd>{{#if template.hasZip}}Ready{{else}}Not ready{{/if}}</dd>
-          </div>
-        </dl>
-
-        {{#if template.features}}
-          <div class="tpl-note">Highlights</div>
-          <ul class="tpl-list">
-            {{#each template.features}}
-              <li>{{this}}</li>
-            {{/each}}
-          </ul>
-        {{/if}}
-      </div>
-
-      <div class="tpl-box">
+      <div class="tpl-box tpl-actions-card">
         <div class="tpl-box__title">Actions</div>
 
         <div class="tpl-cta">
@@ -202,12 +170,12 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
         </div>
       </div>
 
-      <div class="tpl-box">
-        <div class="tpl-box__title">Seller</div>
+      <div class="tpl-box tpl-seller-card">
+        <div class="tpl-box__title">Created by</div>
 
         {{#if template.author}}
           {{#if template.author.name}}
-            <div><strong>{{template.author.name}}</strong></div>
+            <div class="tpl-seller-card__name"><strong>{{template.author.name}}</strong></div>
           {{/if}}
 
           {{#if template.author.nickname}}
