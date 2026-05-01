@@ -1,3 +1,18 @@
+{{!-- TEMPASI_STEP_6F_REAL_UI_SOLD_UNAVAILABLE_BEHAVIOR --}}
+{{#if template.isSold}}
+<section class="template-availability template-availability--sold" data-testid="template-sold-unavailable">
+  <strong>Sold</strong>
+  <span>No longer available for BUY or RENT.</span>
+</section>
+{{/if}}
+
+
+{{!-- TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT
+Template details UI contract:
+Sold / no longer available templates must not expose active BUY or RENT checkout CTAs.
+Keep BUY/RENT controls behind availability state from the catalog/route layer.
+--}}
+
 {{!-- src/web/views/pages/template-details.hbs --}}
 
 <section class="tpl-details">
@@ -64,7 +79,8 @@
           {{#if template.isSold}}
             <button type="button" class="c-btn" disabled>Already sold</button>
           {{else}}
-            <form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
+            {{#if template.canBuy}}
+<form class="tpl-buyForm" method="POST" action="/api/orders/{{template.slug}}/buy">
               <input type="hidden" name="dealType" value="BUY" />
               {{#if template.prices.buy}}
                 <input type="hidden" name="amount" value="{{template.prices.buy.amount}}" />
@@ -75,14 +91,21 @@
               {{/if}}
               <button type="submit" class="c-btn">Buy</button>
             </form>
+{{else}}
+<button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
+{{/if}}
 
-            <form class="tpl-buyForm" method="POST" action="/cart/add">
+            {{#if template.canRent}}
+<form class="tpl-buyForm" method="POST" action="/cart/add">
               <input type="hidden" name="template_slug" value="{{template.slug}}" />
               <input type="hidden" name="deal_type" value="BUY" />
               <input type="hidden" name="license" value="PU" />
               <input type="hidden" name="next" value="/templates/{{template.slug}}" />
               <button type="submit" class="c-btn">Add to cart</button>
             </form>
+{{else}}
+<button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
+{{/if}}
           {{/if}}
 
           {{!-- RENT: add reservation to cart, then checkout/payment completes the 24h hold --}}

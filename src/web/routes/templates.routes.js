@@ -1,3 +1,9 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const {
+  normalizeTemplateAvailability,
+  normalizeTemplateListAvailability,
+} = require('../helpers/templateAvailability.cjs');
 // src/web/routes/templates.routes.js
 import { Router } from 'express';
 import * as repo from '../../server/catalog/templates.repo.js';
@@ -228,7 +234,9 @@ export function createTemplatesRouter() {
       const rawList = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
 
       // ✅ normalize previewUrl + compat fields for cards
-      const templates = (rawList || []).map((t) => normalizeTemplate(t));
+      const templates = normalizeTemplateListAvailability(
+        (rawList || []).map((t) => normalizeTemplate(t)),
+      );
 
       res.render('pages/templates/index', {
         title: 'Templates — Tempasi',
@@ -283,7 +291,7 @@ export function createTemplatesRouter() {
         });
       }
 
-      const template = normalizeTemplate(raw, slug);
+      const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
 
       return res.status(200).render('pages/template-details', {
         title: `${template.title} — Tempasi`,
@@ -299,3 +307,9 @@ export function createTemplatesRouter() {
 
   return router;
 }
+
+// TEMPASI_STEP_6F_REAL_UI_SOLD_UNAVAILABLE_BEHAVIOR
+// Route contract:
+// Template detail/list routes must pass UI-normalized availability fields:
+// template.isSold, template.canBuy, template.canRent.
+// A completed BUY must be rendered as sold/unavailable and must not expose active BUY/RENT CTA.
