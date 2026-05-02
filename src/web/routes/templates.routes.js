@@ -5,7 +5,7 @@ const {
   normalizeTemplateListAvailability,
 } = require('../helpers/templateAvailability.cjs');
 // src/web/routes/templates.routes.js
-import { Router } from 'express';
+import { Router, urlencoded } from 'express';
 import * as repo from '../../server/catalog/templates.repo.js';
 
 /**
@@ -258,8 +258,54 @@ function normalizeTemplate(raw, slugFromUrl) {
   };
 }
 
+function getUserId(req) {
+  const raw =
+    req?.user?.id ??
+    req?.user?.user_id ??
+    req?.user?.userId ??
+    req?.userId ??
+    req?.session?.userId ??
+    req?.session?.user_id ??
+    null;
+
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function normalizeOwnerHoldDays(input) {
+  const n = Number.parseInt(String(input || '1'), 10);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(n, 30);
+}
+
+async function loadOwnerTemplateForAction(db, slug, userId) {
+  if (!db || typeof db.query !== 'function') {
+    throw new Error('DB_NOT_CONFIGURED');
+  }
+
+  const { rows } = await db.query(
+    `
+      SELECT id, slug, owner_user_id, status, deleted_at
+      FROM seller_templates
+      WHERE slug = $1
+        AND deleted_at IS NULL
+      LIMIT 1
+    `,
+    [slug],
+  );
+
+  const template = rows && rows[0] ? rows[0] : null;
+
+  if (!template) return null;
+  if (Number(template.owner_user_id) !== Number(userId)) return null;
+
+  return template;
+}
+
 export function createTemplatesRouter() {
   const router = Router();
+
+  router.use(urlencoded({ extended: false }));
 
   const selectCatalog = pickCatalogFnSafe();
   const getBySlug = pickBySlugFnSafe();
@@ -303,6 +349,85 @@ export function createTemplatesRouter() {
     }
   });
 
+  router.post('/:slug/owner/reserve', async (req, res, next) => {
+    try {
+      const slug = toStr(req.params.slug).trim();
+      const userId = getUserId(req);
+      const db = req.app.locals?.db;
+
+      if (!userId)
+        return res.redirect(302, `/login?next=${encodeURIComponent(`/templates/${slug}`)}`);
+
+      const template = await loadOwnerTemplateForAction(db, slug, userId);
+      if (!template)
+        return res.redirect(302, `/templates/${encodeURIComponent(slug)}?owner=forbidden`);
+
+      const days = normalizeOwnerHoldDays(req.body?.owner_hold_days);
+      if (!days) return res.redirect(302, `/templates/${encodeURIComponent(slug)}?owner=bad_days`);
+
+      const reason = String(req.body?.owner_hold_reason || 'Client presentation')
+        .trim()
+        .slice(0, 300);
+
+      await db.query(
+        `
+          UPDATE seller_templates
+          SET owner_hold_until = NOW() + ($2::int * INTERVAL '1 day'),
+              owner_hold_days = $2,
+              owner_hold_reason = $3,
+              updated_at = NOW()
+          WHERE slug = $1
+            AND owner_user_id = $4
+            AND deleted_at IS NULL
+        `,
+        [slug, days, reason || null, userId],
+      );
+
+      return res.redirect(302, '/cabinet/my-templates?owner_reserved=1');
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/:slug/owner/withdraw', async (req, res, next) => {
+    try {
+      const slug = toStr(req.params.slug).trim();
+      const userId = getUserId(req);
+      const db = req.app.locals?.db;
+
+      if (!userId)
+        return res.redirect(302, `/login?next=${encodeURIComponent(`/templates/${slug}`)}`);
+
+      const template = await loadOwnerTemplateForAction(db, slug, userId);
+      if (!template)
+        return res.redirect(302, `/templates/${encodeURIComponent(slug)}?owner=forbidden`);
+
+      const reason = String(req.body?.owner_withdraw_reason || 'Sold externally')
+        .trim()
+        .slice(0, 300);
+
+      await db.query(
+        `
+          UPDATE seller_templates
+          SET owner_withdrawn_at = NOW(),
+              owner_withdraw_reason = $2,
+              owner_hold_until = NULL,
+              owner_hold_days = NULL,
+              owner_hold_reason = NULL,
+              updated_at = NOW()
+          WHERE slug = $1
+            AND owner_user_id = $3
+            AND deleted_at IS NULL
+        `,
+        [slug, reason || null, userId],
+      );
+
+      return res.redirect(302, '/cabinet/my-templates?owner_withdrawn=1');
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   // /templates/:slug — details page
   router.get('/:slug', async (req, res, next) => {
     try {
@@ -331,6 +456,14 @@ export function createTemplatesRouter() {
       }
 
       const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
+      const currentUserId = getUserId(req);
+      template.isOwner = Boolean(
+        currentUserId && Number(raw.ownerUserId || raw.owner_user_id) === Number(currentUserId),
+      );
+      template.ownerEditHref =
+        template.isOwner && raw.id
+          ? `/cabinet/my-templates/${encodeURIComponent(String(raw.id))}/edit`
+          : '';
       template.author = await loadPublicSellerProfile(db, raw.ownerUserId || raw.owner_user_id);
 
       return res.status(200).render('pages/template-details', {

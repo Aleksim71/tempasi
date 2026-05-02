@@ -130,37 +130,68 @@ Keep BUY/RENT controls behind availability state from the catalog/route layer.
             <a class="c-btn" href="/templates">← Back</a>
           </div>
 
-          <div class="tpl-ctaRow">
-            {{#if template.isSold}}
-              <button type="button" class="c-btn" disabled>Already sold</button>
-            {{else}}
-              {{#if template.canBuy}}
-                <form class="tpl-buyForm" method="POST" action="/cart/add">
-                  <input type="hidden" name="template_slug" value="{{template.slug}}" />
-                  <input type="hidden" name="deal_type" value="BUY" />
-                  <input type="hidden" name="license" value="PU" />
-                  <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-                  <button type="submit" class="c-btn">Buy</button>
-                </form>
-              {{else}}
-                <button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
+          {{#if template.isOwner}}
+            <div class="tpl-owner-actions">
+              {{#if template.ownerEditHref}}
+                <a class="c-btn" href="{{template.ownerEditHref}}">Edit template</a>
               {{/if}}
 
-              {{#if template.canRent}}
-                {{#if template.prices.rent}}
+              <form class="tpl-buyForm tpl-owner-form" method="POST" action="/templates/{{template.slug}}/owner/reserve">
+                <label class="tpl-owner-form__label">
+                  Reserve for client
+                  <input
+                    class="tpl-owner-form__input"
+                    type="number"
+                    name="owner_hold_days"
+                    min="1"
+                    max="30"
+                    value="1"
+                    required
+                  />
+                  <span class="tpl-muted">days</span>
+                </label>
+                <button type="submit" class="c-btn">Reserve</button>
+              </form>
+
+              <form class="tpl-buyForm tpl-owner-form" method="POST" action="/templates/{{template.slug}}/owner/withdraw">
+                <input type="hidden" name="owner_withdraw_reason" value="Sold externally" />
+                <button type="submit" class="c-btn">Withdraw permanently</button>
+              </form>
+            </div>
+          {{else}}
+            <div class="tpl-ctaRow">
+              {{#if template.isSold}}
+                <button type="button" class="c-btn" disabled>Already sold</button>
+              {{else}}
+                {{#if template.canBuy}}
                   <form class="tpl-buyForm" method="POST" action="/cart/add">
                     <input type="hidden" name="template_slug" value="{{template.slug}}" />
-                    <input type="hidden" name="deal_type" value="RENT" />
+                    <input type="hidden" name="deal_type" value="BUY" />
                     <input type="hidden" name="license" value="PU" />
                     <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-                    <button type="submit" class="c-btn">Rent</button>
+                    <button type="submit" class="c-btn">Buy</button>
                   </form>
+                {{else}}
+                  <button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
                 {{/if}}
-              {{else}}
-                <button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
+
+                {{#if template.canRent}}
+                  {{#if template.prices.rent}}
+                    <form class="tpl-buyForm" method="POST" action="/cart/add">
+                      <input type="hidden" name="template_slug" value="{{template.slug}}" />
+                      <input type="hidden" name="deal_type" value="RENT" />
+                      <input type="hidden" name="license" value="PU" />
+                      <input type="hidden" name="rent_days" value="1" />
+                      <input type="hidden" name="next" value="/templates/{{template.slug}}" />
+                      <button type="submit" class="c-btn">Rent</button>
+                    </form>
+                  {{/if}}
+                {{else}}
+                  <button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
+                {{/if}}
               {{/if}}
-            {{/if}}
-          </div>
+            </div>
+          {{/if}}
 
           <div class="tpl-hint">
             Secure checkout · buying is one-time and exclusive.

@@ -265,3 +265,31 @@
     justify-content: flex-start;
   }
 }
+
+/* Step 7G-2: owner-only template actions */
+.tpl-owner-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.tpl-owner-form {
+  display: grid;
+  gap: 8px;
+}
+
+.tpl-owner-form__label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted, #9ca3af);
+  font-size: 0.92rem;
+}
+
+.tpl-owner-form__input {
+  width: 100%;
+  max-width: 140px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text, #e5e7eb);
+}

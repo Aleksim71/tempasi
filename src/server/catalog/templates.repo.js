@@ -73,6 +73,8 @@ export async function selectTemplatesForCatalog(db) {
     FROM seller_templates
     WHERE status = 'published'
       AND deleted_at IS NULL
+      AND owner_withdrawn_at IS NULL
+      AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
       -- Hide templates already bought exclusively.
       AND NOT EXISTS (
         SELECT 1
@@ -175,6 +177,8 @@ export async function getTemplateBySlug(db, slug) {
     WHERE slug = $1
       AND status = 'published'
       AND deleted_at IS NULL
+      AND owner_withdrawn_at IS NULL
+      AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
       -- Direct URL must not bypass exclusive BUY.
       AND NOT EXISTS (
         SELECT 1
