@@ -1,3 +1,4 @@
+// tests/templateDetailsUx.contract.test.cjs
 'use strict';
 
 const fs = require('fs');
@@ -5,61 +6,68 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 
-function read(relPath) {
-  return fs.readFileSync(path.join(ROOT, relPath), 'utf8');
-}
+describe('template details product page UX contract', () => {
+  test('template details page separates product content from commercial actions', () => {
+    const viewPath = path.join(ROOT, 'src/web/views/pages/template-details.hbs');
+    const src = fs.readFileSync(viewPath, 'utf8');
 
-describe('template details product-card UX contract', () => {
-  test('template details page uses a wide product card and simplified marketplace actions', () => {
-    const view = read('src/web/views/pages/template-details.hbs');
+    expect(src).toContain('template-details-shell');
+    expect(src).toContain('template-details-main');
+    expect(src).toContain('template-actions-sidebar');
 
-    expect(view).toContain('tpl-product-card');
-    expect(view).toContain('tpl-product-card__prices');
-    expect(view).toContain('tpl-layout');
-    expect(view).toContain('tpl-actions-card');
-    expect(view).toContain('tpl-seller-card');
+    expect(src).toContain('Available:');
+    expect(src).toContain('Category:');
+    expect(src).toContain('Rating: coming soon');
 
-    expect(view).toContain('>Demo<');
-    expect(view).toContain('>Buy<');
-    expect(view).toContain('>Rent<');
-    expect(view).toContain('>← Back<');
+    expect(src).toContain('About this template');
+    expect(src).toContain('Details from the author');
 
-    expect(view).not.toContain('Add to cart');
-    expect(view).not.toContain('Add rent to cart');
-    expect(view).not.toContain('>Download<');
-    expect(view).not.toContain('Template summary');
-    expect(view).not.toContain('<dt>ZIP</dt>');
-    expect(view).not.toContain('Ready{{else}}Not ready');
+    expect(src).toContain('Exclusive purchase');
+    expect(src).toContain('Buy now');
+    expect(src).toContain('Add to cart');
+
+    expect(src).toContain('Client reservation');
+    expect(src).toContain('name="rent_days"');
+    expect(src).toContain('name="case_ids"');
+    expect(src).toContain('Rent now');
+    expect(src).toContain('Add rent to cart');
+
+    expect(src).toContain('Demo');
+    expect(src).toContain('Created by');
   });
 
-  test('Buy and Rent actions keep existing cart flow endpoints', () => {
-    const view = read('src/web/views/pages/template-details.hbs');
+  test('guest commercial actions redirect to login/register instead of guest cart', () => {
+    const viewPath = path.join(ROOT, 'src/web/views/pages/template-details.hbs');
+    const src = fs.readFileSync(viewPath, 'utf8');
 
-    expect(view).toContain('action="/cart/add"');
-    expect(view).toContain('name="deal_type" value="BUY"');
-    expect(view).toContain('name="deal_type" value="RENT"');
-    expect(view).not.toContain('action="/api/orders/{{template.slug}}/buy"');
+    expect(src).toContain('{{#if isAuthenticated}}');
+    expect(src).toContain('href="/login"');
+    expect(src).toContain('template-rent-form-disabled');
+    expect(src).toContain('id="guest_rent_days"');
+    expect(src).toContain('Sign in to select one or more cases');
+    expect(src).toContain('Sign in or create an account to buy, rent, or save templates to your cases.');
   });
 
-  test('template details page supports public seller profile fields without private login email fallback', () => {
-    const view = read('src/web/views/pages/template-details.hbs');
-    const route = read('src/web/routes/templates.routes.js');
-    const repo = read('src/server/catalog/templates.repo.js');
+  test('owner view keeps owner workflow separate from commercial buy and rent', () => {
+    const viewPath = path.join(ROOT, 'src/web/views/pages/template-details.hbs');
+    const src = fs.readFileSync(viewPath, 'utf8');
 
-    expect(repo).toContain('owner_user_id');
-    expect(route).toContain('loadPublicSellerProfile');
-    expect(route).toContain('FROM user_profiles');
-    expect(route).toContain('public_email');
-    expect(route).toContain('template.author = await loadPublicSellerProfile');
+    expect(src).toContain('{{#if isOwner}}');
+    expect(src).toContain('Owner actions');
+    expect(src).toContain('Edit template');
+    expect(src).toContain('Reserve for client');
+    expect(src).toContain('Withdraw permanently');
+    expect(src).toContain('Commercial buy and rent actions are disabled for your own templates.');
+  });
 
-    expect(view).toContain('Created by');
-    expect(view).toContain('{{template.author.name}}');
-    expect(view).toContain('@{{template.author.nickname}}');
-    expect(view).toContain('{{template.author.bio}}');
-    expect(view).toContain('mailto:{{template.author.public_email}}');
-    expect(view).toContain('Seller profile is not public yet.');
+  test('template details CSS supports two-column layout and sticky action sidebar', () => {
+    const cssPath = path.join(ROOT, 'public/css/pages/template-details.css');
+    const src = fs.readFileSync(cssPath, 'utf8');
 
-    expect(route).not.toContain('email AS public_email');
-    expect(route).not.toContain('users.email');
+    expect(src).toContain('grid-template-columns: minmax(0, 1fr) 380px');
+    expect(src).toContain('position: sticky');
+    expect(src).toContain('.template-buy-card');
+    expect(src).toContain('.template-rent-card');
+    expect(src).toContain('@media (max-width: 980px)');
   });
 });

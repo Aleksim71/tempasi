@@ -49,7 +49,7 @@ describe('owner template workflow contract', () => {
     expect(route).toContain('owner_withdrawn_at = NOW()');
     expect(route).toContain('template.isOwner');
 
-    expect(view).toContain('{{#if template.isOwner}}');
+    expect(view).toContain('{{#if isOwner}}');
     expect(view).toContain('Edit template');
     expect(view).toContain('Reserve for client');
     expect(view).toContain('Withdraw permanently');

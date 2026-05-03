@@ -1,231 +1,257 @@
-{{!-- TEMPASI_STEP_6F_REAL_UI_SOLD_UNAVAILABLE_BEHAVIOR --}}
-{{#if template.isSold}}
-<section class="template-availability template-availability--sold" data-testid="template-sold-unavailable">
-  <strong>Sold</strong>
-  <span>No longer available for BUY or RENT.</span>
-</section>
-{{/if}}
-
-
-{{!-- TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT
-Template details UI contract:
-Sold / no longer available templates must not expose active BUY or RENT checkout CTAs.
-Keep BUY/RENT controls behind availability state from the catalog/route layer.
---}}
-
 {{!-- src/web/views/pages/template-details.hbs --}}
 
-<section class="tpl-details tpl-details--product-layout">
-  {{#if template.isSold}}
-    <section class="template-availability template-availability--sold" data-testid="template-sold-unavailable">
-      <strong>Sold</strong>
-      <span>No longer available for BUY or RENT.</span>
-    </section>
-  {{/if}}
+<section class="template-details-page template-product-page">
+  <div class="template-details-shell">
 
-  <article class="tpl-product-card">
-    <div class="tpl-product-card__main">
-      <h1 class="tpl-title">{{template.title}}</h1>
+    <main class="template-details-main">
+      <header class="template-product-hero">
+        <div>
+          <p class="template-eyebrow">Template</p>
+          <h1>{{template.title}}</h1>
 
-      {{#if template.description}}
-        <p class="tpl-desc tpl-product-card__desc">{{template.description}}</p>
-      {{/if}}
-
-      <div class="tpl-product-card__meta">
-        {{#if template.category}}
-          <span>{{template.category}}</span>
-        {{/if}}
-
-        {{#if template.slug}}
-          <span>{{template.slug}}</span>
-        {{/if}}
-
-        {{#if template.license}}
-          <span>{{template.license}}</span>
-        {{/if}}
-
-        {{#if template.type}}
-          <span>{{template.type}}</span>
-        {{/if}}
-
-        {{#if template.version}}
-          <span>v{{template.version}}</span>
-        {{/if}}
-      </div>
-    </div>
-
-    <div class="tpl-product-card__prices">
-      <div class="tpl-price-line">
-        <span>Buy</span>
-        <strong>
-          {{#if template.prices.buy}}
-            {{template.prices.buy.amount}}{{#if (eq template.prices.buy.currency "EUR")}}€{{else}} {{template.prices.buy.currency}}{{/if}}
+          {{#if template.description}}
+            <p class="template-lead">{{template.description}}</p>
           {{else}}
-            {{#if template.price}}
-              {{template.price}}{{#if (eq template.currency "EUR")}}€{{else}} {{template.currency}}{{/if}}
-            {{else}}
-              —
-            {{/if}}
+            <p class="template-lead">Exclusive web template for client presentation, rent, or purchase.</p>
           {{/if}}
-        </strong>
-      </div>
 
-      <div class="tpl-price-line">
-        <span>Rent</span>
-        <strong>
-          {{#if template.prices.rent}}
-            {{template.prices.rent.amount}}{{#if (eq template.prices.rent.currency "EUR")}}€{{else}} {{template.prices.rent.currency}}{{/if}}
-          {{else}}
-            —
-          {{/if}}
-        </strong>
-      </div>
-    </div>
-  </article>
-
-  <div class="tpl-layout">
-    <div>
-      <div class="tpl-preview">
-        <img
-          class="tpl-preview__img"
-          src="{{#if template.previewUrl}}{{template.previewUrl}}{{else}}/t/{{template.slug}}/preview.png{{/if}}"
-          alt="Preview {{template.title}}"
-          loading="lazy"
-        />
-      </div>
-
-      <div class="tpl-underCta">
-        {{#if template.longDescription}}
-          <div class="tpl-box">
-            <div class="tpl-box__title">About this template</div>
-            <p class="tpl-desc">{{template.longDescription}}</p>
-          </div>
-        {{/if}}
-
-        {{#if template.features}}
-          <div class="tpl-box">
-            <div class="tpl-box__title">Highlights</div>
-            <ul class="tpl-list">
-              {{#each template.features}}
-                <li>{{this}}</li>
-              {{/each}}
-            </ul>
-          </div>
-        {{/if}}
-      </div>
-    </div>
-
-    <aside class="tpl-side">
-      <div class="tpl-box tpl-actions-card">
-        <div class="tpl-box__title">Actions</div>
-
-        <div class="tpl-cta">
-          <div class="tpl-ctaRow">
-            {{#if template.demoUrl}}
-              <a class="c-btn c-btn--primary" href="{{template.demoUrl}}" target="_blank" rel="noopener noreferrer">Demo</a>
+          <div class="template-meta-row">
+            {{#if template.dealType}}
+              <span class="template-meta-pill">Available: {{template.dealType}}</span>
             {{else}}
-              <a class="c-btn c-btn--primary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
+              <span class="template-meta-pill">Available</span>
             {{/if}}
 
-            <a class="c-btn" href="/templates">← Back</a>
-          </div>
+            {{#if template.category}}
+              <span class="template-meta-pill">Category: {{template.category}}</span>
+            {{else}}
+              <span class="template-meta-pill">Category: Template</span>
+            {{/if}}
 
-          {{#if template.isOwner}}
-            <div class="tpl-owner-actions">
-              {{#if template.ownerEditHref}}
-                <a class="c-btn" href="{{template.ownerEditHref}}">Edit template</a>
-              {{/if}}
+            <span class="template-meta-pill">Rating: coming soon</span>
 
-              <form class="tpl-buyForm tpl-owner-form" method="POST" action="/templates/{{template.slug}}/owner/reserve">
-                <label class="tpl-owner-form__label">
-                  Reserve for client
-                  <input
-                    class="tpl-owner-form__input"
-                    type="number"
-                    name="owner_hold_days"
-                    min="1"
-                    max="30"
-                    value="1"
-                    required
-                  />
-                  <span class="tpl-muted">days</span>
-                </label>
-                <button type="submit" class="c-btn">Reserve</button>
-              </form>
-
-              <form class="tpl-buyForm tpl-owner-form" method="POST" action="/templates/{{template.slug}}/owner/withdraw">
-                <input type="hidden" name="owner_withdraw_reason" value="Sold externally" />
-                <button type="submit" class="c-btn">Withdraw permanently</button>
-              </form>
-            </div>
-          {{else}}
-            <div class="tpl-ctaRow">
-              {{#if template.isSold}}
-                <button type="button" class="c-btn" disabled>Already sold</button>
-              {{else}}
-                {{#if template.canBuy}}
-                  <form class="tpl-buyForm" method="POST" action="/cart/add">
-                    <input type="hidden" name="template_slug" value="{{template.slug}}" />
-                    <input type="hidden" name="deal_type" value="BUY" />
-                    <input type="hidden" name="license" value="PU" />
-                    <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-                    <button type="submit" class="c-btn">Buy</button>
-                  </form>
-                {{else}}
-                  <button type="button" class="btn btn-disabled" disabled data-testid="buy-sold-disabled">Sold</button>
-                {{/if}}
-
-                {{#if template.canRent}}
-                  {{#if template.prices.rent}}
-                    <form class="tpl-buyForm" method="POST" action="/cart/add">
-                      <input type="hidden" name="template_slug" value="{{template.slug}}" />
-                      <input type="hidden" name="deal_type" value="RENT" />
-                      <input type="hidden" name="license" value="PU" />
-                      <input type="hidden" name="rent_days" value="1" />
-                      <input type="hidden" name="next" value="/templates/{{template.slug}}" />
-                      <button type="submit" class="c-btn">Rent</button>
-                    </form>
-                  {{/if}}
-                {{else}}
-                  <button type="button" class="btn btn-disabled" disabled data-testid="rent-sold-disabled">Rent unavailable</button>
-                {{/if}}
-              {{/if}}
-            </div>
-          {{/if}}
-
-          <div class="tpl-hint">
-            Secure checkout · buying is one-time and exclusive.
-            <br />
-            Renting reserves the template for a client presentation.
+            {{#if template.slug}}
+              <span class="template-meta-pill template-meta-muted">{{template.slug}}</span>
+            {{/if}}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div class="tpl-box tpl-seller-card">
-        <div class="tpl-box__title">Created by</div>
+      <article class="template-preview-card">
+        {{#if template.previewUrl}}
+          <img src="{{template.previewUrl}}" alt="{{template.title}} preview" class="template-preview-image">
+        {{else}}
+          <div class="template-preview-placeholder">Preview not available</div>
+        {{/if}}
+      </article>
 
-        {{#if template.author}}
-          {{#if template.author.name}}
-            <div class="tpl-seller-card__name"><strong>{{template.author.name}}</strong></div>
-          {{/if}}
+      <section class="template-info-card">
+        <p class="template-eyebrow">Overview</p>
+        <h2>About this template</h2>
 
-          {{#if template.author.nickname}}
-            <div class="tpl-note">@{{template.author.nickname}}</div>
-          {{/if}}
+        {{#if template.shortDescription}}
+          <p>{{template.shortDescription}}</p>
+        {{else if template.description}}
+          <p>{{template.description}}</p>
+        {{else}}
+          <p>This template is prepared for Tempasi marketplace preview, client presentation, rent, and exclusive purchase.</p>
+        {{/if}}
+      </section>
 
-          {{#if template.author.bio}}
-            <div class="tpl-note">{{template.author.bio}}</div>
-          {{/if}}
+      <section class="template-info-card">
+        <p class="template-eyebrow">Author content</p>
+        <h2>Details from the author</h2>
 
-          {{#if template.author.public_email}}
-            <div class="tpl-note">
-              Contact: <a href="mailto:{{template.author.public_email}}">{{template.author.public_email}}</a>
+        {{#if template.fullDescription}}
+          <p>{{template.fullDescription}}</p>
+        {{else if template.about}}
+          <p>{{template.about}}</p>
+        {{else}}
+          <p>The author has not added a full description yet.</p>
+        {{/if}}
+      </section>
+    </main>
+
+    <aside class="template-actions-sidebar">
+      {{#if isOwner}}
+        <section class="template-action-card">
+          <p class="template-eyebrow">Owner actions</p>
+          <h2>Your template</h2>
+          <p class="template-action-note">Commercial buy and rent actions are disabled for your own templates.</p>
+
+          <div class="template-action-stack">
+            <a class="btn btn-primary" href="/cabinet/my-templates/{{template.id}}/edit">Edit template</a>
+
+            <form method="post" action="/templates/{{template.slug}}/owner/reserve" class="template-inline-form">
+              <label class="template-field-label" for="owner_hold_days">Reserve for client</label>
+              <input id="owner_hold_days" name="days" type="number" min="1" max="30" value="1" class="template-days-input">
+              <button class="btn btn-secondary" type="submit">Reserve for client</button>
+            </form>
+
+            <form method="post" action="/templates/{{template.slug}}/owner/withdraw">
+              <button class="btn btn-danger" type="submit">Withdraw permanently</button>
+            </form>
+
+            {{#if template.demoUrl}}
+              <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
+            {{else}}
+              <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
+            {{/if}}
+          </div>
+        </section>
+      {{else}}
+        <section class="template-action-card template-buy-card">
+          <p class="template-eyebrow">Buy</p>
+          <div class="template-price-row">
+            <h2>Exclusive purchase</h2>
+            {{#if template.prices.buy.amount}}
+              <strong>{{template.prices.buy.amount}}€</strong>
+            {{else if template.price}}
+              <strong>{{template.price}}€</strong>
+            {{else}}
+              <strong>—</strong>
+            {{/if}}
+          </div>
+
+          <p class="template-action-note">Buy once and remove this template from public sale and rent permanently.</p>
+
+          <div class="template-action-stack">
+            {{#if isAuthenticated}}
+              <form method="post" action="/cart/add">
+                <input type="hidden" name="template_slug" value="{{template.slug}}">
+                <input type="hidden" name="deal_type" value="BUY">
+                <input type="hidden" name="license" value="BUY">
+                <input type="hidden" name="next" value="/cart">
+                <button class="btn btn-primary" type="submit">Buy now</button>
+              </form>
+
+              <form method="post" action="/cart/add">
+                <input type="hidden" name="template_slug" value="{{template.slug}}">
+                <input type="hidden" name="deal_type" value="BUY">
+                <input type="hidden" name="license" value="BUY">
+                <button class="btn btn-secondary" type="submit">Add to cart</button>
+              </form>
+            {{else}}
+              <a class="btn btn-primary" href="/login">Buy now</a>
+              <a class="btn btn-secondary" href="/login">Add to cart</a>
+              <p class="template-login-note">Sign in or create an account to buy, rent, or save templates to your cases.</p>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="template-action-card template-rent-card">
+          <p class="template-eyebrow">Rent</p>
+          <div class="template-price-row">
+            <h2>Client reservation</h2>
+            {{#if template.prices.rent.amount}}
+              <strong>{{template.prices.rent.amount}}€ / day</strong>
+            {{else}}
+              <strong>—</strong>
+            {{/if}}
+          </div>
+
+          <p class="template-action-note">Reserve this template for selected days with exclusive right to buy during active rent.</p>
+
+          {{#if isAuthenticated}}
+            <form method="post" action="/cart/add" class="template-rent-form">
+              <input type="hidden" name="template_slug" value="{{template.slug}}">
+              <input type="hidden" name="deal_type" value="RENT">
+              <input type="hidden" name="license" value="PU">
+
+              <label class="template-field-label" for="rent_days">Days</label>
+              <input id="rent_days" name="rent_days" type="number" min="1" max="30" value="1" class="template-days-input">
+
+              <div class="template-cases-box">
+                <p class="template-field-label">Cases</p>
+
+                {{#if cases.length}}
+                  {{#each cases}}
+                    <label class="template-checkbox-row">
+                      <input type="checkbox" name="case_ids" value="{{this.id}}">
+                      <span>{{this.title}}</span>
+                    </label>
+                  {{/each}}
+                {{else}}
+                  <p class="template-empty-note">No cases yet. You can create a case in Cabinet.</p>
+                {{/if}}
+              </div>
+
+              <button class="btn btn-primary" type="submit" name="next" value="/cart">Rent now</button>
+              <button class="btn btn-secondary" type="submit">Add rent to cart</button>
+            </form>
+
+            {{#if template.demoUrl}}
+              <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
+            {{else}}
+              <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
+            {{/if}}
+          {{else}}
+            <div class="template-rent-form template-rent-form-disabled">
+              <label class="template-field-label" for="guest_rent_days">Days</label>
+              <input
+                id="guest_rent_days"
+                name="rent_days"
+                type="number"
+                min="1"
+                max="30"
+                value="1"
+                class="template-days-input"
+                disabled
+              >
+
+              <div class="template-cases-box">
+                <p class="template-field-label">Cases</p>
+                <label class="template-checkbox-row template-checkbox-disabled">
+                  <input type="checkbox" name="case_ids" value="" disabled>
+                  <span>Sign in to select one or more cases</span>
+                </label>
+              </div>
+
+              <a class="btn btn-primary" href="/login">Rent now</a>
+              <a class="btn btn-secondary" href="/login">Add rent to cart</a>
+
+              {{#if template.demoUrl}}
+                <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
+              {{else}}
+                <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
+              {{/if}}
+
+              <p class="template-login-note">Sign in or create an account to rent this template or attach it to cases.</p>
             </div>
           {{/if}}
+        </section>
+      {{/if}}
+
+      <section class="template-action-card template-author-card">
+        <p class="template-eyebrow">Created by</p>
+
+        {{#if sellerProfile}}
+          {{#if sellerProfile.full_name}}
+            <h2>{{sellerProfile.full_name}}</h2>
+          {{else}}
+            <h2>Tempasi seller</h2>
+          {{/if}}
+
+          {{#if sellerProfile.nickname}}
+            <p class="template-author-handle">@{{sellerProfile.nickname}}</p>
+          {{else if sellerProfile.username}}
+            <p class="template-author-handle">@{{sellerProfile.username}}</p>
+          {{/if}}
+
+          {{#if sellerProfile.about}}
+            <p>{{sellerProfile.about}}</p>
+          {{else}}
+            <p>Seller profile is not public yet.</p>
+          {{/if}}
+
+          {{#if sellerProfile.public_email}}
+            <p class="template-author-contact">Contact: {{sellerProfile.public_email}}</p>
+          {{/if}}
         {{else}}
-          <div class="tpl-muted">Seller profile is not public yet.</div>
+          <h2>Tempasi seller</h2>
+          <p>Seller profile is not public yet.</p>
         {{/if}}
-      </div>
+      </section>
     </aside>
   </div>
 </section>

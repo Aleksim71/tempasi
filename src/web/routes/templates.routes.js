@@ -8,6 +8,34 @@ const {
 import { Router, urlencoded } from 'express';
 import * as repo from '../../server/catalog/templates.repo.js';
 
+function getTemplateDetailsUserId(req) {
+  return req.userId || req.user?.id || req.session?.userId || req.session?.user?.id || null;
+}
+
+async function loadUserCasesForTemplateDetails(db, userId) {
+  if (!db || typeof db.query !== 'function' || !userId) return [];
+
+  try {
+    const result = await db.query(
+      `
+        SELECT id, title
+        FROM cases
+        WHERE user_id = $1
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 20
+      `,
+      [String(userId)],
+    );
+
+    return (result.rows || []).map((row) => ({
+      id: row.id,
+      title: row.title || `Case #${row.id}`,
+    }));
+  } catch (_err) {
+    return [];
+  }
+}
+
 /**
  * This router MUST NOT crash the whole page rendering.
  * In tests / CI we prefer to show an empty catalog rather than HTTP 500
@@ -466,12 +494,19 @@ export function createTemplatesRouter() {
           : '';
       template.author = await loadPublicSellerProfile(db, raw.ownerUserId || raw.owner_user_id);
 
+      const templateDetailsUserId = getTemplateDetailsUserId(req);
+      const templateDetailsCases = await loadUserCasesForTemplateDetails(db, templateDetailsUserId);
+
       return res.status(200).render('pages/template-details', {
         title: `${template.title} — Tempasi`,
         bodyClass: 'page-template-details',
         activePage: 'templates',
         styles: ['/css/pages/template-details.css'],
         template,
+        sellerProfile: template.author,
+        cases: templateDetailsCases || [],
+        isAuthenticated: Boolean(templateDetailsUserId),
+        isOwner: Boolean(template.isOwner),
       });
     } catch (err) {
       return next(err);

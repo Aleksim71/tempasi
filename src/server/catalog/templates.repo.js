@@ -50,6 +50,11 @@ export async function selectTemplatesForCatalog(db) {
       title,
       slug,
       short_description,
+      description,
+      preview_image,
+      preview_url,
+      demo_url,
+      category,
       price_buy_cents,
       price_rent_cents,
       status,
@@ -127,9 +132,14 @@ export async function selectTemplatesForCatalog(db) {
       name: toStr(r.title || '').trim() || slug,
 
       description: toStr(r.short_description || ''),
+      shortDescription: toStr(r.short_description || ''),
+      fullDescription: toStr(r.description || ''),
+      category: toStr(r.category || ''),
 
       // ✅ ALWAYS go through /t/<slug>/preview.png
-      previewUrl: buildPreviewUrlBySlug(slug),
+      previewUrl:
+        toStr(r.preview_url || r.preview_image || '').trim() || buildPreviewUrlBySlug(slug),
+      demoUrl: toStr(r.demo_url || '').trim() || `/preview/${encodeURIComponent(slug)}`,
 
       zipReady: Boolean(r.zip_path),
       hasZip: Boolean(r.zip_path),
@@ -165,6 +175,11 @@ export async function getTemplateBySlug(db, slug) {
       title,
       slug,
       short_description,
+      description,
+      preview_image,
+      preview_url,
+      demo_url,
+      category,
       price_buy_cents,
       price_rent_cents,
       status,
@@ -242,6 +257,9 @@ export async function getTemplateBySlug(db, slug) {
     name: toStr(r.title || '').trim() || slugStr,
 
     description: toStr(r.short_description || ''),
+    shortDescription: toStr(r.short_description || ''),
+    fullDescription: toStr(r.description || ''),
+    category: toStr(r.category || ''),
 
     // ✅ ALWAYS go through /t/<slug>/preview.png
     previewUrl: buildPreviewUrlBySlug(slugStr),
