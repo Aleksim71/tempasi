@@ -93,6 +93,18 @@ export async function selectTemplatesForCatalog(db) {
           AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM cart_items ci_public_cart_hold
+      WHERE ci_public_cart_hold.template_id = seller_templates.id
+        AND (
+          ci_public_cart_hold.license = 'BUY'
+          OR ci_public_cart_hold.license = 'RENT'
+          OR ci_public_cart_hold.license = 'PU'
+          OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
+        )
+    )
+
     ORDER BY created_at DESC, id DESC
     LIMIT 200
   `;
@@ -197,6 +209,18 @@ export async function getTemplateBySlug(db, slug) {
           AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM cart_items ci_public_cart_hold
+      WHERE ci_public_cart_hold.template_id = seller_templates.id
+        AND (
+          ci_public_cart_hold.license = 'BUY'
+          OR ci_public_cart_hold.license = 'RENT'
+          OR ci_public_cart_hold.license = 'PU'
+          OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
+        )
+    )
+
     LIMIT 1
   `;
 
