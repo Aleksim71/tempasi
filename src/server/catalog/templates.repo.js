@@ -96,7 +96,7 @@ export async function selectTemplatesForCatalog(db) {
     AND NOT EXISTS (
       SELECT 1
       FROM cart_items ci_public_cart_hold
-      WHERE ci_public_cart_hold.template_id = seller_templates.id
+      WHERE ci_public_cart_hold.template_slug = seller_templates.slug
         AND (
           ci_public_cart_hold.license = 'BUY'
           OR ci_public_cart_hold.license = 'RENT'
@@ -212,7 +212,7 @@ export async function getTemplateBySlug(db, slug) {
     AND NOT EXISTS (
       SELECT 1
       FROM cart_items ci_public_cart_hold
-      WHERE ci_public_cart_hold.template_id = seller_templates.id
+      WHERE ci_public_cart_hold.template_slug = seller_templates.slug
         AND (
           ci_public_cart_hold.license = 'BUY'
           OR ci_public_cart_hold.license = 'RENT'

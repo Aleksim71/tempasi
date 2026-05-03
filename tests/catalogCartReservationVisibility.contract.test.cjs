@@ -7,12 +7,12 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 describe('catalog visibility respects cart reservations', () => {
-  test('public catalog/details exclude templates reserved in cart', () => {
+  test('public catalog/details exclude templates reserved in cart by template_slug', () => {
     const repoPath = path.join(ROOT, 'src/server/catalog/templates.repo.js');
     const src = fs.readFileSync(repoPath, 'utf8');
 
     expect(src).toContain('cart_items ci_public_cart_hold');
-    expect(src).toContain('ci_public_cart_hold.template_id');
+    expect(src).toContain('ci_public_cart_hold.template_slug = seller_templates.slug');
     expect(src).toContain("ci_public_cart_hold.license = 'BUY'");
     expect(src).toContain("ci_public_cart_hold.license = 'RENT'");
     expect(src).toContain("ci_public_cart_hold.license = 'PU'");
