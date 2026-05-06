@@ -292,6 +292,22 @@ const downloadsRouter = pickRouter(
   { db },
 );
 
+function isPublicCasePreviewRequest(req) {
+  if (!req || String(req.method || '').toUpperCase() !== 'GET') return false;
+  const originalUrl = String(req.originalUrl || req.url || '');
+  const pathname = originalUrl.split('?')[0];
+  return /^\/cabinet\/cases\/[^/]+\/preview\/public\/?$/.test(pathname);
+}
+
+function requireCabinetAuthExceptPublicCasePreview(options) {
+  const requireAuth = requireAuthWeb(options);
+
+  return function cabinetAuthGate(req, res, next) {
+    if (isPublicCasePreviewRequest(req)) return next();
+    return requireAuth(req, res, next);
+  };
+}
+
 const profileApiRouter = pickRouter(
   profileApiMod,
   ['profileApiRouter', 'profileApiRoutes', 'router', 'routes'],
@@ -313,10 +329,10 @@ if (process.env.TEMPASI_SKIP_SSR) {
 } else {
   const webApp = createWebApp({ db });
 
-  // ✅ Protect Cabinet (Overview + Cases) via ONE router mounted under /cabinet
+  // ✅ Protect Cabinet pages, but allow tokenized public Case Preview links.
   webApp.use(
     '/cabinet',
-    requireAuthWeb({ loginPath: '/login', defaultNext: '/cabinet' }),
+    requireCabinetAuthExceptPublicCasePreview({ loginPath: '/login', defaultNext: '/cabinet' }),
     createCabinetPagesRouter({ db }),
   );
 
