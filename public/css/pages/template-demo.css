@@ -1,0 +1,228 @@
+/* public/css/pages/template-demo.css */
+
+.page-template-demo {
+  background:
+    radial-gradient(circle at top left, rgba(25, 135, 84, 0.12), transparent 34rem), #f6f8f5;
+  min-height: 100vh;
+}
+
+.template-demo-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.template-demo-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(18, 34, 26, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.template-demo-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.template-demo-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(18, 34, 26, 0.12);
+  border-radius: 999px;
+  color: #183426;
+  background: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.template-demo-eyebrow {
+  margin: 0 0 0.15rem;
+  color: #198754;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.template-demo-toolbar h1 {
+  margin: 0;
+  max-width: 44rem;
+  overflow: hidden;
+  color: #12221a;
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-demo-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.template-demo-devices {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(18, 34, 26, 0.1);
+  border-radius: 999px;
+  background: #eef5ef;
+}
+
+.template-demo-device,
+.template-demo-action {
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.template-demo-device {
+  padding: 0.55rem 0.8rem;
+  color: #315044;
+  background: transparent;
+}
+
+.template-demo-device.is-active {
+  color: #fff;
+  background: #198754;
+  box-shadow: 0 0.5rem 1.4rem rgba(25, 135, 84, 0.22);
+}
+
+.template-demo-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.55rem;
+  padding: 0.55rem 1rem;
+  color: #fff;
+  background: #12221a;
+}
+
+.template-demo-stage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.template-demo-browser {
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100vh - 7rem);
+  border: 1px solid rgba(18, 34, 26, 0.14);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1.5rem 4rem rgba(18, 34, 26, 0.14);
+  transition:
+    width 180ms ease,
+    min-height 180ms ease,
+    border-radius 180ms ease;
+}
+
+.template-demo-browser[data-device='tablet'] {
+  width: 768px;
+  max-width: 100%;
+}
+
+.template-demo-browser[data-device='mobile'] {
+  width: 390px;
+  max-width: 100%;
+}
+
+.template-demo-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-bottom: 1px solid rgba(18, 34, 26, 0.09);
+  background: linear-gradient(180deg, #ffffff, #f4f7f4);
+}
+
+.template-demo-dot {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+  background: rgba(18, 34, 26, 0.22);
+}
+
+.template-demo-url {
+  margin-left: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(18, 34, 26, 0.62);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-demo-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 9.75rem);
+  min-height: 42rem;
+  border: 0;
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .template-demo-toolbar {
+    position: static;
+    align-items: stretch;
+    flex-direction: column;
+    padding: 0.9rem;
+  }
+
+  .template-demo-brand {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .template-demo-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .template-demo-devices {
+    justify-content: space-between;
+  }
+
+  .template-demo-device,
+  .template-demo-action {
+    flex: 1;
+  }
+
+  .template-demo-stage {
+    padding: 0.75rem;
+  }
+
+  .template-demo-browser {
+    min-height: 70vh;
+    border-radius: 1rem;
+  }
+
+  .template-demo-frame {
+    height: 70vh;
+    min-height: 34rem;
+  }
+}

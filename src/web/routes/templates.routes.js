@@ -7,6 +7,7 @@ const {
 // src/web/routes/templates.routes.js
 import { Router, urlencoded } from 'express';
 import * as repo from '../../server/catalog/templates.repo.js';
+import { getTemplateBySlug } from '../../server/catalog/templates.repo.js';
 
 function getTemplateDetailsUserId(req) {
   return req.userId || req.user?.id || req.session?.userId || req.session?.user?.id || null;
@@ -139,10 +140,16 @@ async function loadPublicSellerProfile(db, ownerUserId) {
   }
 
   return {
-    name,
+    // Canonical fields used by template-details.hbs
+    full_name: name,
     nickname,
-    bio,
+    about: bio,
     public_email: publicEmail,
+
+    // Backward-compatible aliases for older view/route code
+    name,
+    bio,
+    publicEmail,
   };
 }
 
@@ -457,6 +464,47 @@ export function createTemplatesRouter() {
   });
 
   // /templates/:slug — details page
+  router.get('/:slug/demo', async (req, res, next) => {
+    try {
+      const db = req.app.locals.db;
+      const slug = toStr(req.params.slug).trim();
+      const raw = await getTemplateBySlug(db, slug);
+
+      if (!raw) {
+        return res.status(404).render('pages/template', {
+          title: 'Template not found — Tempasi',
+          bodyClass: 'page-template',
+          activePage: 'templates',
+          styles: ['/css/pages/template-details.css'],
+          slug,
+        });
+      }
+
+      const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
+      const currentUserId = getUserId(req);
+      template.isOwner = Boolean(
+        currentUserId && Number(raw.ownerUserId || raw.owner_user_id) === Number(currentUserId),
+      );
+
+      const demoFrameUrl =
+        template.demoUrl ||
+        `/t/${encodeURIComponent(String(template.slug || slug))}/demo/index.html`;
+
+      return res.status(200).render('pages/template-demo', {
+        title: `${template.title} — Live Demo — Tempasi`,
+        bodyClass: 'page-template-demo',
+        activePage: 'templates',
+        styles: ['/css/pages/template-demo.css'],
+        template,
+        demoFrameUrl,
+        templateDetailsUrl: `/templates/${encodeURIComponent(String(template.slug || slug))}`,
+        isOwner: Boolean(template.isOwner),
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.get('/:slug', async (req, res, next) => {
     try {
       const slug = toStr(req.params.slug).trim();

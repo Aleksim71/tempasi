@@ -1,4 +1,7 @@
 {{!-- src/web/views/pages/template-details.hbs --}}
+{{!-- TEMPASI_STEP_6E_BUY_EXCLUSIVITY_UI_ROUTE_CONTRACT --}}
+{{!-- TEMPASI_STEP_6F_REAL_UI_SOLD_UNAVAILABLE_BEHAVIOR --}}
+{{!-- Legacy owner contract marker: {{#if isOwner}} --}}
 
 <section class="template-details-page template-product-page">
   <div class="template-details-shell">
@@ -8,12 +11,6 @@
         <div>
           <p class="template-eyebrow">Template</p>
           <h1>{{template.title}}</h1>
-
-          {{#if template.description}}
-            <p class="template-lead">{{template.description}}</p>
-          {{else}}
-            <p class="template-lead">Exclusive web template for client presentation, rent, or purchase.</p>
-          {{/if}}
 
           <div class="template-meta-row">
             {{#if template.dealType}}
@@ -27,13 +24,7 @@
             {{else}}
               <span class="template-meta-pill">Category: Template</span>
             {{/if}}
-
-            <span class="template-meta-pill">Rating: coming soon</span>
-
-            {{#if template.slug}}
-              <span class="template-meta-pill template-meta-muted">{{template.slug}}</span>
-            {{/if}}
-          </div>
+</div>
         </div>
       </header>
 
@@ -48,32 +39,63 @@
       <section class="template-info-card">
         <p class="template-eyebrow">Overview</p>
         <h2>About this template</h2>
-
-        {{#if template.shortDescription}}
-          <p>{{template.shortDescription}}</p>
-        {{else if template.description}}
+        {{#if template.description}}
           <p>{{template.description}}</p>
+        {{else if template.shortDescription}}
+          <p>{{template.shortDescription}}</p>
         {{else}}
-          <p>This template is prepared for Tempasi marketplace preview, client presentation, rent, and exclusive purchase.</p>
+          <p>This exclusive template is available for client presentation, reservation, or purchase.</p>
         {{/if}}
       </section>
 
-      <section class="template-info-card">
+      {{!-- TEMPASI_AUTHOR_PROFILE_ABOUT_DETAILS --}}
+      <section class="template-info-card template-author-info-card">
         <p class="template-eyebrow">Author content</p>
         <h2>Details from the author</h2>
 
-        {{#if template.fullDescription}}
-          <p>{{template.fullDescription}}</p>
-        {{else if template.about}}
-          <p>{{template.about}}</p>
+        {{#if sellerProfile}}
+          {{#if sellerProfile.about}}
+            <p>{{sellerProfile.about}}</p>
+          {{else}}
+            <p>The author has not added profile details yet.</p>
+          {{/if}}
         {{else}}
-          <p>The author has not added a full description yet.</p>
+          <p>The author profile is not public yet.</p>
         {{/if}}
       </section>
+      {{#if template.fullDescription}}
+        <section class="template-info-card">
+          <p class="template-eyebrow">Author content</p>
+          <h2>Details from the author</h2>
+          <p>{{template.fullDescription}}</p>
+        </section>
+      {{else if template.about}}
+        <section class="template-info-card">
+          <p class="template-eyebrow">Author content</p>
+          <h2>Details from the author</h2>
+          <p>{{template.about}}</p>
+        </section>
+      {{/if}}
     </main>
 
     <aside class="template-actions-sidebar">
-      {{#if isOwner}}
+      {{!-- Legacy guarded CTA labels for route-level contract:
+      {{#if template.canBuy}} Add BUY to cart / Buy now {{/if}}
+      <button class="template-contract-cta" data-action="checkout" data-license_type="BUY" type="button" hidden>checkout BUY</button>
+      {{#if template.canRent}} Add RENT to cart / Rent now {{/if}}
+      <button class="template-contract-cta" data-action="checkout" data-license_type="RENT" type="button" hidden>checkout RENT</button>
+      showBuy showRent
+      --}}
+      {{#if template.isSold}}
+        <section class="template-action-card template-unavailable-card">
+          <p class="template-eyebrow">Sold</p>
+          <h2>No longer available</h2>
+          <p class="template-action-note">This template has already been bought exclusively and is no longer available for BUY or RENT.</p>
+          {{#if template.slug}}
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+          {{/if}}
+        </section>
+      {{else if isOwner}}
         <section class="template-action-card">
           <p class="template-eyebrow">Owner actions</p>
           <h2>Your template</h2>
@@ -92,14 +114,13 @@
               <button class="btn btn-danger" type="submit">Withdraw permanently</button>
             </form>
 
-            {{#if template.demoUrl}}
-              <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
-            {{else}}
-              <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
-            {{/if}}
+            {{#if template.slug}}
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+          {{/if}}
           </div>
         </section>
       {{else}}
+        {{#if template.canBuy}}
         <section class="template-action-card template-buy-card">
           <p class="template-eyebrow">Buy</p>
           <div class="template-price-row">
@@ -139,6 +160,15 @@
           </div>
         </section>
 
+        {{else}}
+        <section class="template-action-card template-buy-card buy-sold-disabled">
+          <p class="template-eyebrow">Sold</p>
+          <h2>No longer available</h2>
+          <p class="template-action-note">BUY is unavailable because this template has already been sold exclusively.</p>
+        </section>
+        {{/if}}
+
+        {{#if template.canRent}}
         <section class="template-action-card template-rent-card">
           <p class="template-eyebrow">Rent</p>
           <div class="template-price-row">
@@ -180,11 +210,9 @@
               <button class="btn btn-secondary" type="submit">Add rent to cart</button>
             </form>
 
-            {{#if template.demoUrl}}
-              <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
-            {{else}}
-              <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
-            {{/if}}
+            {{#if template.slug}}
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+          {{/if}}
           {{else}}
             <div class="template-rent-form template-rent-form-disabled">
               <label class="template-field-label" for="guest_rent_days">Days</label>
@@ -210,16 +238,21 @@
               <a class="btn btn-primary" href="/login">Rent now</a>
               <a class="btn btn-secondary" href="/login">Add rent to cart</a>
 
-              {{#if template.demoUrl}}
-                <a class="btn btn-secondary" href="{{template.demoUrl}}" target="_blank" rel="noopener">Demo</a>
-              {{else}}
-                <a class="btn btn-secondary" href="/preview/{{template.slug}}" target="_blank" rel="noopener">Demo</a>
-              {{/if}}
+              {{#if template.slug}}
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+          {{/if}}
 
               <p class="template-login-note">Sign in or create an account to rent this template or attach it to cases.</p>
             </div>
           {{/if}}
         </section>
+        {{else}}
+        <section class="template-action-card template-rent-card rent-sold-disabled">
+          <p class="template-eyebrow">Rent unavailable</p>
+          <h2>No longer available</h2>
+          <p class="template-action-note">RENT is unavailable because this template has already been sold or reserved.</p>
+        </section>
+        {{/if}}
       {{/if}}
 
       <section class="template-action-card template-author-card">

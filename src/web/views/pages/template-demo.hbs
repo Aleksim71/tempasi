@@ -1,0 +1,60 @@
+{{!-- src/web/views/pages/template-demo.hbs --}}
+<section class="template-demo-page" data-template-demo-page>
+  <header class="template-demo-toolbar">
+    <div class="template-demo-brand">
+      <a class="template-demo-back" href="{{templateDetailsUrl}}">← Back to template</a>
+      <div>
+        <p class="template-demo-eyebrow">Live demo</p>
+        <h1>{{template.title}}</h1>
+      </div>
+    </div>
+
+    <div class="template-demo-toolbar-actions">
+      <div class="template-demo-devices" aria-label="Preview device size">
+        <button class="template-demo-device is-active" type="button" data-demo-device="desktop">Desktop</button>
+        <button class="template-demo-device" type="button" data-demo-device="tablet">Tablet</button>
+        <button class="template-demo-device" type="button" data-demo-device="mobile">Mobile</button>
+      </div>
+
+      <a class="template-demo-action" href="{{templateDetailsUrl}}">Buy / Rent</a>
+    </div>
+  </header>
+
+  <main class="template-demo-stage">
+    <div class="template-demo-browser" data-demo-browser>
+      <div class="template-demo-browser-bar">
+        <span class="template-demo-dot"></span>
+        <span class="template-demo-dot"></span>
+        <span class="template-demo-dot"></span>
+        <span class="template-demo-url">tempasi.demo / {{template.slug}}</span>
+      </div>
+
+      <iframe
+        class="template-demo-frame"
+        src="{{demoFrameUrl}}"
+        title="{{template.title}} live demo"
+        loading="eager"
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      ></iframe>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const browser = document.querySelector('[data-demo-browser]');
+      const buttons = Array.from(document.querySelectorAll('[data-demo-device]'));
+
+      if (!browser || !buttons.length) return;
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const device = button.getAttribute('data-demo-device') || 'desktop';
+
+          browser.setAttribute('data-device', device);
+          buttons.forEach((item) => item.classList.toggle('is-active', item === button));
+        });
+      });
+    })();
+  </script>
+</section>

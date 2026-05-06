@@ -38,6 +38,49 @@ function readFirstExisting(paths) {
 export function createWebApp({ db }) {
   const app = express();
 
+  // TEMPASI_TEMPLATE_STORED_PREVIEW_ROUTE
+  // Serve real stored template preview extracted from template upload storage.
+  app.get('/t/:slug/preview/preview.:ext', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    const ext = String(req.params.ext || '')
+      .trim()
+      .toLowerCase();
+
+    if (!/^[a-z0-9][a-z0-9-]*$/i.test(slug)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!/^(png|jpg|jpeg|webp|svg)$/.test(ext)) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.TEMPLATE_UPLOAD_DIR,
+      process.env.UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'templates'),
+      path.join(process.cwd(), 'public', 'uploads', 'templates'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const candidate = path.resolve(resolvedRoot, slug, 'preview', `preview.${ext}`);
+
+      if (!candidate.startsWith(resolvedRoot + path.sep)) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate)) {
+        if (ext === 'svg') {
+          res.type('image/svg+xml');
+        }
+
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
   app.locals.db = db;
 
   const viewsRoot = path.join(__dirname, 'web', 'views');
@@ -224,6 +267,15 @@ export function createWebApp({ db }) {
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   app.get('/__health', (_req, res) => res.json({ ok: true }));
+  // Backward-compatible legacy preview URL.
+  // Old: /preview/:slug
+  // New: /templates/:slug/demo
+  app.get('/preview/:slug', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    if (!slug) return res.redirect(302, '/templates');
+    return res.redirect(302, `/templates/${encodeURIComponent(slug)}/demo`);
+  });
+
   app.get('/', (_req, res) => res.redirect(302, '/templates'));
 
   app.use(createWebRouter());
