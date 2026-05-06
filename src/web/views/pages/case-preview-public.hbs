@@ -1,0 +1,60 @@
+{{!-- src/web/views/pages/case-preview-public.hbs --}}
+<link rel="stylesheet" href="/css/pages/cabinet.css" />
+
+<section class="cases-shell cases-shell--public-preview">
+  <div class="cases-panel cases-panel--public-preview">
+    {{#if workspaceData.cases.isNotFound}}
+      <div class="cases-empty">
+        <div class="cases-empty__title">Case preview not found</div>
+        <div class="cases-empty__text">This public preview link is missing, expired, or invalid.</div>
+      </div>
+    {{else}}
+      <div class="cases-panel__header">
+        <p class="cases-panel__text">Tempasi client preview</p>
+        <h1 class="cases-panel__title">{{workspaceData.cases.selectedCase.title}}</h1>
+        {{#if workspaceData.cases.selectedCase.client_name}}
+          <p class="cases-panel__text">Prepared for {{workspaceData.cases.selectedCase.client_name}}</p>
+        {{else}}
+          <p class="cases-panel__text">Selected website concepts for review.</p>
+        {{/if}}
+      </div>
+
+      {{#if workspaceData.cases.templates.length}}
+        <div class="cases-list cases-list--preview">
+          {{#each workspaceData.cases.templates}}
+            <article class="cases-card cases-card--preview">
+              <div class="cases-card__main">
+                {{#if previewUrl}}
+                  <img class="cases-template-preview cases-template-preview--large" src="{{previewUrl}}" alt="{{title}} preview" loading="lazy" />
+                {{/if}}
+                <div class="cases-card__title">{{title}}</div>
+                <p class="cases-panel__text">{{shortDescription}}</p>
+                <div class="cases-card__meta">
+                  <span>Selected concept</span>
+                  <span>{{category}}</span>
+                  {{#if priceLabel}}<span>{{priceLabel}}</span>{{/if}}
+                </div>
+                {{#if tagItems.length}}
+                  <div class="template-tags" aria-label="Template tags">
+                    {{#each tagItems}}
+                      <span class="badge">{{this}}</span>
+                    {{/each}}
+                  </div>
+                {{/if}}
+              </div>
+              <div class="cases-card__actions">
+                <a class="button" href="{{detailsUrl}}">View details</a>
+                <a class="button button--ghost" href="{{liveDemoUrl}}" target="_blank" rel="noopener">Live demo</a>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="cases-empty">
+          <div class="cases-empty__title">No templates to preview yet</div>
+          <div class="cases-empty__text">This case does not currently contain active rented templates.</div>
+        </div>
+      {{/if}}
+    {{/if}}
+  </div>
+</section>

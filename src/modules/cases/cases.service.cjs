@@ -35,8 +35,16 @@ async function getOwnedCase(userId, caseId, db) {
   return repo.getOwnedCaseById({ ownerUserId: userId, caseId }, db);
 }
 
+async function getPublicPreviewCase(caseId, token, db) {
+  return repo.getPublicPreviewCaseByToken({ caseId, token }, db);
+}
+
 async function listCaseTemplates(userId, caseId, db) {
   return repo.listCaseTemplates({ ownerUserId: userId, caseId }, db);
+}
+
+async function listPublicPreviewTemplates(caseId, token, db) {
+  return repo.listPublicPreviewTemplates({ caseId, token }, db);
 }
 
 async function listAvailableCasesForOrder(userId, orderId, db) {
@@ -59,7 +67,9 @@ module.exports = {
   ensureDefaultCaseForUser,
   listOwnedCaseIds,
   getOwnedCase,
+  getPublicPreviewCase,
   listCaseTemplates,
+  listPublicPreviewTemplates,
   listAvailableCasesForOrder,
   clearCase,
   deleteCase,

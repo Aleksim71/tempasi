@@ -187,6 +187,59 @@ function createCabinetPagesRouter() {
     next();
   });
 
+
+  // Public, tokenized client preview. Keep this route before requireAuthPage.
+  router.get('/cases/:id/preview/public', async (req, res) => {
+    const pool = getPool();
+    const caseId = String(req.params.id || '').trim();
+    const token = String(req.query.token || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getPublicPreviewCase(caseId, token, pool);
+
+      if (!selectedCase) {
+        return res.status(404).render('pages/case-preview-public', {
+          styles: ['/css/pages/cabinet.css'],
+          bodyClass: 'case-public-preview',
+          pageTitle: 'Case Preview Not Found',
+          pageSubtitle: 'This public preview link is missing, expired, or invalid.',
+          workspaceError: null,
+          workspaceData: {
+            cases: {
+              selectedCase: null,
+              templates: [],
+              isNotFound: true,
+            },
+          },
+        });
+      }
+
+      const rows = await casesService.listPublicPreviewTemplates(caseId, token, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+    } catch (err) {
+      console.error('[cabinet] public cases/:id/preview error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/case-preview-public', {
+      styles: ['/css/pages/cabinet.css'],
+      bodyClass: 'case-public-preview',
+      pageTitle: selectedCase ? `${selectedCase.title} — Case Preview` : 'Case Preview',
+      pageSubtitle: 'Selected website concepts for client review.',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          selectedCase,
+          templates,
+        },
+      },
+    });
+  });
+
   router.use(requireAuthPage);
 
   router.get('/', (req, res) => res.redirect('/cabinet/my-templates'));
@@ -669,6 +722,10 @@ res.render('pages/cabinet', {
         templatesCount: Number(item.templates_count || 0),
         createdAt: item.created_at,
         updatedAt: item.updated_at,
+        publicPreviewToken: item.public_preview_token || '',
+        publicPreviewUrl: item.public_preview_token
+          ? `/cabinet/cases/${encodeURIComponent(item.id)}/preview/public?token=${encodeURIComponent(item.public_preview_token)}`
+          : '',
       }));
 
       const rentsResult = await pool.query(
@@ -773,6 +830,10 @@ res.render('pages/cabinet', {
         return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
       }
 
+      selectedCase.publicPreviewUrl = selectedCase.public_preview_token
+        ? `/cabinet/cases/${encodeURIComponent(selectedCase.id)}/preview/public?token=${encodeURIComponent(selectedCase.public_preview_token)}`
+        : '';
+
       const rows = await casesService.listCaseTemplates(userId, caseId, pool);
       templates = (rows || []).map(normalizeCaseTemplateRow);
 
@@ -821,6 +882,10 @@ res.render('pages/cabinet', {
       if (!selectedCase) {
         return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
       }
+
+      selectedCase.publicPreviewUrl = selectedCase.public_preview_token
+        ? `/cabinet/cases/${encodeURIComponent(selectedCase.id)}/preview/public?token=${encodeURIComponent(selectedCase.public_preview_token)}`
+        : '';
 
       const rows = await casesService.listCaseTemplates(userId, caseId, pool);
       templates = (rows || []).map(normalizeCaseTemplateRow);
@@ -1267,10 +1332,69 @@ function getCaseTabs(activeKey) {
   ];
 }
 
+function formatCaseTemplateMoneyEur(cents) {
+  if (cents === null || cents === undefined || cents === '') return '';
+  const n = Number(cents);
+  if (!Number.isFinite(n)) return '';
+  return (n / 100).toFixed(2);
+}
+
+function resolveCaseTemplatePreviewUrl(row, slug) {
+  const normalizedSlug = String(slug || '').trim();
+  const direct = String(
+    row.preview_url ||
+      row.preview_image ||
+      row.previewUrl ||
+      row.previewPath ||
+      row.preview_path ||
+      ''
+  ).trim();
+
+  if (direct) {
+    if (direct.startsWith('/')) return direct;
+
+    const previewFile = direct.match(/preview\.(png|jpg|jpeg|webp|svg)$/i);
+    if (normalizedSlug && previewFile) {
+      return `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.${previewFile[1].toLowerCase()}`;
+    }
+
+    return `/${direct.replace(/^\/+/, '')}`;
+  }
+
+  if (normalizedSlug && row.zip_path) {
+    return `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.png`;
+  }
+
+  return normalizedSlug ? `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.png` : '';
+}
+
+function normalizeCaseTemplateTags(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+
+  if (raw.startsWith('{') && raw.endsWith('}')) {
+    return raw
+      .slice(1, -1)
+      .split(',')
+      .map((tag) => tag.replace(/^"|"$/g, '').trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  return raw
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 function normalizeCaseTemplateRow(row) {
   const slug = String(row.template_slug || '').trim();
   const endsAt = row.ends_at || null;
   const casesCount = Number(row.cases_count || 0);
+  const buyPriceEur = formatCaseTemplateMoneyEur(row.price_buy_cents);
+  const rentPriceEur = formatCaseTemplateMoneyEur(row.price_rent_cents);
+  const demoUrl = String(row.demo_url || '').trim();
 
   return {
     orderId: row.order_id,
@@ -1279,17 +1403,25 @@ function normalizeCaseTemplateRow(row) {
     slug,
     title: row.title || slug || 'Untitled template',
     shortDescription: row.short_description || 'No description added yet.',
+    description: row.description || row.short_description || '',
     category: row.category || 'other',
     tags: row.tags || '',
+    tagItems: normalizeCaseTemplateTags(row.tags),
+    templateStatus: row.template_status || '',
     startsAt: row.starts_at || null,
     endsAt,
     endsAtLabel: formatCaseRentDateTime(endsAt),
     timeLeftLabel: formatCaseRentTimeLeft(endsAt),
     casesCount,
     canExclude: casesCount > 1,
+    priceBuyCents: row.price_buy_cents,
+    priceRentCents: row.price_rent_cents,
+    buyPriceEur,
+    rentPriceEur,
+    priceLabel: rentPriceEur ? `Rent €${rentPriceEur}` : buyPriceEur ? `Buy €${buyPriceEur}` : '',
     detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
-    liveDemoUrl: slug ? `/templates/${encodeURIComponent(slug)}/demo` : '/templates',
-    previewUrl: slug ? `/t/${encodeURIComponent(slug)}/preview/preview.png` : '',
+    liveDemoUrl: demoUrl || (slug ? `/preview/${encodeURIComponent(slug)}` : '/templates'),
+    previewUrl: resolveCaseTemplatePreviewUrl(row, slug),
     availableCases: [],
   };
 }

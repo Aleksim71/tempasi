@@ -38,12 +38,14 @@ async function getCasesSchema(pool) {
   const ownerColumn = caseColumns.has('owner_user_id') ? 'owner_user_id' : 'user_id';
   const noteColumn = caseColumns.has('note') ? 'note' : caseColumns.has('notes') ? 'notes' : null;
   const hasClientName = caseColumns.has('client_name');
+  const hasPublicPreviewToken = caseColumns.has('public_preview_token');
   const hasCaseTemplatePosition = caseTemplateColumns.has('position');
 
   return {
     ownerColumn,
     noteColumn,
     hasClientName,
+    hasPublicPreviewToken,
     hasCaseTemplatePosition,
   };
 }
@@ -59,6 +61,9 @@ async function listByOwner(ownerUserId, db) {
   const ownerValue = ownerValueForSchema(ownerUserId, schema);
 
   const clientNameSelect = schema.hasClientName ? 'c.client_name' : 'NULL::text AS client_name';
+  const publicPreviewTokenSelect = schema.hasPublicPreviewToken
+    ? 'c.public_preview_token'
+    : 'NULL::text AS public_preview_token';
   const templatesCountJoin = `
     LEFT JOIN case_templates ct ON ct.case_id = c.id
   `;
@@ -69,6 +74,7 @@ async function listByOwner(ownerUserId, db) {
       c.id,
       c.title,
       ${clientNameSelect},
+      ${publicPreviewTokenSelect},
       c.created_at,
       c.updated_at,
       COUNT(ct.template_id)::int AS templates_count
@@ -243,6 +249,9 @@ async function getOwnedCaseById({ ownerUserId, caseId }, db) {
 
   const clientNameSelect = schema.hasClientName ? 'c.client_name' : 'NULL::text AS client_name';
   const noteSelect = schema.noteColumn ? `c.${schema.noteColumn} AS note` : 'NULL::text AS note';
+  const publicPreviewTokenSelect = schema.hasPublicPreviewToken
+    ? 'c.public_preview_token'
+    : 'NULL::text AS public_preview_token';
 
   const { rows } = await pool.query(
     `
@@ -251,6 +260,7 @@ async function getOwnedCaseById({ ownerUserId, caseId }, db) {
       c.title,
       ${clientNameSelect},
       ${noteSelect},
+      ${publicPreviewTokenSelect},
       c.created_at,
       c.updated_at
     FROM cases c
@@ -282,8 +292,16 @@ async function listCaseTemplates({ ownerUserId, caseId }, db) {
       COALESCE(st.id::text, o.template_slug) AS template_id,
       COALESCE(st.title, o.template_slug) AS title,
       COALESCE(st.short_description, '') AS short_description,
+      COALESCE(st.description, '') AS description,
       COALESCE(st.category, 'other') AS category,
       COALESCE(st.tags::text, '') AS tags,
+      st.preview_url,
+      st.preview_image,
+      st.demo_url,
+      st.price_buy_cents,
+      st.price_rent_cents,
+      st.zip_path,
+      st.status AS template_status,
       COUNT(oca_all.case_id)::int AS cases_count
     FROM public.order_case_assignments oca
     JOIN public.orders o
@@ -371,12 +389,98 @@ async function clearOwnedCaseAssignments({ ownerUserId, caseId }, db) {
 }
 
 
+
+async function getPublicPreviewCaseByToken({ caseId, token }, db) {
+  const pool = pickDb(db);
+  const schema = await getCasesSchema(pool);
+  const normalizedToken = String(token || '').trim();
+
+  if (!schema.hasPublicPreviewToken || !normalizedToken) return null;
+
+  const clientNameSelect = schema.hasClientName ? 'c.client_name' : 'NULL::text AS client_name';
+  const noteSelect = schema.noteColumn ? `c.${schema.noteColumn} AS note` : 'NULL::text AS note';
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      c.id,
+      c.title,
+      ${clientNameSelect},
+      ${noteSelect},
+      c.public_preview_token,
+      c.created_at,
+      c.updated_at
+    FROM public.cases c
+    WHERE c.id::text = $1::text
+      AND c.public_preview_token = $2
+    LIMIT 1
+    `,
+    [String(caseId), normalizedToken]
+  );
+
+  return rows[0] || null;
+}
+
+async function listPublicPreviewTemplates({ caseId, token }, db) {
+  const pool = pickDb(db);
+  const selectedCase = await getPublicPreviewCaseByToken({ caseId, token }, pool);
+  if (!selectedCase) return [];
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      o.id AS order_id,
+      o.template_slug,
+      o.deal_type,
+      o.status AS order_status,
+      e.id AS entitlement_id,
+      e.starts_at,
+      e.ends_at,
+      COALESCE(st.id::text, o.template_slug) AS template_id,
+      COALESCE(st.title, o.template_slug) AS title,
+      COALESCE(st.short_description, '') AS short_description,
+      COALESCE(st.description, '') AS description,
+      COALESCE(st.category, 'other') AS category,
+      COALESCE(st.tags::text, '') AS tags,
+      st.preview_url,
+      st.preview_image,
+      st.demo_url,
+      st.price_buy_cents,
+      st.price_rent_cents,
+      st.zip_path,
+      st.status AS template_status,
+      COUNT(oca_all.case_id)::int AS cases_count
+    FROM public.order_case_assignments oca
+    JOIN public.orders o
+      ON o.id = oca.order_id
+    JOIN public.entitlements e
+      ON e.order_id = o.id
+    LEFT JOIN public.seller_templates st
+      ON st.slug = o.template_slug
+    LEFT JOIN public.order_case_assignments oca_all
+      ON oca_all.order_id = o.id
+    WHERE oca.case_id::text = $1::text
+      AND UPPER(COALESCE(o.deal_type, e.deal_type, e.kind, '')) = 'RENT'
+      AND LOWER(COALESCE(o.status, '')) = 'paid'
+      AND e.closed_at IS NULL
+      AND (e.ends_at IS NULL OR e.ends_at > NOW())
+    GROUP BY o.id, e.id, st.id, st.title, st.short_description, st.description, st.category, st.tags, st.preview_url, st.preview_image, st.demo_url, st.price_buy_cents, st.price_rent_cents, st.zip_path, st.status
+    ORDER BY e.ends_at ASC NULLS LAST, o.created_at DESC, o.id DESC
+    `,
+    [String(caseId)]
+  );
+
+  return rows || [];
+}
+
 module.exports = {
   listByOwner,
   countByOwner,
   listOwnedCaseIds,
   getOwnedCaseById,
+  getPublicPreviewCaseByToken,
   listCaseTemplates,
+  listPublicPreviewTemplates,
   listAvailableCasesForOrder,
   clearOwnedCaseAssignments,
   createCase,
