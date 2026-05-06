@@ -100,6 +100,82 @@ const upload = multer({
   },
 });
 
+
+function displayZipName(row) {
+  const original = String(row?.zip_original_name || '').trim();
+  if (original) return original;
+
+  const stored = String(row?.zip_path || '').trim();
+  if (!stored) return 'No ZIP uploaded';
+
+  return stored.split(/[\\/]/).filter(Boolean).pop() || stored;
+}
+
+function inferSellingOptionFromRow(row) {
+  const rentCents = Number(row?.price_rent_cents || 0);
+  return rentCents > 0 ? 'buy_rent' : 'buy_only';
+}
+
+
+const TEMPASI_ALLOWED_TEMPLATE_CATEGORIES = new Set([
+  'landing',
+  'ecommerce',
+  'blog',
+  'portfolio',
+  'saas',
+  'restaurant',
+  'real-estate',
+  'education',
+  'events',
+  'health',
+  'other',
+]);
+
+function normalizeTemplateCategoryForRoute(value) {
+  const category = String(value || '').trim().toLowerCase();
+  return TEMPASI_ALLOWED_TEMPLATE_CATEGORIES.has(category) ? category : 'other';
+}
+
+function normalizeTemplateTagsForRoute(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const seen = new Set();
+
+  return raw
+    .split(',')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean)
+    .map((tag) => tag.replace(/\s+/g, ' '))
+    .filter((tag) => tag.length <= 30)
+    .filter((tag) => {
+      if (seen.has(tag)) return false;
+      seen.add(tag);
+      return true;
+    })
+    .slice(0, 15)
+    .join(', ');
+}
+
+
+function categoryFlags(value) {
+  const category = normalizeTemplateCategoryForRoute(value || 'other');
+
+  return {
+    formCategoryLanding: category === 'landing',
+    formCategoryEcommerce: category === 'ecommerce',
+    formCategoryBlog: category === 'blog',
+    formCategoryPortfolio: category === 'portfolio',
+    formCategorySaas: category === 'saas',
+    formCategoryRestaurant: category === 'restaurant',
+    formCategoryRealEstate: category === 'real-estate',
+    formCategoryEducation: category === 'education',
+    formCategoryEvents: category === 'events',
+    formCategoryHealth: category === 'health',
+    formCategoryOther: category === 'other',
+  };
+}
+
 function createCabinetPagesRouter() {
   const router = express.Router();
 
@@ -180,13 +256,13 @@ function createCabinetPagesRouter() {
       workspaceData: { items: [] },
       workspaceError: null,
 
-      form: { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
+      form: { title: '', shortDescription: '', category: 'other', tags: '', priceBuy: '', priceRent: '', sellingOption: 'buy_rent', status: 'draft' },
       formErrors: {},
       formIsDraft: true,
       formIsPublished: false,
 
       pageTitle: 'Add Template',
-      pageSubtitle: 'Create a template record (MVP).',
+      pageSubtitle: 'Create a template record. Slug is generated automatically by the system.',
       panelTitle: 'Add Template',
       panelText: '',
     });
@@ -195,15 +271,28 @@ function createCabinetPagesRouter() {
   router.post('/my-templates/add', upload.single('templateZip'), async (req, res) => {
     const form = {
       title: String(req.body?.title || ''),
-      slug: String(req.body?.slug || ''),
       shortDescription: String(req.body?.shortDescription || ''),
+      category: String(req.body?.category || 'other'),
+      tags: String(req.body?.tags || ''),
       priceBuy: String(req.body?.priceBuy || ''),
       priceRent: String(req.body?.priceRent || ''),
+      sellingOption: String(req.body?.sellingOption || req.body?.license || 'buy_rent'),
       status: String(req.body?.status || 'draft'),
     };
 
     let workspaceError = null;
     let formErrors = {};
+
+    try {
+      const existingForForm = await sellerTemplatesService.getMyTemplateById({
+        pool,
+        user: req.user,
+        id,
+      });
+      form.currentZipName = displayZipName(existingForForm);
+    } catch (_e) {
+      form.currentZipName = form.currentZipName || 'No ZIP uploaded';
+    }
 
     try {
       const file = req.file;
@@ -252,9 +341,11 @@ function createCabinetPagesRouter() {
       formErrors,
       formIsDraft: status === 'draft',
       formIsPublished: status === 'published',
+      formIsBuyOnly: String(form.sellingOption || 'buy_rent') === 'buy_only',
+      formIsBuyRent: String(form.sellingOption || '') === 'buy_rent',
 
       pageTitle: 'Add Template',
-      pageSubtitle: 'Create a template record (MVP).',
+      pageSubtitle: 'Create a template record. Slug is generated automatically by the system.',
       panelTitle: 'Add Template',
       panelText: '',
     });
@@ -298,7 +389,30 @@ function createCabinetPagesRouter() {
       workspaceError = new Error('Template not found');
     }
 
-    res.render('pages/cabinet', {
+    
+    // TEMPASI_EDIT_GET_CATEGORY_TAGS_META_FETCH_CURRENT
+    // Force-load saved catalog metadata for the edit form from DB.
+    let editCategory = normalizeTemplateCategoryForRoute(row?.category || 'other');
+    let editTags = String(row?.tags || '');
+
+    if (row && row.id) {
+      const metaResult = await pool.query(
+        `
+          SELECT category, tags
+          FROM seller_templates
+          WHERE id = $1
+            AND deleted_at IS NULL
+          LIMIT 1
+        `,
+        [row.id],
+      );
+
+      const meta = metaResult.rows[0] || {};
+      editCategory = normalizeTemplateCategoryForRoute(meta.category || row.category || 'other');
+      editTags = String(meta.tags || row.tags || '');
+    }
+
+res.render('pages/cabinet', {
       activeSpace: 'my-templates',
       isMyTemplatesList: false,
       isMyTemplatesAdd: false,
@@ -311,6 +425,8 @@ function createCabinetPagesRouter() {
             title: row.title || '',
             slug: row.slug || '',
             shortDescription: row.short_description || '',
+            category: editCategory,
+            tags: editTags,
             priceBuy:
               row.price_buy_cents !== null && row.price_buy_cents !== undefined
                 ? formatMoneyEurFromCents(row.price_buy_cents)
@@ -319,12 +435,17 @@ function createCabinetPagesRouter() {
               row.price_rent_cents !== null && row.price_rent_cents !== undefined
                 ? formatMoneyEurFromCents(row.price_rent_cents)
                 : '',
+            sellingOption: inferSellingOptionFromRow(row),
             status: row.status || 'draft',
+            currentZipName: displayZipName(row),
           }
-        : { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
+        : { title: '', shortDescription: '', category: editCategory, tags: editTags, priceBuy: '', priceRent: '', sellingOption: 'buy_rent', status: 'draft', currentZipName: 'No ZIP uploaded' },
       formErrors: {},
       formIsDraft: row ? row.status === 'draft' : true,
       formIsPublished: row ? row.status === 'published' : false,
+      formIsBuyOnly: row ? inferSellingOptionFromRow(row) === 'buy_only' : false,
+      formIsBuyRent: row ? inferSellingOptionFromRow(row) === 'buy_rent' : true,
+      ...categoryFlags(editCategory),
       pageTitle: 'Edit Template',
       pageSubtitle: 'Update template details.',
       panelTitle: 'Edit Template',
@@ -339,10 +460,12 @@ function createCabinetPagesRouter() {
 
     const form = {
       title: String(req.body?.title || ''),
-      slug: String(req.body?.slug || ''),
       shortDescription: String(req.body?.shortDescription || ''),
+      category: String(req.body?.category || 'other'),
+      tags: String(req.body?.tags || ''),
       priceBuy: String(req.body?.priceBuy || ''),
       priceRent: String(req.body?.priceRent || ''),
+      sellingOption: String(req.body?.sellingOption || req.body?.license || 'buy_rent'),
       status: String(req.body?.status || 'draft'),
     };
 
@@ -358,7 +481,44 @@ function createCabinetPagesRouter() {
         file: req.file || null,
       });
 
-      return res.redirect('/cabinet/my-templates');
+  
+    // TEMPASI_FORCE_SAVE_CATEGORY_TAGS_FROM_EDIT_ROUTE
+    // Category and tags are catalog metadata from the edit form.
+    // Persist them here explicitly so they cannot be lost in older repo/service update paths.
+    try {
+      const ownerUserId =
+        req.user?.id ||
+        req.user?.user_id ||
+        req.user?.userId ||
+        req.session?.user?.id ||
+        req.session?.userId ||
+        null;
+
+      if (ownerUserId) {
+        await pool.query(
+          `
+            UPDATE seller_templates
+            SET
+              category = $1,
+              tags = $2,
+              updated_at = NOW()
+            WHERE id = $3
+              AND owner_user_id = $4
+              AND deleted_at IS NULL
+          `,
+          [
+            normalizeTemplateCategoryForRoute(req.body?.category),
+            normalizeTemplateTagsForRoute(req.body?.tags),
+            id,
+            ownerUserId,
+          ],
+        );
+      }
+    } catch (metaError) {
+      console.error('[cabinet] failed to persist template category/tags:', metaError);
+    }
+
+    return res.redirect('/cabinet/my-templates');
     } catch (e) {
       if (e && e.message === 'ONLY_ZIP_ALLOWED') {
         formErrors.templateZip = 'Only .zip files are allowed.';
@@ -386,6 +546,8 @@ function createCabinetPagesRouter() {
       formErrors,
       formIsDraft: status === 'draft',
       formIsPublished: status === 'published',
+      formIsBuyOnly: String(form.sellingOption || 'buy_rent') === 'buy_only',
+      formIsBuyRent: String(form.sellingOption || '') === 'buy_rent',
       pageTitle: 'Edit Template',
       pageSubtitle: 'Update template details.',
       panelTitle: 'Edit Template',

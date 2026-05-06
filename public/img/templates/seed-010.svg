@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">seed-010 preview</title>
+  <desc id="desc">Tempasi preview placeholder for Healthcare</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#151a21"/>
+      <stop offset="55%" stop-color="#202733"/>
+      <stop offset="100%" stop-color="#2c2414"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4d98a"/>
+      <stop offset="100%" stop-color="#9c7b32"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" rx="42" fill="url(#bg)"/>
+  <rect x="70" y="70" width="1060" height="620" rx="34" fill="#0e1117" stroke="#3a3322" stroke-width="3"/>
+  <rect x="110" y="112" width="240" height="30" rx="15" fill="url(#gold)" opacity="0.92"/>
+  <rect x="110" y="178" width="520" height="58" rx="18" fill="#f2f0e7" opacity="0.92"/>
+  <rect x="110" y="260" width="420" height="26" rx="13" fill="#9aa3af" opacity="0.7"/>
+  <rect x="110" y="306" width="350" height="26" rx="13" fill="#9aa3af" opacity="0.45"/>
+  <rect x="110" y="392" width="190" height="58" rx="29" fill="url(#gold)" opacity="0.92"/>
+  <rect x="330" y="392" width="170" height="58" rx="29" fill="#161b22" stroke="#5b6675" opacity="0.95"/>
+  <rect x="680" y="150" width="360" height="410" rx="34" fill="#1b222c" stroke="#2d3745"/>
+  <rect x="720" y="196" width="280" height="170" rx="24" fill="#263242"/>
+  <circle cx="785" cy="278" r="48" fill="url(#gold)" opacity="0.88"/>
+  <rect x="720" y="410" width="280" height="28" rx="14" fill="#f2f0e7" opacity="0.82"/>
+  <rect x="720" y="462" width="210" height="24" rx="12" fill="#9aa3af" opacity="0.58"/>
+  <text x="110" y="620" fill="#f2f0e7" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="700">Clinic website</text>
+  <text x="110" y="664" fill="#b8c0cc" font-family="Inter, Arial, sans-serif" font-size="22">Healthcare · Tempasi template preview</text>
+</svg>

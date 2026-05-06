@@ -7,45 +7,199 @@ const path = require('path');
 const repo = require('./sellerTemplates.repo.cjs');
 const zipTool = require('./templateZip.contract.cjs');
 
+
+
 function getOwnerUserId(user) {
   if (!user) return null;
   return user.id || user.user_id || user.userId || null;
 }
 
+
+function slugifyTemplateTitle(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70) || 'template';
+}
+
+async function buildUniqueSellerTemplateSlug({ pool, title, excludeId = null }) {
+  const base = slugifyTemplateTitle(title);
+  let candidate = base;
+
+  for (let i = 0; i < 100; i += 1) {
+    const result = await pool.query(
+      `
+        SELECT id
+        FROM seller_templates
+        WHERE slug = $1
+          AND deleted_at IS NULL
+          ${excludeId ? 'AND id <> $2' : ''}
+        LIMIT 1
+      `,
+      excludeId ? [candidate, excludeId] : [candidate],
+    );
+
+    if (result.rowCount === 0) return candidate;
+
+    candidate = `${base}-${i + 2}`;
+  }
+
+  return `${base}-${Date.now()}`;
+}
+
+function normalizeTemplateLicense(value) {
+  const license = String(value || '').trim();
+
+  if (license === 'buy_only' || license === 'buy_rent') {
+    return license;
+  }
+
+  return '';
+}
+
+
+
+function parseMoneyToCents(value) {
+  const raw = String(value ?? '').trim();
+
+  if (!raw) return null;
+
+  const normalized = raw.replace(',', '.');
+
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    return null;
+  }
+
+  const [eurosRaw, centsRaw = ''] = normalized.split('.');
+  const euros = Number(eurosRaw);
+  const cents = Number((centsRaw + '00').slice(0, 2));
+
+  if (!Number.isSafeInteger(euros) || !Number.isSafeInteger(cents)) {
+    return null;
+  }
+
+  const total = euros * 100 + cents;
+
+  return Number.isSafeInteger(total) ? total : null;
+}
+
+
+const TEMPLATE_CATEGORY_VALUES = new Set([
+  'landing',
+  'ecommerce',
+  'blog',
+  'portfolio',
+  'saas',
+  'restaurant',
+  'real-estate',
+  'education',
+  'events',
+  'health',
+  'other',
+]);
+
+function normalizeTemplateCategory(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return TEMPLATE_CATEGORY_VALUES.has(raw) ? raw : 'other';
+}
+
+function normalizeTemplateTags(value) {
+  const raw = String(value || '').trim();
+
+  if (!raw) return '';
+
+  const seen = new Set();
+  const tags = raw
+    .split(',')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean)
+    .map((tag) => tag.replace(/\s+/g, ' '))
+    .filter((tag) => tag.length <= 30)
+    .filter((tag) => {
+      if (seen.has(tag)) return false;
+      seen.add(tag);
+      return true;
+    })
+    .slice(0, 15);
+
+  return tags.join(', ');
+}
+
 function validateAddOrEditTemplateForm(body = {}) {
   const errors = {};
-  const data = {
-    title: String(body.title || '').trim(),
-    slug: String(body.slug || '').trim(),
-    shortDescription: String(body.shortDescription || '').trim(),
-    priceBuy: String(body.priceBuy || '').trim(),
-    priceRent: String(body.priceRent || '').trim(),
-    status: String(body.status || 'draft').trim(),
+
+  const title = String(body?.title || '').trim();
+  const shortDescription = String(body?.shortDescription || '').trim();
+  const category = normalizeTemplateCategory(body?.category || 'other');
+  const tags = normalizeTemplateTags(body?.tags || '');
+  const priceBuy = String(body?.priceBuy || '').trim();
+  const priceRent = String(body?.priceRent || '').trim();
+  const status = String(body?.status || 'draft').trim();
+
+  // User-facing field. This is NOT a legal license.
+  // Internal legacy compatibility:
+  // - buy_only -> BUY
+  // - buy_rent -> BUY_RENT
+  const sellingOption = String(body?.sellingOption || body?.license || 'buy_rent').trim();
+
+  const allowedSellingOptions = new Set(['buy_only', 'buy_rent']);
+
+  if (!title) errors.title = 'Title is required.';
+
+  if (!allowedSellingOptions.has(sellingOption)) {
+    errors.sellingOption = 'Choose a selling option.';
+  }
+
+  const normalizedStatus = status === 'published' ? 'published' : 'draft';
+
+  const buyCents = parseMoneyToCents(priceBuy);
+  const rentCents = parseMoneyToCents(priceRent);
+
+  if (priceBuy && buyCents === null) {
+    errors.priceBuy = 'Enter a valid buy price.';
+  }
+
+  if (priceRent && rentCents === null) {
+    errors.priceRent = 'Enter a valid rent price.';
+  }
+
+  if (sellingOption === 'buy_only' && priceRent) {
+    errors.priceRent = 'Rent price is only allowed for Buy + Rent templates.';
+  }
+
+  if (sellingOption === 'buy_rent' && !priceRent) {
+    errors.priceRent = 'Rent price is required for Buy + Rent templates.';
+  }
+
+  if (normalizedStatus === 'published' && !priceBuy) {
+    errors.priceBuy = 'Buy price is required before publishing.';
+  }
+
+  return {
+    ok: Object.keys(errors).length === 0,
+    errors,
+    data: {
+      title,
+      shortDescription,
+      category,
+      tags,
+      // Keep raw form values here.
+      // Repository is the single place that converts EUR strings to cents.
+      // Do NOT pass buyCents/rentCents here, otherwise prices are multiplied by 100 twice.
+      priceBuy,
+      priceRent: sellingOption === 'buy_rent' ? priceRent : null,
+      status: normalizedStatus,
+      sellingOption,
+      internalLicense: sellingOption === 'buy_rent' ? 'BUY_RENT' : 'BUY',
+    },
   };
-
-  if (!data.title) errors.title = 'Title is required.';
-
-  const normSlug = repo.normalizeSlug(data.slug);
-  if (!normSlug) errors.slug = 'Slug is required (letters/numbers/dashes).';
-
-  if (data.priceBuy) {
-    const cents = repo.toCentsOrNull(data.priceBuy);
-    if (cents === null) errors.priceBuy = 'Buy price must be a non-negative number.';
-  }
-
-  if (data.priceRent) {
-    const cents = repo.toCentsOrNull(data.priceRent);
-    if (cents === null) errors.priceRent = 'Rent price must be a non-negative number.';
-  }
-
-  if (data.status && !['draft', 'published'].includes(data.status)) {
-    data.status = 'draft';
-  }
-
-  data.slug = normSlug;
-
-  return { ok: Object.keys(errors).length === 0, errors, data };
 }
+
 
 function throwValidationFailed(details) {
   const err = new Error('VALIDATION_FAILED');
@@ -89,13 +243,30 @@ function bestEffortUnlink(p) {
   }
 }
 
-function getPreviewPathForTemplateId(templateId) {
-  return path.join(process.cwd(), 'public/uploads/previews', `${templateId}.png`);
+function getTemplateUploadRoot() {
+  return path.resolve(
+    process.env.TEMPLATE_UPLOAD_DIR ||
+    process.env.UPLOAD_DIR ||
+    path.join(process.cwd(), 'uploads', 'templates')
+  );
 }
 
-async function validateZipAndWritePreviewOrThrow({ templateId, zipPath }) {
-  // validate structure + extract preview to deterministic path
-  const outPath = getPreviewPathForTemplateId(templateId);
+function getPreviewPathForTemplateSlug(slug) {
+  const safeSlug = String(slug || '').trim();
+
+  if (!safeSlug) {
+    const err = new Error('TEMPLATE_PREVIEW_SLUG_REQUIRED');
+    err.code = 'TEMPLATE_PREVIEW_SLUG_REQUIRED';
+    throw err;
+  }
+
+  return path.join(getTemplateUploadRoot(), safeSlug, 'preview', 'preview.png');
+}
+
+async function validateZipAndWritePreviewOrThrow({ slug, zipPath }) {
+  const outPath = getPreviewPathForTemplateSlug(slug);
+
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
   await zipTool.validateTemplateZipOrThrowAsync(zipPath);
   await zipTool.extractPreviewPngToFile({ zipPath, outPath });
@@ -158,22 +329,32 @@ async function addSellerTemplate({ pool, user, body, file }) {
     }
   }
 
+  const generatedSlug = await buildUniqueSellerTemplateSlug({
+    pool,
+    title: v.data.title,
+  });
+
   const created = await repo.insertSellerTemplate({
     pool,
     ownerUserId,
     title: v.data.title,
-    slug: v.data.slug,
+    slug: generatedSlug,
     shortDescription: v.data.shortDescription || null,
+    category: v.data.category || 'other',
+    tags: v.data.tags || '',
+    category: v.data.category || 'other',
+    tags: v.data.tags || '',
     priceBuy: v.data.priceBuy || null,
     priceRent: v.data.priceRent || null,
     status: v.data.status || 'draft',
-    zipPath,
+    license: v.data.internalLicense,
+zipPath,
     zipOriginalName,
   });
 
-  // Extract preview to deterministic path: public/uploads/previews/<id>.png
+  // Extract preview to canonical storage path: <TEMPLATE_UPLOAD_DIR>/<slug>/preview/preview.png
   try {
-    await validateZipAndWritePreviewOrThrow({ templateId: created.id, zipPath });
+    await validateZipAndWritePreviewOrThrow({ slug: created.slug || generatedSlug, zipPath });
   } catch (e) {
     // If preview extraction fails, keep template but report error next time in Edit
     // (UI will show preview placeholder in list)
@@ -282,15 +463,24 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
     }
   }
 
+  const generatedSlug = await buildUniqueSellerTemplateSlug({
+    pool,
+    title: v.data.title,
+    excludeId: id,
+  });
+
   const updated = await repo.updateSellerTemplateByOwner({
     pool,
     ownerUserId,
     id,
     title: v.data.title,
-    slug: v.data.slug,
+    slug: existing.slug,
     shortDescription: v.data.shortDescription || null,
+    category: v.data.category || 'other',
+    tags: v.data.tags || '',
     priceBuy: v.data.priceBuy || null,
     priceRent: v.data.priceRent || null,
+    status: v.data.status || 'draft',
     zipPath: newZipPath !== undefined ? newZipPath : undefined, // only touch when present
     zipOriginalName: newZipOriginalName !== undefined ? newZipOriginalName : undefined,
   });
@@ -301,6 +491,28 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
     throw err;
   }
 
+  // TEMPASI_SAVE_CATEGORY_TAGS_ON_EDIT
+  // Persist catalog metadata from Add/Edit form.
+  // Category/tags are catalog fields, not technical upload fields.
+  await pool.query(
+    `
+      UPDATE seller_templates
+      SET
+        category = $1,
+        tags = $2,
+        updated_at = NOW()
+      WHERE id = $3
+        AND owner_user_id = $4
+        AND deleted_at IS NULL
+    `,
+    [
+      v.data.category || 'other',
+      v.data.tags || '',
+      id,
+      ownerUserId,
+    ],
+  );
+
   // If ZIP was replaced:
   if (newZipPath) {
     // delete old ZIP best-effort
@@ -310,7 +522,7 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
 
     // regenerate preview
     try {
-      await validateZipAndWritePreviewOrThrow({ templateId: Number(id), zipPath: newZipPath });
+      await validateZipAndWritePreviewOrThrow({ slug: updated.slug || generatedSlug || existing.slug, zipPath: newZipPath });
     } catch (e) {
       // Keep updated record but surface error in UI as workspaceError if needed
       const err = new Error(e.code || e.message || 'PREVIEW_EXTRACT_FAILED');

@@ -104,3 +104,12 @@
 .actions .button--primary {
   box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
 }
+
+/* TEMPASI_SELECT_OPTION_READABILITY
+   Native dropdown options are rendered by the browser/OS.
+   Keep them readable even on the dark Tempasi form theme. */
+select.input option,
+select.input optgroup {
+  color: #111827;
+  background: #ffffff;
+}

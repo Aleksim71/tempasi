@@ -378,3 +378,138 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* TEMPASI_PUBLIC_CATALOG_ACCESS_RADIO_STYLE
+   Access filter is a single-choice radio group, not a checkbox group. */
+.chip--access-radio {
+  position: relative;
+}
+
+.chip--access-radio .chip-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 184, 90, 0.62);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(214, 184, 90, 0.08);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.chip--access-radio .chip-input:checked {
+  border-color: rgba(214, 184, 90, 0.95);
+  background:
+    radial-gradient(circle at center, rgba(214, 184, 90, 0.98) 0 34%, transparent 38% 100%),
+    rgba(214, 184, 90, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(214, 184, 90, 0.34),
+    0 0 18px rgba(214, 184, 90, 0.18);
+}
+
+.chip--access-radio .chip-input:focus-visible {
+  outline: 2px solid rgba(214, 184, 90, 0.75);
+  outline-offset: 3px;
+}
+
+.chip--access-radio .chip-label {
+  cursor: pointer;
+}
+
+/* TEMPASI_FORCE_GREEN_ROUND_ACCESS_RADIO
+   Force public catalog Access controls to look like large green radios,
+   not square checkboxes. */
+.chip--access-radio input.chip-input[type='radio'] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  display: inline-grid !important;
+  place-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  margin: 0 10px 0 0 !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(114, 214, 120, 0.72) !important;
+  background: rgba(114, 214, 120, 0.08) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.chip--access-radio input.chip-input[type='radio']::before {
+  content: '' !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  transform: scale(0) !important;
+  transition: transform 120ms ease !important;
+  background: rgb(114, 214, 120) !important;
+  box-shadow: 0 0 12px rgba(114, 214, 120, 0.42) !important;
+}
+
+.chip--access-radio input.chip-input[type='radio']:checked::before {
+  transform: scale(1) !important;
+}
+
+.chip--access-radio input.chip-input[type='radio']:checked {
+  border-color: rgb(114, 214, 120) !important;
+  background: rgba(114, 214, 120, 0.12) !important;
+}
+
+/* If old chip CSS draws a square through label pseudo-elements, neutralize it. */
+.chip--access-radio .chip-label::before,
+.chip--access-radio .chip-label::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* TEMPASI_ACCESS_RADIO_VISUAL_DOT_FINAL */
+.chip--access-radio {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.chip--access-radio .chip-input--access-radio {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  pointer-events: none !important;
+}
+
+.chip--access-radio .chip-radio-dot {
+  display: inline-block !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  border-radius: 999px !important;
+  border: 1.5px solid rgba(114, 214, 120, 0.78) !important;
+  background: rgba(114, 214, 120, 0.08) !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+.chip--access-radio .chip-radio-dot::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 4px !important;
+  border-radius: 999px !important;
+  background: rgb(114, 214, 120) !important;
+  transform: scale(0) !important;
+  transition: transform 120ms ease !important;
+  box-shadow: 0 0 12px rgba(114, 214, 120, 0.42) !important;
+}
+
+.chip--access-radio .chip-input--access-radio:checked + .chip-radio-dot::after {
+  transform: scale(1) !important;
+}
+
+.chip--access-radio .chip-input--access-radio:focus-visible + .chip-radio-dot {
+  outline: 2px solid rgba(114, 214, 120, 0.72) !important;
+  outline-offset: 3px !important;
+}

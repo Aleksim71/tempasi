@@ -6,7 +6,7 @@
 
     <img
       class="template-card__img"
-      src="{{#if this.previewUrl}}{{this.previewUrl}}{{else if this.preview_url}}{{this.preview_url}}{{else if this.id}}/uploads/previews/{{this.id}}.png{{#if this.updated_at}}?v={{this.updated_at}}{{else if this.zip_uploaded_at}}?v={{this.zip_uploaded_at}}{{/if}}{{else}}/t/{{this.slug}}/preview.png{{/if}}"
+      src="{{#if this.previewUrl}}{{this.previewUrl}}{{else if this.preview_url}}{{this.preview_url}}{{else}}/t/{{this.slug}}/preview/preview.png{{/if}}"
       alt="Preview {{this.title}}"
       loading="lazy"
       onerror="try{const box=this.closest('.template-card__preview'); const ph=box && box.querySelector('.template-card__placeholder'); if(ph) ph.style.display='flex'; this.remove();}catch(e){}"
@@ -25,8 +25,8 @@
       {{/if}}
 
       {{#if this.rentPrice}}
-        <span class="template-card__price">Rent: {{this.rentPrice}}€</span>
-        <span class="template-card__meta">One template = one BUY.</span>
+        <span class="template-card__price">Buy + Rent: {{this.rentPrice}}€</span>
+        <span class="template-card__meta">One template = one Buy only.</span>
       {{/if}}
     </div>
 

@@ -32,7 +32,7 @@
 
             <div class="seller-card__preview">
               <img
-                src="/uploads/previews/{{id}}.png?t={{updated_ts}}"
+                src="/t/{{slug}}/preview/preview.png"
                 alt="{{title}}"
                 onerror="this.onerror=null;this.src='/img/preview-placeholder.svg';"
               >
@@ -42,7 +42,8 @@
               <h3 class="seller-card__title">{{title}}</h3>
 
               <div class="seller-card__meta">
-                <div><strong>Slug:</strong> {{slug}}</div>
+                <div><strong>Article:</strong> TMP-{{id}}<br>
+                  <strong>Slug:</strong> {{slug}}</div>
 
                 {{#if price_buy_eur}}
                   <div><strong>Buy:</strong> €{{price_buy_eur}}</div>
@@ -138,12 +139,7 @@
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
         </div>
-
-        <div class="form__row">
-          <label class="form__label" for="slug">Slug *</label>
-          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
-          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
-          {{#if formErrors.slug}}
+{{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
         </div>
@@ -155,15 +151,111 @@
 
         <div class="form__grid">
           <div class="form__row">
+            <label class="form__label" for="category">Category *</label>
+            <select class="input" id="editCategory" name="category" required>
+              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
+              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
+              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
+              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
+              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
+              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
+              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
+              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
+              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
+              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
+              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="tags">Tags</label>
+            <input class="input" id="editTags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
+            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
+          </div>
+        </div>
+
+        <div class="form__grid">
+          <div class="form__row">
+            <label class="form__label" for="category">Category *</label>
+            <select class="input" id="category" name="category" required>
+              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
+              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
+              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
+              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
+              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
+              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
+              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
+              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
+              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
+              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
+              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="tags">Tags</label>
+            <input class="input" id="tags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
+            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
+          </div>
+        </div>
+
+
+        
+<style>
+  form:has(input[name="sellingOption"][value="buy_only"]:checked) [data-rent-price-row] {
+    display: none !important;
+  }
+</style>
+
+        <div class="form__row">
+          <span class="form__label">Selling option *</span>
+
+          <div class="form__choices">
+            <label class="form__choice">
+              <input
+                type="radio"
+                name="sellingOption"
+                value="buy_rent"
+                onchange="document.getElementById('rentPriceRow').style.display=''; document.getElementById('priceRent').disabled=false;"
+                data-selling-option-radio
+                {{#if formIsBuyOnly}}{{else}}checked{{/if}}
+                required
+              >
+              <span>Buy + Rent</span>
+            </label>
+
+            <label class="form__choice">
+              <input
+                type="radio"
+                name="sellingOption"
+                value="buy_only"
+                onchange="document.getElementById('rentPriceRow').style.display='none'; document.getElementById('priceRent').value=''; document.getElementById('priceRent').disabled=true;"
+                data-selling-option-radio
+                {{#if formIsBuyOnly}}checked{{/if}}
+                required
+              >
+              <span>Buy only</span>
+            </label>
+          </div>
+
+          <div class="form__hint">Choose whether this template is Buy only or Buy + Rent.</div>
+
+          {{#if formErrors.sellingOption}}
+            <div class="form__error">{{formErrors.sellingOption}}</div>
+          {{/if}}
+        </div>
+
+        <div class="form__grid form__grid--prices" data-selling-price-grid>
+          <div class="form__row">
             <label class="form__label" for="priceBuy">Buy price (EUR)</label>
-            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            <input class="input" id="editPriceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
-          <div class="form__row">
-            <label class="form__label" for="priceRent">Rent price (EUR)</label>
+          <div class="form__row" id="rentPriceRow" data-rent-price-row>
+            <label class="form__label" for="priceRent">Rent price (EUR, Buy + Rent only)</label>
             <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
@@ -200,18 +292,27 @@
 
       <form class="form" method="post" action="" enctype="multipart/form-data">
         <div class="form__row">
+          <label class="form__label" for="status">Status *</label>
+          <div class="form__radios">
+            <label class="radio">
+              <input type="radio" name="status" value="draft" {{#if formIsDraft}}checked{{/if}}>
+              Draft
+            </label>
+            <label class="radio">
+              <input type="radio" name="status" value="published" {{#if formIsPublished}}checked{{/if}}>
+              Published
+            </label>
+          </div>
+          <div class="form__hint">Draft is visible only to you. Published is visible in the public catalog.</div>
+        </div>
+        <div class="form__row">
           <label class="form__label" for="title">Title *</label>
           <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
           {{#if formErrors.title}}
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
         </div>
-
-        <div class="form__row">
-          <label class="form__label" for="slug">Slug *</label>
-          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
-          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
-          {{#if formErrors.slug}}
+{{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
         </div>
@@ -223,16 +324,81 @@
 
         <div class="form__grid">
           <div class="form__row">
-            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
+            <label class="form__label" for="editCategory">Category *</label>
+            <select class="input" id="editCategory" name="category" required>
+              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
+              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
+              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
+              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
+              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
+              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
+              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
+              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
+              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
+              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
+              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="editTags">Tags</label>
+            <input class="input" id="editTags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
+            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
+          </div>
+        </div>
+
+
+        
+        <div class="form__row">
+          <span class="form__label">Selling option *</span>
+
+          <div class="form__choices">
+            <label class="form__choice">
+              <input
+                type="radio"
+                name="sellingOption"
+                value="buy_rent"
+                onchange="document.getElementById('editRentPriceRow').style.display=''; document.getElementById('editPriceRent').disabled=false;"
+                data-selling-option-radio
+                {{#if formIsBuyOnly}}{{else}}checked{{/if}}
+                required
+              >
+              <span>Buy + Rent</span>
+            </label>
+
+            <label class="form__choice">
+              <input
+                type="radio"
+                name="sellingOption"
+                value="buy_only"
+                onchange="document.getElementById('editRentPriceRow').style.display='none'; document.getElementById('editPriceRent').value=''; document.getElementById('editPriceRent').disabled=true;"
+                data-selling-option-radio
+                {{#if formIsBuyOnly}}checked{{/if}}
+                required
+              >
+              <span>Buy only</span>
+            </label>
+          </div>
+
+          <div class="form__hint">Choose whether this template is Buy only or Buy + Rent.</div>
+
+          {{#if formErrors.sellingOption}}
+            <div class="form__error">{{formErrors.sellingOption}}</div>
+          {{/if}}
+        </div>
+
+<div class="form__grid form__grid--prices" data-selling-price-grid>
+          <div class="form__row">
+            <label class="form__label" for="editPriceBuy">Buy price (EUR)</label>
             <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
-          <div class="form__row">
-            <label class="form__label" for="priceRent">Rent price (EUR)</label>
-            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+          <div class="form__row" id="editRentPriceRow" data-rent-price-row {{#if formIsBuyOnly}}style="display:none;"{{/if}}>
+            <label class="form__label" for="editPriceRent">Rent price (EUR, Buy + Rent only)</label>
+            <input class="input" id="editPriceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" {{#if formIsBuyOnly}}disabled{{/if}} />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
             {{/if}}
@@ -240,7 +406,7 @@
         </div>
 
         <div class="form__row">
-          <div class="form__hint"><strong>Current ZIP:</strong> {{form.currentZipName}}</div>
+          <div class="form__hint"><strong>Current ZIP:</strong> {{#if form.currentZipName}}{{form.currentZipName}}{{else}}No ZIP uploaded{{/if}}</div>
         </div>
 
         <div class="form__row">
@@ -482,3 +648,4 @@
   {{/if}}
 
 </section>
+

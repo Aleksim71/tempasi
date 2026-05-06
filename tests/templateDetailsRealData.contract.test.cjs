@@ -17,6 +17,7 @@ describe('template details real data contract', () => {
     expect(src).toContain('category,');
     expect(src).toContain('fullDescription: toStr(r.description');
     expect(src).toContain('demoUrl: toStr(r.demo_url');
+    expect(src).toContain('previewUrl: resolveStoredTemplatePreviewUrl(r)');
   });
 
   test('template details route loads authenticated user cases by text user_id', () => {

@@ -333,3 +333,48 @@
     boot();
   }
 })();
+
+
+/* TEMPASI_SELLING_OPTION_RENT_PRICE_TOGGLE */
+(function () {
+  function syncSellingOptionForm(form) {
+    if (!form) return;
+
+    var checked = form.querySelector('input[name="sellingOption"]:checked');
+    var rentRow = form.querySelector('[data-rent-price-row]');
+    var rentInput = form.querySelector('input[name="priceRent"]');
+
+    if (!checked || !rentRow || !rentInput) return;
+
+    var isBuyOnly = checked.value === 'buy_only';
+
+    rentRow.style.display = isBuyOnly ? 'none' : '';
+    rentInput.disabled = isBuyOnly;
+
+    if (isBuyOnly) {
+      rentInput.value = '';
+    }
+  }
+
+  function syncAllSellingOptionForms() {
+    document.querySelectorAll('form').forEach(function (form) {
+      if (form.querySelector('input[name="sellingOption"]')) {
+        syncSellingOptionForm(form);
+      }
+    });
+  }
+
+  document.addEventListener('change', function (event) {
+    var target = event.target;
+
+    if (!target || target.name !== 'sellingOption') return;
+
+    syncSellingOptionForm(target.closest('form'));
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncAllSellingOptionForms);
+  } else {
+    syncAllSellingOptionForms();
+  }
+})();

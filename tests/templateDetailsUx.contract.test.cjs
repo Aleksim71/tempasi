@@ -17,7 +17,7 @@ describe('template details product page UX contract', () => {
 
     expect(src).toContain('Available:');
     expect(src).toContain('Category:');
-    expect(src).toContain('Rating: coming soon');
+    expect(src).not.toContain('Rating: coming soon');
 
     expect(src).toContain('About this template');
     expect(src).toContain('Details from the author');

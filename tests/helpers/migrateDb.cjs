@@ -184,6 +184,43 @@ async function migrateDb() {
       await execSqlFile(client, f);
     }
 
+  // TEMPASI_STEP_7J_TEST_SCHEMA_BACKFILL
+  // Keep older test DB migration sets compatible with current MVP schema.
+  await client.query(`
+    ALTER TABLE seller_templates
+      ADD COLUMN IF NOT EXISTS owner_hold_until TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS owner_hold_days INTEGER,
+      ADD COLUMN IF NOT EXISTS owner_hold_reason TEXT,
+      ADD COLUMN IF NOT EXISTS owner_withdrawn_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS owner_withdraw_reason TEXT,
+      ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Template',
+      ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS zip_path TEXT,
+      ADD COLUMN IF NOT EXISTS zip_original_name TEXT,
+      ADD COLUMN IF NOT EXISTS zip_mime TEXT,
+      ADD COLUMN IF NOT EXISTS zip_size_bytes BIGINT,
+      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ;
+
+      ALTER TABLE seller_templates
+        ADD COLUMN IF NOT EXISTS tags TEXT NOT NULL DEFAULT '';
+
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      user_id BIGINT PRIMARY KEY,
+      full_name VARCHAR(255) NOT NULL DEFAULT '',
+      nickname VARCHAR(120) NOT NULL DEFAULT '',
+      about TEXT NOT NULL DEFAULT '',
+      avatar_url TEXT,
+      role_title TEXT,
+      location TEXT,
+      website_url TEXT,
+      public_profile BOOLEAN NOT NULL DEFAULT false,
+      public_email VARCHAR(255),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+
     // Post-migration compatibility patches (safe no-ops if already present)
     await ensureEntitlementsKind(client);
     await ensureOrdersDealType(client);

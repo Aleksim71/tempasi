@@ -18,7 +18,7 @@
 
       <img
         class="tcard__img"
-        src="{{#if t.previewUrl}}{{t.previewUrl}}{{else if t.preview_url}}{{t.preview_url}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else if t.id}}/uploads/previews/{{t.id}}.png{{else}}/t/{{t.slug}}/preview.png{{/if}}"
+        src="{{#if t.previewUrl}}{{t.previewUrl}}{{else if t.preview_url}}{{t.preview_url}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else}}/t/{{t.slug}}/preview/preview.png{{/if}}"
         alt="Preview {{t.slug}}"
         loading="lazy"
         onerror="try{const box=this.closest('.tcard__media'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"
@@ -31,7 +31,7 @@
       {{#if t.is_popular}}<span class="tbadge tbadge--popular">POPULAR</span>{{/if}}
       {{#if t.is_exclusive}}<span class="tbadge tbadge--exclusive">EXCLUSIVE</span>{{/if}}
       {{#if t.rented_until}}<span class="tbadge tbadge--rented">RENTED</span>{{/if}}
-      <span class="tbadge" title="One template = one BUY. Cases are only presentation placements.">ONE BUY</span>
+      <span class="tbadge" title="One template = exclusive buy. Cases are only presentation placements.">Exclusive buy</span>
     </div>
   </div>
 
@@ -83,7 +83,7 @@
     <footer class="tcard__foot">
       <div class="tcard__prices" aria-label="Pricing">
         <div class="tprice">
-          <span class="tprice__label">Rent</span>
+          <span class="tprice__label">Buy + Rent</span>
           {{#if t.rentPrice}}
             <span class="tprice__value">{{t.rentPrice}}€</span>
           {{else if t.rent_price}}
@@ -94,7 +94,7 @@
         </div>
 
         <div class="tprice">
-          <span class="tprice__label">Buy</span>
+          <span class="tprice__label">Buy only</span>
           {{#if t.price}}
             <span class="tprice__value">{{t.price}}€</span>
           {{else if t.buyPrice}}

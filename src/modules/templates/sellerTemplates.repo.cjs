@@ -31,12 +31,15 @@ function toCentsOrNull(v) {
 // ------------------------------------------------------------
 // INSERT (with optional ZIP meta)
 // ------------------------------------------------------------
+
 async function insertSellerTemplate({
   pool,
   ownerUserId,
   title,
   slug,
   shortDescription,
+  category = 'other',
+  tags = '',
   priceBuy,
   priceRent,
   status,
@@ -64,6 +67,8 @@ async function insertSellerTemplate({
         title,
         slug,
         short_description,
+        category,
+        tags,
         price_buy_cents,
         price_rent_cents,
         status,
@@ -80,9 +85,11 @@ async function insertSellerTemplate({
         $5,
         $6,
         $7,
-        $8::text,
-        $9::text,
-        CASE WHEN $8::text IS NULL THEN NULL ELSE NOW() END
+        $8,
+        $9,
+        $10,
+        $11,
+        NOW()
       )
     RETURNING
       id,
@@ -90,6 +97,8 @@ async function insertSellerTemplate({
       title,
       slug,
       short_description,
+      category,
+      tags,
       price_buy_cents,
       price_rent_cents,
       status,
@@ -106,6 +115,8 @@ async function insertSellerTemplate({
     title.trim(),
     normSlug,
     shortDescription ? String(shortDescription).trim() : null,
+    category ? String(category).trim() : 'other',
+    tags ? String(tags).trim() : '',
     price_buy_cents,
     price_rent_cents,
     finalStatus,
@@ -118,8 +129,8 @@ async function insertSellerTemplate({
     return rows[0];
   } catch (e) {
     if (e && e.code === '23505') {
-      const err = new Error('SLUG_TAKEN');
-      err.code = 'SLUG_TAKEN';
+      const err = new Error('SLUG_ALREADY_EXISTS');
+      err.code = 'SLUG_ALREADY_EXISTS';
       throw err;
     }
     throw e;
@@ -228,8 +239,11 @@ async function updateSellerTemplateByOwner({
   title,
   slug,
   shortDescription,
+  category = 'other',
+  tags = '',
   priceBuy,
   priceRent,
+  status,
   zipPath, // optional
   zipOriginalName, // optional
 }) {
@@ -245,6 +259,10 @@ async function updateSellerTemplateByOwner({
   const price_buy_cents = toCentsOrNull(priceBuy);
   const price_rent_cents = toCentsOrNull(priceRent);
 
+  const st = status && String(status).trim() ? String(status).trim() : 'draft';
+  const allowedStatuses = new Set(['draft', 'published']);
+  const finalStatus = allowedStatuses.has(st) ? st : 'draft';
+
   // If zipPath is provided (even null), update zip meta.
   // If zipPath is undefined => do not touch ZIP columns.
   const withZip = zipPath !== undefined;
@@ -256,14 +274,17 @@ async function updateSellerTemplateByOwner({
         title = $1,
         slug = $2,
         short_description = $3,
-        price_buy_cents = $4,
-        price_rent_cents = $5,
-        zip_path = $6::text,
-        zip_original_name = $7::text,
-        zip_uploaded_at = CASE WHEN $6::text IS NULL THEN NULL ELSE NOW() END,
+        category = $4,
+        tags = $5,
+        price_buy_cents = $6,
+        price_rent_cents = $7,
+        status = $8,
+        zip_path = $9::text,
+        zip_original_name = $10::text,
+        zip_uploaded_at = CASE WHEN $9::text IS NULL THEN NULL ELSE NOW() END,
         updated_at = NOW()
-      WHERE id = $8
-        AND owner_user_id = $9
+      WHERE id = $11
+        AND owner_user_id = $12
         AND deleted_at IS NULL
       RETURNING
         id,
@@ -271,6 +292,8 @@ async function updateSellerTemplateByOwner({
         title,
         slug,
         short_description,
+        category,
+        tags,
         price_buy_cents,
         price_rent_cents,
         status,
@@ -285,11 +308,14 @@ async function updateSellerTemplateByOwner({
         title = $1,
         slug = $2,
         short_description = $3,
-        price_buy_cents = $4,
-        price_rent_cents = $5,
+        category = $4,
+        tags = $5,
+        price_buy_cents = $6,
+        price_rent_cents = $7,
+        status = $8,
         updated_at = NOW()
-      WHERE id = $6
-        AND owner_user_id = $7
+      WHERE id = $9
+        AND owner_user_id = $10
         AND deleted_at IS NULL
       RETURNING
         id,
@@ -297,6 +323,8 @@ async function updateSellerTemplateByOwner({
         title,
         slug,
         short_description,
+        category,
+        tags,
         price_buy_cents,
         price_rent_cents,
         status,
@@ -311,8 +339,11 @@ async function updateSellerTemplateByOwner({
         title.trim(),
         normSlug,
         shortDescription ? String(shortDescription).trim() : null,
+        category ? String(category).trim() : 'other',
+        tags ? String(tags).trim() : '',
         price_buy_cents,
         price_rent_cents,
+        finalStatus,
         zipPath === undefined ? null : zipPath,
         zipOriginalName === undefined ? null : zipOriginalName,
         id,
@@ -322,8 +353,11 @@ async function updateSellerTemplateByOwner({
         title.trim(),
         normSlug,
         shortDescription ? String(shortDescription).trim() : null,
+        category ? String(category).trim() : 'other',
+        tags ? String(tags).trim() : '',
         price_buy_cents,
         price_rent_cents,
+        finalStatus,
         id,
         ownerUserId,
       ];

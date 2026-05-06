@@ -4,6 +4,51 @@ function toStr(v) {
   return v == null ? '' : String(v);
 }
 
+function normalizePreviewUrl(row) {
+  const slug = String(row?.slug || '').trim();
+
+  if (/^seed-\d{3}$/.test(slug)) {
+    return `/img/templates/${slug}.svg`;
+  }
+
+  const raw =
+    row?.preview_url ||
+    row?.preview_image ||
+    row?.previewUrl ||
+    row?.preview_path ||
+    row?.previewPath ||
+    '';
+
+  return String(raw || '').trim();
+}
+
+function resolveStoredTemplatePreviewUrl(row) {
+  const slug = String(row?.slug || '').trim();
+
+  const directPreview = String(
+    row?.preview_url || row?.preview_image || row?.preview_path || row?.previewUrl || '',
+  ).trim();
+
+  if (directPreview) {
+    if (directPreview.startsWith('/')) return directPreview;
+
+    const previewFile = directPreview.match(/preview\.(png|jpg|jpeg|webp|svg)$/i);
+    if (slug && previewFile) {
+      return `/t/${encodeURIComponent(slug)}/preview/preview.${previewFile[1].toLowerCase()}`;
+    }
+
+    return `/${directPreview.replace(/^\/+/, '')}`;
+  }
+
+  const zipPath = String(row?.zip_path || row?.zipPath || '').trim();
+
+  if (slug && zipPath) {
+    return `/t/${encodeURIComponent(slug)}/preview/preview.png`;
+  }
+
+  return '';
+}
+
 function centsToMoney(amountCents) {
   if (amountCents === null || amountCents === undefined) return null;
   const n = Number(amountCents);
@@ -137,8 +182,7 @@ export async function selectTemplatesForCatalog(db) {
       category: toStr(r.category || ''),
 
       // ✅ ALWAYS go through /t/<slug>/preview.png
-      previewUrl:
-        toStr(r.preview_url || r.preview_image || '').trim() || buildPreviewUrlBySlug(slug),
+      previewUrl: resolveStoredTemplatePreviewUrl(r),
       demoUrl: toStr(r.demo_url || '').trim() || `/preview/${encodeURIComponent(slug)}`,
 
       zipReady: Boolean(r.zip_path),
@@ -262,7 +306,7 @@ export async function getTemplateBySlug(db, slug) {
     category: toStr(r.category || ''),
 
     // ✅ ALWAYS go through /t/<slug>/preview.png
-    previewUrl: buildPreviewUrlBySlug(slugStr),
+    previewUrl: resolveStoredTemplatePreviewUrl(r),
 
     demoUrl: '',
 

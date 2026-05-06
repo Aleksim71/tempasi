@@ -27,14 +27,16 @@
           <div class="templates-side__title">Access</div>
 
           <div class="templates-chips templates-chips--wide">
-            <label class="chip chip--toggle">
-              <input class="chip-input" type="checkbox" name="access" value="rent" checked />
-              <span class="chip-label">Rent</span>
+            <label class="chip chip--toggle chip--access-radio">
+              <input class="chip-input chip-input--access-radio" type="radio" name="access" value="rent" />
+              <span class="chip-radio-dot" aria-hidden="true"></span>
+              <span class="chip-label">Buy + Rent</span>
             </label>
 
-            <label class="chip chip--toggle">
-              <input class="chip-input" type="checkbox" name="access" value="buy" checked />
-              <span class="chip-label">Buy</span>
+            <label class="chip chip--toggle chip--access-radio">
+              <input class="chip-input chip-input--access-radio" type="radio" name="access" value="buy" />
+              <span class="chip-radio-dot" aria-hidden="true"></span>
+              <span class="chip-label">Buy only</span>
             </label>
           </div>
         </div>
@@ -87,18 +89,11 @@
           </div>
         </div>
 
-        {{!-- Licenses --}}
+        {{!-- Selling options --}}
         <div class="templates-side__section">
-          <div class="templates-side__title">Licenses</div>
+          <div class="templates-side__title">Selling options</div>
 
           <div class="templates-chips templates-chips--grid">
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="PU" /><span class="chip-label">PU</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="CU" /><span class="chip-label">CU</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="EL" /><span class="chip-label">EL</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="SL" /><span class="chip-label">SL</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="ML" /><span class="chip-label">ML</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="EX" /><span class="chip-label">EX</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="lic" value="RF" /><span class="chip-label">RF</span></label>
           </div>
         </div>
 
