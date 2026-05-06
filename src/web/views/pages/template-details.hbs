@@ -197,7 +197,7 @@
                 {{#if cases.length}}
                   {{#each cases}}
                     <label class="template-checkbox-row">
-                      <input type="checkbox" name="case_ids" value="{{this.id}}">
+                      <input type="checkbox" name="case_ids" value="{{this.id}}" {{#if this.isSelected}}checked{{/if}}>
                       <span>{{this.title}}</span>
                     </label>
                   {{/each}}
@@ -206,7 +206,7 @@
                 {{/if}}
               </div>
 
-              <button class="btn btn-primary" type="submit" name="next" value="/cart">Rent now</button>
+              <button class="btn btn-primary" type="submit" name="next" value="/cart{{#if selectedCaseParam}}?{{selectedCaseParam}}{{/if}}">Rent now</button>
               <button class="btn btn-secondary" type="submit">Add rent to cart</button>
             </form>
 

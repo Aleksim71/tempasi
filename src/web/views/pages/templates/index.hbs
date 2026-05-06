@@ -8,6 +8,7 @@
     {{!-- SIDEBAR (ORIGINAL, DO NOT CHANGE CONTENT) --}}
     <aside class="templates-side" aria-label="Templates filters">
       <form class="templates-filters" method="get" action="/templates">
+        {{#if selectedCaseId}}<input type="hidden" name="caseId" value="{{selectedCaseId}}">{{/if}}
         {{!-- Search --}}
         <div class="templates-side__section">
           <div class="templates-side__title">Filters</div>
@@ -104,7 +105,7 @@
 
             <div class="templates-actions">
               <button type="submit" class="chip chip--primary">Apply</button>
-              <a class="chip chip--ghost" href="/templates">Reset</a>
+              <a class="chip chip--ghost" href="/templates{{#if selectedCaseParam}}?{{selectedCaseParam}}{{/if}}">Reset</a>
             </div>
           </div>
         </div>

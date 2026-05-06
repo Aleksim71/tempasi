@@ -13,7 +13,7 @@
 
 <article class="tcard" data-template-slug="{{t.slug}}">
   <div class="tcard__media">
-    <a class="tcard__thumb" href="/templates/{{t.slug}}" aria-label="Open template details">
+    <a class="tcard__thumb" href="/templates/{{t.slug}}{{#if t.selectedCaseParam}}?{{t.selectedCaseParam}}{{/if}}" aria-label="Open template details">
       <div class="template-card__no-preview" style="display:none;">Preview not available</div>
 
       <img
@@ -111,7 +111,7 @@
 
       <div class="tcard__actions" aria-label="Template actions">
         <a class="tbtn tbtn--primary" href="/preview/{{t.slug}}" target="_blank" rel="noopener">Demo</a>
-        <a class="tbtn tbtn--ghost" href="/templates/{{t.slug}}">Details</a>
+        <a class="tbtn tbtn--ghost" href="/templates/{{t.slug}}{{#if t.selectedCaseParam}}?{{t.selectedCaseParam}}{{/if}}">Details</a>
       </div>
     </footer>
   </div>

@@ -33,6 +33,62 @@ function normalizeRentDays(input) {
   return Math.min(n, 30);
 }
 
+function collectCaseIds(body = {}) {
+  const raw = [];
+  for (const key of ['case_ids', 'caseIds', 'caseId', 'case_id']) {
+    const value = body[key];
+    if (Array.isArray(value)) raw.push(...value);
+    else if (value !== undefined && value !== null) raw.push(value);
+  }
+
+  const out = [];
+  for (const value of raw) {
+    const text = String(value || '').trim();
+    if (!text) continue;
+    if (text.includes(',')) {
+      out.push(
+        ...text
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean),
+      );
+      continue;
+    }
+    out.push(text);
+  }
+
+  return [...new Set(out.map((id) => String(id || '').trim()).filter(Boolean))];
+}
+
+async function hasColumn(db, tableName, columnName) {
+  const result = await db.query(
+    `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = $1
+        AND column_name = $2
+      LIMIT 1
+    `,
+    [tableName, columnName],
+  );
+  return Boolean(result.rows?.[0]);
+}
+
+async function listOwnedCaseIds(db, userId, caseIds) {
+  if (!caseIds.length) return [];
+  const result = await db.query(
+    `
+      SELECT id
+      FROM cases
+      WHERE user_id = $1
+        AND id = ANY($2::text[])
+    `,
+    [String(userId), caseIds.map(String)],
+  );
+  return (result.rows || []).map((row) => String(row.id));
+}
+
 function formatRentDurationLabel(license) {
   const match = String(license || '').match(/^PU:(\d+)d$/i);
   const days = match ? Number.parseInt(match[1], 10) : 1;
@@ -167,6 +223,7 @@ export function createCartRouter() {
       const license = dealType === 'RENT' && rentDays ? `PU:${rentDays}d` : rawLicense;
       const licenseForValidation = rawLicense;
       const nextPath = safeNextPath(req.body?.next || `/templates/${templateSlug}`) || '/templates';
+      const caseIds = dealType === 'RENT' ? collectCaseIds(req.body || {}) : [];
 
       if (!userId) return redirectToLogin(res, nextPath);
       if (!templateSlug) return res.redirect(302, '/templates');
@@ -179,6 +236,10 @@ export function createCartRouter() {
 
       if (dealType === 'RENT' && !rentDays) {
         return res.redirect(302, `${nextPath}?cart=rent_days_required`);
+      }
+
+      if (dealType === 'RENT' && caseIds.length === 0) {
+        return res.redirect(302, `${nextPath}?cart=case_required`);
       }
 
       const db = req.app.locals?.db;
@@ -248,6 +309,15 @@ export function createCartRouter() {
         return res.redirect(302, `${nextPath}?cart=reserved`);
       }
 
+      if (dealType === 'RENT' && caseIds.length > 0) {
+        const ownedCaseIds = await listOwnedCaseIds(db, userId, caseIds);
+        const ownedSet = new Set(ownedCaseIds.map(String));
+        const missing = caseIds.filter((id) => !ownedSet.has(String(id)));
+        if (missing.length > 0) {
+          return res.redirect(302, `${nextPath}?cart=case_not_owned`);
+        }
+      }
+
       const ownedResult = await db.query(
         `
           SELECT 1
@@ -293,15 +363,39 @@ export function createCartRouter() {
         }
       }
 
-      const insertResult = await db.query(
-        `
-          INSERT INTO cart_items (user_id, template_slug, deal_type, license, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, NOW(), NOW())
-          ON CONFLICT (user_id, template_slug, deal_type, license) DO NOTHING
-          RETURNING id
-        `,
-        [userId, templateSlug, dealType, license],
-      );
+      const cartHasCaseIds = await hasColumn(db, 'cart_items', 'case_ids');
+      let insertResult;
+
+      if (cartHasCaseIds) {
+        insertResult = await db.query(
+          `
+            INSERT INTO cart_items (user_id, template_slug, deal_type, license, case_ids, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            ON CONFLICT (user_id, template_slug, deal_type, license) DO UPDATE
+              SET case_ids = EXCLUDED.case_ids,
+                  updated_at = NOW()
+            RETURNING id
+          `,
+          [
+            userId,
+            templateSlug,
+            dealType,
+            license,
+            dealType === 'RENT' && caseIds.length ? JSON.stringify(caseIds) : null,
+          ],
+        );
+      } else {
+        // Backward-compatible fallback before the migration is applied.
+        insertResult = await db.query(
+          `
+            INSERT INTO cart_items (user_id, template_slug, deal_type, license, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, NOW(), NOW())
+            ON CONFLICT (user_id, template_slug, deal_type, license) DO NOTHING
+            RETURNING id
+          `,
+          [userId, templateSlug, dealType, license],
+        );
+      }
 
       if (!insertResult.rows?.[0]) {
         return res.redirect(302, '/cart?exists=1');

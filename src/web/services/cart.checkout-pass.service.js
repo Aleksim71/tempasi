@@ -91,6 +91,39 @@ function normalizeIds(input) {
   return [...new Set(out)];
 }
 
+function normalizeCaseIdsFromDb(input) {
+  if (!input) return [];
+  const raw = Array.isArray(input)
+    ? input
+    : (() => {
+        if (typeof input === 'string') {
+          try {
+            return JSON.parse(input);
+          } catch (_) {
+            return input.split(',');
+          }
+        }
+        return [];
+      })();
+
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.map((id) => String(id || '').trim()).filter(Boolean))];
+}
+
+async function tableExists(client, tableName) {
+  const { rows } = await client.query(
+    `
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_schema = current_schema()
+        AND table_name = $1
+      LIMIT 1
+    `,
+    [tableName],
+  );
+  return Boolean(rows[0]);
+}
+
 async function buildPriceMap(client, templateSlugs) {
   const templateColumns = await getColumns(client, 'seller_templates');
   const slugColumn = pickFirst(templateColumns, ['slug']);
@@ -207,6 +240,7 @@ export async function checkoutCartPass({ req = null, userId, selectedItemIds = [
     const cartSlugColumn = pickFirst(cartColumns, ['template_slug']);
     const cartDealTypeColumn = pickFirst(cartColumns, ['deal_type']);
     const cartLicenseColumn = pickFirst(cartColumns, ['license']);
+    const cartCaseIdsColumn = pickFirst(cartColumns, ['case_ids']);
 
     if (!cartIdColumn || !cartUserIdColumn || !cartSlugColumn || !cartDealTypeColumn) {
       throw new Error('cart_items schema is missing required columns');
@@ -226,7 +260,8 @@ export async function checkoutCartPass({ req = null, userId, selectedItemIds = [
         ${cartIdColumn} AS id,
         ${cartSlugColumn} AS template_slug,
         ${cartDealTypeColumn} AS deal_type,
-        ${cartLicenseColumn ? `${cartLicenseColumn} AS license` : `NULL::text AS license`}
+        ${cartLicenseColumn ? `${cartLicenseColumn} AS license` : `NULL::text AS license`},
+        ${cartCaseIdsColumn ? `${cartCaseIdsColumn} AS case_ids` : `NULL::jsonb AS case_ids`}
       FROM cart_items
       WHERE ${whereParts.join(' AND ')}
       ORDER BY ${cartIdColumn} ASC
@@ -266,6 +301,7 @@ export async function checkoutCartPass({ req = null, userId, selectedItemIds = [
     const orderCurrencyColumn = pickFirst(orderColumns, ['currency']);
     const orderSourceColumn = pickFirst(orderColumns, ['source', 'checkout_source']);
     const orderCartItemIdColumn = pickFirst(orderColumns, ['cart_item_id']);
+    const orderCaseIdsColumn = pickFirst(orderColumns, ['case_ids']);
     const orderProviderSessionIdColumn = pickFirst(orderColumns, ['provider_session_id']);
     const orderProviderColumn = pickFirst(orderColumns, ['provider']);
     const orderIdColumn = pickFirst(orderColumns, ['id']);
@@ -331,6 +367,16 @@ export async function checkoutCartPass({ req = null, userId, selectedItemIds = [
         values.push(item.id);
       }
 
+      const caseIds =
+        String(item.deal_type || '').toUpperCase() === 'RENT'
+          ? normalizeCaseIdsFromDb(item.case_ids)
+          : [];
+
+      if (orderCaseIdsColumn) {
+        columns.push(orderCaseIdsColumn);
+        values.push(caseIds.length ? JSON.stringify(caseIds) : null);
+      }
+
       const placeholders = columns.map((_, index) => `$${index + 1}`);
       const returningClause = orderIdColumn ? ` RETURNING ${orderIdColumn} AS id` : '';
 
@@ -342,7 +388,26 @@ export async function checkoutCartPass({ req = null, userId, selectedItemIds = [
 
       const insertResult = await client.query(insertSql, values);
       if (orderIdColumn && insertResult.rows[0] && insertResult.rows[0].id != null) {
-        insertedOrderIds.push(insertResult.rows[0].id);
+        const insertedOrderId = insertResult.rows[0].id;
+        insertedOrderIds.push(insertedOrderId);
+
+        const caseIds =
+          String(item.deal_type || '').toUpperCase() === 'RENT'
+            ? normalizeCaseIdsFromDb(item.case_ids)
+            : [];
+
+        if (caseIds.length > 0 && (await tableExists(client, 'order_case_assignments'))) {
+          for (const caseId of caseIds) {
+            await client.query(
+              `
+                INSERT INTO order_case_assignments(order_id, case_id)
+                VALUES ($1, $2)
+                ON CONFLICT DO NOTHING
+              `,
+              [insertedOrderId, caseId],
+            );
+          }
+        }
       }
 
       const upperDealType = String(item.deal_type || '').toUpperCase();

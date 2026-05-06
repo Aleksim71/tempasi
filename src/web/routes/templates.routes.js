@@ -157,6 +157,25 @@ function toStr(v) {
   return v == null ? '' : String(v);
 }
 
+function normalizeCaseIdParam(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  // UUID cases are current production shape, but keep numeric test fixtures valid too.
+  if (/^[0-9a-fA-F-]{8,64}$/.test(raw) || /^[1-9][0-9]*$/.test(raw)) return raw;
+  return '';
+}
+
+function appendCaseContextToTemplates(templates, selectedCaseId) {
+  const caseId = normalizeCaseIdParam(selectedCaseId);
+  if (!caseId) return templates;
+  const caseParam = `caseId=${encodeURIComponent(caseId)}`;
+  return (templates || []).map((template) => ({
+    ...template,
+    selectedCaseId: caseId,
+    selectedCaseParam: caseParam,
+  }));
+}
+
 function toEpochMs(v) {
   if (!v) return '';
   const d = v instanceof Date ? v : new Date(v);
@@ -353,9 +372,12 @@ export function createTemplatesRouter() {
       // Some repo functions accept db; some don't.
       const rawList = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
 
+      const selectedCaseId = normalizeCaseIdParam(req.query?.caseId || req.query?.case_id);
+
       // ✅ normalize previewUrl + compat fields for cards
-      const templates = normalizeTemplateListAvailability(
-        (rawList || []).map((t) => normalizeTemplate(t)),
+      const templates = appendCaseContextToTemplates(
+        normalizeTemplateListAvailability((rawList || []).map((t) => normalizeTemplate(t))),
+        selectedCaseId,
       );
 
       res.render('pages/templates/index', {
@@ -364,6 +386,8 @@ export function createTemplatesRouter() {
         activePage: 'templates',
         styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
         templates,
+        selectedCaseId,
+        selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
       });
     } catch (err) {
       // ✅ Hard fail-safe: never 500 for catalog
@@ -543,7 +567,13 @@ export function createTemplatesRouter() {
       template.author = await loadPublicSellerProfile(db, raw.ownerUserId || raw.owner_user_id);
 
       const templateDetailsUserId = getTemplateDetailsUserId(req);
-      const templateDetailsCases = await loadUserCasesForTemplateDetails(db, templateDetailsUserId);
+      const selectedCaseId = normalizeCaseIdParam(req.query?.caseId || req.query?.case_id);
+      const templateDetailsCases = (
+        await loadUserCasesForTemplateDetails(db, templateDetailsUserId)
+      ).map((item) => ({
+        ...item,
+        isSelected: selectedCaseId && String(item.id) === String(selectedCaseId),
+      }));
 
       return res.status(200).render('pages/template-details', {
         title: `${template.title} — Tempasi`,
@@ -553,6 +583,8 @@ export function createTemplatesRouter() {
         template,
         sellerProfile: template.author,
         cases: templateDetailsCases || [],
+        selectedCaseId,
+        selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
         isAuthenticated: Boolean(templateDetailsUserId),
         isOwner: Boolean(template.isOwner),
       });
