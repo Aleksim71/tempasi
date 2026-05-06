@@ -746,12 +746,7 @@ res.render('pages/cabinet', {
       workspaceData: {
         cases: {
           tab,
-          tabs: [
-            { key: 'list', label: 'List', href: '/cabinet/cases?tab=list', isActive: tab === 'list' },
-            { key: 'create', label: 'Create', href: '/cabinet/cases?tab=create', isActive: tab === 'create' },
-            { key: 'rents', label: 'Rents', href: '/cabinet/cases?tab=rents', isActive: tab === 'rents' },
-            { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: tab === 'analytics' },
-          ],
+          tabs: getCaseTabs(tab),
           items: caseItems,
           lastCaseDeleteMessage: casesService.LAST_CASE_DELETE_MESSAGE,
           rents,
@@ -760,6 +755,145 @@ res.render('pages/cabinet', {
       },
     });
   });
+
+
+  router.get('/cases/:id', async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getOwnedCase(userId, caseId, pool);
+
+      if (!selectedCase) {
+        return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
+      }
+
+      const rows = await casesService.listCaseTemplates(userId, caseId, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+
+      for (const item of templates) {
+        const availableCases = await casesService.listAvailableCasesForOrder(userId, item.orderId, pool);
+        item.availableCases = (availableCases || []).map((row) => ({
+          id: row.id,
+          title: row.title || `Case ${row.id}`,
+        }));
+      }
+    } catch (err) {
+      console.error('[cabinet] cases/:id view error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: 'Case View',
+      pageSubtitle: 'Internal view of selected templates.',
+      panelTitle: 'Case View',
+      panelText: '',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          tab: 'view',
+          tabs: getCaseTabs(''),
+          selectedCase,
+          templates,
+        },
+      },
+    });
+  });
+
+  router.get('/cases/:id/preview', async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getOwnedCase(userId, caseId, pool);
+
+      if (!selectedCase) {
+        return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
+      }
+
+      const rows = await casesService.listCaseTemplates(userId, caseId, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+    } catch (err) {
+      console.error('[cabinet] cases/:id/preview error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: 'Case Preview',
+      pageSubtitle: 'Presentation preview for the selected client case.',
+      panelTitle: 'Case Preview',
+      panelText: '',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          tab: 'preview',
+          tabs: getCaseTabs(''),
+          selectedCase,
+          templates,
+        },
+      },
+    });
+  });
+
+  router.post('/cases/:id/clear', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    try {
+      await casesService.clearCase(userId, caseId, pool);
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      console.error('[cabinet] cases/:id/clear error:', err);
+      return res.redirect('/cabinet/cases?tab=list&error=case_clear_failed');
+    }
+  });
+
+  router.post('/cases/:caseId/templates/:orderId/exclude', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.caseId || '').trim();
+    const orderId = Number(req.params.orderId);
+
+    try {
+      await rentAssignmentsService.removeAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(caseId)}`);
+    } catch (err) {
+      console.error('[cabinet] cases/:caseId/templates/:orderId/exclude error:', err);
+      const code = err && err.code ? String(err.code) : 'template_exclude_failed';
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(caseId)}?error=${encodeURIComponent(code)}`);
+    }
+  });
+
+  router.post('/cases/:caseId/templates/:orderId/copy', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const currentCaseId = String(req.params.caseId || '').trim();
+    const orderId = Number(req.params.orderId);
+    const targetCaseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.addAssignment({ userId, orderId, caseId: targetCaseId }, pool);
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(currentCaseId)}`);
+    } catch (err) {
+      console.error('[cabinet] cases/:caseId/templates/:orderId/copy error:', err);
+      const code = err && err.code ? String(err.code) : 'template_copy_failed';
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(currentCaseId)}?error=${encodeURIComponent(code)}`);
+    }
+  });
+
 
   router.post('/cases', express.urlencoded({ extended: false }), async (req, res, next) => {
     try {
@@ -1123,6 +1257,43 @@ function formatCaseRentTimeLeft(value) {
   if (hours > 0) return `${hours}h ${minutes}m left`;
   return `${minutes}m left`;
 }
+
+function getCaseTabs(activeKey) {
+  return [
+    { key: 'list', label: 'List', href: '/cabinet/cases?tab=list', isActive: activeKey === 'list' },
+    { key: 'create', label: 'Create', href: '/cabinet/cases?tab=create', isActive: activeKey === 'create' },
+    { key: 'rents', label: 'Rents', href: '/cabinet/cases?tab=rents', isActive: activeKey === 'rents' },
+    { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: activeKey === 'analytics' },
+  ];
+}
+
+function normalizeCaseTemplateRow(row) {
+  const slug = String(row.template_slug || '').trim();
+  const endsAt = row.ends_at || null;
+  const casesCount = Number(row.cases_count || 0);
+
+  return {
+    orderId: row.order_id,
+    entitlementId: row.entitlement_id,
+    templateId: row.template_id,
+    slug,
+    title: row.title || slug || 'Untitled template',
+    shortDescription: row.short_description || 'No description added yet.',
+    category: row.category || 'other',
+    tags: row.tags || '',
+    startsAt: row.starts_at || null,
+    endsAt,
+    endsAtLabel: formatCaseRentDateTime(endsAt),
+    timeLeftLabel: formatCaseRentTimeLeft(endsAt),
+    casesCount,
+    canExclude: casesCount > 1,
+    detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
+    liveDemoUrl: slug ? `/templates/${encodeURIComponent(slug)}/demo` : '/templates',
+    previewUrl: slug ? `/t/${encodeURIComponent(slug)}/preview/preview.png` : '',
+    availableCases: [],
+  };
+}
+
 
 function normalizeCaseRentRow(row) {
   const source = String(row.source || row.hold_source || row.reservation_source || 'rent').toLowerCase();

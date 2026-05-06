@@ -27,15 +27,19 @@
               <div class="cases-card__main">
                 <div class="cases-card__title">{{title}}</div>
                 <div class="cases-card__meta">
-                  <span>Status: {{status}}</span>
                   <span>Templates: {{templatesCount}}</span>
                 </div>
               </div>
               <div class="cases-card__actions">
-                <a class="button" href="/cabinet/cases/{{id}}">Open</a>
-                <a class="button button--ghost" href="/cabinet/cases/{{id}}">Demo</a>
-                <button class="button button--ghost" type="button">Clear</button>
-                <button class="button button--ghost" type="button">Close</button>
+                <a class="button" href="/cabinet/cases/{{id}}">View</a>
+                <a class="button button--ghost" href="/cabinet/cases/{{id}}/preview">Preview</a>
+                <a class="button button--ghost" href="/templates?caseId={{id}}">Add templates</a>
+                <form method="post" action="/cabinet/cases/{{id}}/clear">
+                  <button class="button button--ghost" type="submit">Clear</button>
+                </form>
+                <form method="post" action="/cabinet/cases/{{id}}/delete">
+                  <button class="button button--ghost" type="submit">Delete</button>
+                </form>
               </div>
             </article>
           {{/each}}
@@ -49,6 +53,110 @@
       {{/if}}
     </div>
   {{/if}}
+
+
+  {{!-- VIEW --}}
+  {{#if (eq workspaceData.cases.tab "view")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">{{workspaceData.cases.selectedCase.title}}</h3>
+        <p class="cases-panel__text">Internal case view. Review the selected templates and manage presentation placement.</p>
+      </div>
+
+      {{#if workspaceData.cases.templates.length}}
+        <div class="cases-list">
+          {{#each workspaceData.cases.templates}}
+            <article class="cases-card">
+              <div class="cases-card__main">
+                {{#if previewUrl}}
+                  <img class="cases-template-preview" src="{{previewUrl}}" alt="{{title}} preview" loading="lazy" />
+                {{/if}}
+                <div class="cases-card__title">{{title}}</div>
+                <p class="cases-panel__text">{{shortDescription}}</p>
+                <div class="cases-card__meta">
+                  <span>Reserved until: {{endsAtLabel}}</span>
+                  <span>Time left: {{timeLeftLabel}}</span>
+                  <span>Cases: {{casesCount}}</span>
+                </div>
+              </div>
+
+              <div class="cases-card__actions">
+                <a class="button" href="{{detailsUrl}}">Details</a>
+                <a class="button button--ghost" href="{{liveDemoUrl}}">Live Demo</a>
+
+                {{#if canExclude}}
+                  <form method="post" action="/cabinet/cases/{{../workspaceData.cases.selectedCase.id}}/templates/{{orderId}}/exclude">
+                    <button class="button button--ghost" type="submit">Exclude</button>
+                  </form>
+                {{else}}
+                  <button class="button button--ghost" type="button" disabled>Exclude</button>
+                {{/if}}
+
+                {{#if availableCases.length}}
+                  <form method="post" action="/cabinet/cases/{{../workspaceData.cases.selectedCase.id}}/templates/{{orderId}}/copy">
+                    <select class="input" name="caseId" aria-label="Copy to case">
+                      {{#each availableCases}}
+                        <option value="{{id}}">{{title}}</option>
+                      {{/each}}
+                    </select>
+                    <button class="button button--ghost" type="submit">Copy to case</button>
+                  </form>
+                {{else}}
+                  <button class="button button--ghost" type="button" disabled>Copy to case</button>
+                {{/if}}
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="cases-empty">
+          <div class="cases-empty__title">No templates in this case yet</div>
+          <div class="cases-empty__text">Add rented templates from the catalog to prepare a client presentation.</div>
+          <a class="button button--primary" href="/templates?caseId={{workspaceData.cases.selectedCase.id}}">Browse templates</a>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{!-- PREVIEW --}}
+  {{#if (eq workspaceData.cases.tab "preview")}}
+    <div class="cases-panel">
+      <div class="cases-panel__header">
+        <h3 class="cases-panel__title">{{workspaceData.cases.selectedCase.title}}</h3>
+        <p class="cases-panel__text">Presentation preview. Show the selected website concepts with large previews and live demos.</p>
+      </div>
+
+      {{#if workspaceData.cases.templates.length}}
+        <div class="cases-list cases-list--preview">
+          {{#each workspaceData.cases.templates}}
+            <article class="cases-card cases-card--preview">
+              <div class="cases-card__main">
+                {{#if previewUrl}}
+                  <img class="cases-template-preview cases-template-preview--large" src="{{previewUrl}}" alt="{{title}} preview" loading="lazy" />
+                {{/if}}
+                <div class="cases-card__title">{{title}}</div>
+                <p class="cases-panel__text">{{shortDescription}}</p>
+                <div class="cases-card__meta">
+                  <span>Selected concept</span>
+                  <span>{{category}}</span>
+                </div>
+              </div>
+              <div class="cases-card__actions">
+                <a class="button" href="{{detailsUrl}}">View details</a>
+                <a class="button button--ghost" href="{{liveDemoUrl}}">Live demo</a>
+              </div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="cases-empty">
+          <div class="cases-empty__title">No templates to preview yet</div>
+          <div class="cases-empty__text">Add templates to this case before opening the presentation preview.</div>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
 
   {{!-- CREATE --}}
   {{#if (eq workspaceData.cases.tab "create")}}

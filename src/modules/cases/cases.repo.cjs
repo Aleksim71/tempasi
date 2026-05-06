@@ -236,10 +236,149 @@ async function removeTemplate(caseId, templateId, db) {
   );
 }
 
+async function getOwnedCaseById({ ownerUserId, caseId }, db) {
+  const pool = pickDb(db);
+  const schema = await getCasesSchema(pool);
+  const ownerValue = ownerValueForSchema(ownerUserId, schema);
+
+  const clientNameSelect = schema.hasClientName ? 'c.client_name' : 'NULL::text AS client_name';
+  const noteSelect = schema.noteColumn ? `c.${schema.noteColumn} AS note` : 'NULL::text AS note';
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      c.id,
+      c.title,
+      ${clientNameSelect},
+      ${noteSelect},
+      c.created_at,
+      c.updated_at
+    FROM cases c
+    WHERE c.${schema.ownerColumn} = $1
+      AND c.id::text = $2::text
+    LIMIT 1
+    `,
+    [ownerValue, String(caseId)]
+  );
+
+  return rows[0] || null;
+}
+
+async function listCaseTemplates({ ownerUserId, caseId }, db) {
+  const pool = pickDb(db);
+  const ownedCase = await getOwnedCaseById({ ownerUserId, caseId }, pool);
+  if (!ownedCase) return [];
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      o.id AS order_id,
+      o.template_slug,
+      o.deal_type,
+      o.status AS order_status,
+      e.id AS entitlement_id,
+      e.starts_at,
+      e.ends_at,
+      COALESCE(st.id::text, o.template_slug) AS template_id,
+      COALESCE(st.title, o.template_slug) AS title,
+      COALESCE(st.short_description, '') AS short_description,
+      COALESCE(st.category, 'other') AS category,
+      COALESCE(st.tags::text, '') AS tags,
+      COUNT(oca_all.case_id)::int AS cases_count
+    FROM public.order_case_assignments oca
+    JOIN public.orders o
+      ON o.id = oca.order_id
+    JOIN public.entitlements e
+      ON e.order_id = o.id
+    LEFT JOIN public.seller_templates st
+      ON st.slug = o.template_slug
+    LEFT JOIN public.order_case_assignments oca_all
+      ON oca_all.order_id = o.id
+    WHERE oca.case_id::text = $2::text
+      AND o.user_id::text = $1::text
+      AND UPPER(COALESCE(o.deal_type, e.deal_type, e.kind, '')) = 'RENT'
+      AND LOWER(COALESCE(o.status, '')) = 'paid'
+      AND e.closed_at IS NULL
+      AND (e.ends_at IS NULL OR e.ends_at > NOW())
+    GROUP BY o.id, e.id, st.id, st.title, st.short_description, st.category, st.tags
+    ORDER BY e.ends_at ASC NULLS LAST, o.created_at DESC, o.id DESC
+    `,
+    [String(ownerUserId), String(caseId)]
+  );
+
+  return rows || [];
+}
+
+async function listAvailableCasesForOrder({ ownerUserId, orderId }, db) {
+  const pool = pickDb(db);
+  const schema = await getCasesSchema(pool);
+  const ownerValue = ownerValueForSchema(ownerUserId, schema);
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      c.id,
+      c.title
+    FROM cases c
+    WHERE c.${schema.ownerColumn} = $1
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.order_case_assignments oca
+        WHERE oca.order_id = $2
+          AND oca.case_id::text = c.id::text
+      )
+    ORDER BY c.updated_at DESC, c.created_at DESC
+    `,
+    [ownerValue, Number(orderId)]
+  );
+
+  return rows || [];
+}
+
+async function clearOwnedCaseAssignments({ ownerUserId, caseId }, db) {
+  const pool = pickDb(db);
+  const ownedCase = await getOwnedCaseById({ ownerUserId, caseId }, pool);
+  if (!ownedCase) return { deletedCount: 0, keptCount: 0 };
+
+  const deleted = await pool.query(
+    `
+    DELETE FROM public.order_case_assignments oca
+    WHERE oca.case_id::text = $1::text
+      AND EXISTS (
+        SELECT 1
+        FROM public.order_case_assignments other_oca
+        WHERE other_oca.order_id = oca.order_id
+          AND other_oca.case_id::text <> $1::text
+      )
+    RETURNING *
+    `,
+    [String(caseId)]
+  );
+
+  const remaining = await pool.query(
+    `
+    SELECT COUNT(*)::int AS count
+    FROM public.order_case_assignments
+    WHERE case_id::text = $1::text
+    `,
+    [String(caseId)]
+  );
+
+  return {
+    deletedCount: Number(deleted.rowCount || 0),
+    keptCount: Number(remaining.rows?.[0]?.count || 0),
+  };
+}
+
+
 module.exports = {
   listByOwner,
   countByOwner,
   listOwnedCaseIds,
+  getOwnedCaseById,
+  listCaseTemplates,
+  listAvailableCasesForOrder,
+  clearOwnedCaseAssignments,
   createCase,
   ensureDefaultCase,
   deleteOwnedCase,

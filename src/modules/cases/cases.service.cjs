@@ -31,6 +31,23 @@ async function listOwnedCaseIds(userId, caseIds, db) {
   return repo.listOwnedCaseIds(userId, caseIds, db);
 }
 
+async function getOwnedCase(userId, caseId, db) {
+  return repo.getOwnedCaseById({ ownerUserId: userId, caseId }, db);
+}
+
+async function listCaseTemplates(userId, caseId, db) {
+  return repo.listCaseTemplates({ ownerUserId: userId, caseId }, db);
+}
+
+async function listAvailableCasesForOrder(userId, orderId, db) {
+  return repo.listAvailableCasesForOrder({ ownerUserId: userId, orderId }, db);
+}
+
+async function clearCase(userId, caseId, db) {
+  return repo.clearOwnedCaseAssignments({ ownerUserId: userId, caseId }, db);
+}
+
+
 async function deleteCase(userId, caseId, db) {
   return repo.deleteOwnedCase({ ownerUserId: userId, caseId }, db);
 }
@@ -41,5 +58,9 @@ module.exports = {
   create,
   ensureDefaultCaseForUser,
   listOwnedCaseIds,
+  getOwnedCase,
+  listCaseTemplates,
+  listAvailableCasesForOrder,
+  clearCase,
   deleteCase,
 };
