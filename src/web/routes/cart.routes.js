@@ -81,8 +81,8 @@ async function listOwnedCaseIds(db, userId, caseIds) {
     `
       SELECT id
       FROM cases
-      WHERE user_id = $1
-        AND id = ANY($2::text[])
+      WHERE user_id::text = $1::text
+        AND id::text = ANY($2::text[])
     `,
     [String(userId), caseIds.map(String)],
   );
@@ -144,7 +144,7 @@ async function loadCartItems(db, userId) {
       FROM cart_items ci
       LEFT JOIN seller_templates st
         ON st.slug = ci.template_slug
-      WHERE ci.user_id = $1
+      WHERE ci.user_id::text = $1::text
       ORDER BY ci.created_at DESC, ci.id DESC
     `,
     [userId],
@@ -171,6 +171,298 @@ async function loadCartItems(db, userId) {
       detailsHref: `/templates/${encodeURIComponent(row.template_slug || '')}`,
     };
   });
+}
+
+function demoCheckoutEnabled() {
+  return process.env.NODE_ENV !== 'production' || process.env.TEMPASI_ENABLE_DEMO_CHECKOUT === '1';
+}
+
+async function getTableColumns(db, tableName) {
+  const { rows } = await db.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = $1
+      ORDER BY ordinal_position
+    `,
+    [tableName],
+  );
+
+  return new Set((rows || []).map((row) => row.column_name));
+}
+
+function pickColumn(columns, names) {
+  for (const name of names) {
+    if (columns.has(name)) return name;
+  }
+  return null;
+}
+
+function normalizeCaseIdsFromCart(value) {
+  if (!value) return [];
+
+  let parsed = value;
+
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch (_) {
+      parsed = value;
+    }
+  }
+
+  const raw = Array.isArray(parsed) ? parsed : [parsed];
+
+  return [...new Set(raw.map((item) => String(item || '').trim()).filter(Boolean))];
+}
+
+function parseRentDaysFromLicense(license) {
+  const match = String(license || '').match(/^PU:([1-9][0-9]*)d$/i);
+  if (!match) return 1;
+  const days = Number.parseInt(match[1], 10);
+  return Number.isFinite(days) && days > 0 ? Math.min(days, 30) : 1;
+}
+
+async function demoCompleteCartCheckout(db, userId) {
+  const cartColumns = await getTableColumns(db, 'cart_items');
+  const orderColumns = await getTableColumns(db, 'orders');
+  const entitlementColumns = await getTableColumns(db, 'entitlements');
+  const assignmentColumns = await getTableColumns(db, 'order_case_assignments');
+
+  const hasAssignmentsTable = assignmentColumns.size > 0;
+
+  const cartCaseIdsColumn = pickColumn(cartColumns, ['case_ids']);
+  const orderIdColumn = pickColumn(orderColumns, ['id']);
+  const orderUserIdColumn = pickColumn(orderColumns, [
+    'user_id',
+    'buyer_user_id',
+    'customer_user_id',
+  ]);
+  const orderSlugColumn = pickColumn(orderColumns, ['template_slug']);
+  const orderDealTypeColumn = pickColumn(orderColumns, ['deal_type']);
+  const orderLicenseColumn = pickColumn(orderColumns, ['license']);
+  const orderStatusColumn = pickColumn(orderColumns, ['status']);
+  const orderAmountColumn = pickColumn(orderColumns, [
+    'amount_cents',
+    'price_cents',
+    'total_cents',
+  ]);
+  const orderCurrencyColumn = pickColumn(orderColumns, ['currency']);
+  const orderProviderColumn = pickColumn(orderColumns, ['provider']);
+  const orderProviderSessionIdColumn = pickColumn(orderColumns, ['provider_session_id']);
+  const orderCaseIdsColumn = pickColumn(orderColumns, ['case_ids']);
+  const orderCreatedAtColumn = pickColumn(orderColumns, ['created_at']);
+  const orderUpdatedAtColumn = pickColumn(orderColumns, ['updated_at']);
+
+  if (!orderIdColumn || !orderUserIdColumn || !orderSlugColumn || !orderDealTypeColumn) {
+    throw new Error('DEMO_CHECKOUT_ORDERS_SCHEMA_MISSING_REQUIRED_COLUMNS');
+  }
+
+  const entitlementUserIdColumn = pickColumn(entitlementColumns, ['user_id']);
+  const entitlementSlugColumn = pickColumn(entitlementColumns, ['template_slug']);
+  const entitlementDealTypeColumn = pickColumn(entitlementColumns, ['deal_type', 'kind']);
+  const entitlementKindColumn = pickColumn(entitlementColumns, ['kind']);
+  const entitlementStartsAtColumn = pickColumn(entitlementColumns, ['starts_at']);
+  const entitlementEndsAtColumn = pickColumn(entitlementColumns, ['ends_at']);
+  const entitlementOrderIdColumn = pickColumn(entitlementColumns, ['order_id']);
+  const entitlementCreatedAtColumn = pickColumn(entitlementColumns, ['created_at']);
+  const entitlementUpdatedAtColumn = pickColumn(entitlementColumns, ['updated_at']);
+
+  const { rows: items } = await db.query(
+    `
+      SELECT
+        ci.id,
+        ci.user_id,
+        ci.template_slug,
+        ci.deal_type,
+        ci.license,
+        ${cartCaseIdsColumn ? `ci.${cartCaseIdsColumn}` : `NULL::jsonb`} AS case_ids,
+        COALESCE(st.price_buy_cents, 0) AS price_buy_cents,
+        COALESCE(st.price_rent_cents, 0) AS price_rent_cents
+      FROM cart_items ci
+      LEFT JOIN seller_templates st
+        ON st.slug = ci.template_slug
+      WHERE ci.user_id::text = $1::text
+      ORDER BY ci.created_at ASC, ci.id ASC
+      FOR UPDATE OF ci
+    `,
+    [String(userId)],
+  );
+
+  if (!items.length) {
+    const error = new Error('DEMO_CHECKOUT_CART_EMPTY');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const createdOrderIds = [];
+  const allCaseIds = [];
+
+  for (const item of items) {
+    const dealType = String(item.deal_type || 'BUY').toUpperCase();
+    const caseIds = dealType === 'RENT' ? normalizeCaseIdsFromCart(item.case_ids) : [];
+
+    for (const caseId of caseIds) {
+      if (!allCaseIds.includes(caseId)) allCaseIds.push(caseId);
+    }
+
+    const amountCents =
+      dealType === 'RENT'
+        ? Number(item.price_rent_cents || 0) * parseRentDaysFromLicense(item.license)
+        : Number(item.price_buy_cents || 0);
+
+    const columns = [orderUserIdColumn, orderSlugColumn, orderDealTypeColumn];
+    const values = [String(userId), item.template_slug, dealType];
+
+    if (orderLicenseColumn) {
+      columns.push(orderLicenseColumn);
+      // orders_license_check does not accept MVP rent duration values like PU:2d.
+      // Keep rent duration in cart-derived calculation/entitlement, but store canonical order license.
+      values.push('PU');
+    }
+
+    if (orderStatusColumn) {
+      columns.push(orderStatusColumn);
+      values.push('paid');
+    }
+
+    if (orderAmountColumn) {
+      columns.push(orderAmountColumn);
+      values.push(amountCents);
+    }
+
+    if (orderCurrencyColumn) {
+      columns.push(orderCurrencyColumn);
+      values.push('EUR');
+    }
+
+    if (orderProviderColumn) {
+      columns.push(orderProviderColumn);
+      values.push('demo');
+    }
+
+    if (orderProviderSessionIdColumn) {
+      columns.push(orderProviderSessionIdColumn);
+      values.push(`demo_${Date.now()}_${item.id}`);
+    }
+
+    if (orderCaseIdsColumn) {
+      columns.push(orderCaseIdsColumn);
+      values.push(caseIds.length ? JSON.stringify(caseIds) : null);
+    }
+
+    if (orderCreatedAtColumn) {
+      columns.push(orderCreatedAtColumn);
+      values.push(new Date());
+    }
+
+    if (orderUpdatedAtColumn) {
+      columns.push(orderUpdatedAtColumn);
+      values.push(new Date());
+    }
+
+    const placeholders = columns.map((_, index) => `$${index + 1}`);
+    const orderResult = await db.query(
+      `
+        INSERT INTO orders (${columns.join(', ')})
+        VALUES (${placeholders.join(', ')})
+        RETURNING ${orderIdColumn} AS id
+      `,
+      values,
+    );
+
+    const orderId = orderResult.rows?.[0]?.id;
+    if (!orderId) {
+      throw new Error('DEMO_CHECKOUT_ORDER_NOT_CREATED');
+    }
+
+    createdOrderIds.push(orderId);
+
+    if (
+      dealType === 'RENT' &&
+      entitlementUserIdColumn &&
+      entitlementSlugColumn &&
+      entitlementDealTypeColumn
+    ) {
+      const days = parseRentDaysFromLicense(item.license);
+      const entitlementInsertColumns = [
+        entitlementUserIdColumn,
+        entitlementSlugColumn,
+        entitlementDealTypeColumn,
+      ];
+      const entitlementValues = [String(userId), item.template_slug, 'RENT'];
+
+      if (entitlementKindColumn && entitlementKindColumn !== entitlementDealTypeColumn) {
+        entitlementInsertColumns.push(entitlementKindColumn);
+        // entitlements.kind check allows lowercase values: buy/rent.
+        entitlementValues.push('rent');
+      }
+
+      if (entitlementStartsAtColumn) {
+        entitlementInsertColumns.push(entitlementStartsAtColumn);
+        entitlementValues.push(new Date());
+      }
+
+      if (entitlementEndsAtColumn) {
+        entitlementInsertColumns.push(entitlementEndsAtColumn);
+        entitlementValues.push(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+      }
+
+      if (entitlementOrderIdColumn) {
+        entitlementInsertColumns.push(entitlementOrderIdColumn);
+        entitlementValues.push(orderId);
+      }
+
+      if (entitlementCreatedAtColumn) {
+        entitlementInsertColumns.push(entitlementCreatedAtColumn);
+        entitlementValues.push(new Date());
+      }
+
+      if (entitlementUpdatedAtColumn) {
+        entitlementInsertColumns.push(entitlementUpdatedAtColumn);
+        entitlementValues.push(new Date());
+      }
+
+      const entitlementPlaceholders = entitlementInsertColumns.map((_, index) => `$${index + 1}`);
+      await db.query(
+        `
+          INSERT INTO entitlements (${entitlementInsertColumns.join(', ')})
+          VALUES (${entitlementPlaceholders.join(', ')})
+        `,
+        entitlementValues,
+      );
+    }
+
+    if (hasAssignmentsTable && caseIds.length > 0) {
+      for (const caseId of caseIds) {
+        await db.query(
+          `
+            INSERT INTO order_case_assignments(order_id, case_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+          `,
+          [orderId, caseId],
+        );
+      }
+    }
+  }
+
+  await db.query(
+    `
+      DELETE FROM cart_items
+      WHERE user_id::text = $1::text
+    `,
+    [String(userId)],
+  );
+
+  return {
+    orderIds: createdOrderIds,
+    caseIds: allCaseIds,
+    redirectTo: allCaseIds[0]
+      ? `/cabinet/cases/${encodeURIComponent(allCaseIds[0])}`
+      : '/cart?demo_checkout=done',
+  };
 }
 
 export function createCartRouter() {
@@ -322,7 +614,7 @@ export function createCartRouter() {
         `
           SELECT 1
           FROM entitlements
-          WHERE user_id = $1
+          WHERE user_id::text = $1::text
             AND template_slug = $2
             AND UPPER(COALESCE(deal_type, 'BUY')) = 'BUY'
           LIMIT 1
@@ -337,7 +629,7 @@ export function createCartRouter() {
         await db.query(
           `
             DELETE FROM cart_items
-            WHERE user_id = $1
+            WHERE user_id::text = $1::text
               AND template_slug = $2
               AND UPPER(deal_type) = 'RENT'
           `,
@@ -350,7 +642,7 @@ export function createCartRouter() {
           `
             SELECT 1
             FROM cart_items
-            WHERE user_id = $1
+            WHERE user_id::text = $1::text
               AND template_slug = $2
               AND UPPER(deal_type) = 'BUY'
             LIMIT 1
@@ -407,6 +699,32 @@ export function createCartRouter() {
     }
   });
 
+  router.post('/demo-checkout', async (req, res, next) => {
+    try {
+      if (!demoCheckoutEnabled()) return res.status(404).send('Not found');
+
+      const userId = getUserId(req);
+      if (!userId) return redirectToLogin(res, '/cart');
+
+      const db = req.app.locals?.db;
+      if (!db || typeof db.query !== 'function') {
+        throw new Error('DB_NOT_CONFIGURED');
+      }
+
+      await db.query('BEGIN');
+      try {
+        const result = await demoCompleteCartCheckout(db, userId);
+        await db.query('COMMIT');
+        return res.redirect(302, result.redirectTo);
+      } catch (err) {
+        await db.query('ROLLBACK');
+        throw err;
+      }
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.post('/remove', async (req, res, next) => {
     try {
       const userId = getUserId(req);
@@ -426,7 +744,7 @@ export function createCartRouter() {
         `
           DELETE FROM cart_items
           WHERE id = $1
-            AND user_id = $2
+            AND user_id::text = $2::text
         `,
         [itemId, userId],
       );

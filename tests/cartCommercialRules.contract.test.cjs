@@ -27,7 +27,7 @@ describe('cart commercial business rules contract', () => {
     const source = read('src/web/routes/cart.routes.js');
     const flat = compact(source);
 
-    expect(flat).toContain("DELETE FROM cart_items WHERE user_id = $1 AND template_slug = $2 AND UPPER(deal_type) = 'RENT'");
+    expect(flat).toContain("DELETE FROM cart_items WHERE user_id::text = $1::text AND template_slug = $2 AND UPPER(deal_type) = 'RENT'");
     expect(source).toContain("cart=buy_already_in_cart");
     expect(source).toContain("dealType === 'BUY'");
     expect(source).toContain("dealType === 'RENT'");

@@ -186,6 +186,9 @@
             <form method="post" action="/cart/add" class="template-rent-form">
               <input type="hidden" name="template_slug" value="{{template.slug}}">
               <input type="hidden" name="deal_type" value="RENT">
+              {{#if selectedCaseId}}
+                <input type="hidden" name="caseId" value="{{selectedCaseId}}">
+              {{/if}}
               <input type="hidden" name="license" value="PU">
 
               <label class="template-field-label" for="rent_days">Days</label>

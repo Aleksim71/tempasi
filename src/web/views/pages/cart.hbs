@@ -62,8 +62,11 @@
               <span>Subtotal</span>
               <strong>€{{cart.subtotalEur}}</strong>
             </div>
+            <form method="post" action="/cart/demo-checkout" class="cart-summary__checkout">
+              <button type="submit" class="btn primary">Complete demo checkout</button>
+            </form>
             <div class="cart-summary__hint">
-              Cart checkout will be added in the next cycle.
+              Demo checkout marks the current cart as paid and is available only outside production.
             </div>
           </div>
         </div>
