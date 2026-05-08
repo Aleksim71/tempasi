@@ -31,17 +31,17 @@
                 </div>
               </div>
               <div class="cases-card__actions">
-                <a class="button" href="/cabinet/cases/{{id}}">View</a>
-                <a class="button button--ghost" href="/cabinet/cases/{{id}}/preview">Preview</a>
+                <a class="button tp-sub-tab" href="/cabinet/cases/{{id}}">View</a>
+                <a class="button button--ghost tp-sub-tab" href="/cabinet/cases/{{id}}/preview">Preview</a>
                 {{#if publicPreviewUrl}}
-                  <a class="button button--ghost" href="{{publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
+                  <a class="button button--ghost tp-sub-tab" href="{{publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
                 {{/if}}
-                <a class="button button--ghost" href="/templates?caseId={{id}}">Add templates</a>
+                <a class="button button--ghost tp-sub-tab" href="/templates?caseId={{id}}">Add templates</a>
                 <form method="post" action="/cabinet/cases/{{id}}/clear">
-                  <button class="button button--ghost" type="submit">Clear</button>
+                  <button class="button button--ghost tp-action-btn tp-action-secondary" type="submit">Clear</button>
                 </form>
                 <form method="post" action="/cabinet/cases/{{id}}/delete">
-                  <button class="button button--ghost" type="submit">Delete</button>
+                  <button class="button button--ghost tp-action-btn tp-action-danger" type="submit">Delete</button>
                 </form>
               </div>
             </article>

@@ -1,0 +1,170 @@
+/* public/css/components/ui-controls-contract.css */
+/* Tempasi UI Controls Contract: main tabs, sub-tabs, and action buttons. */
+
+:root {
+  --tp-control-radius: 22px;
+  --tp-control-border-width: 1px;
+  --tp-control-height: 44px;
+  --tp-control-padding-x: 18px;
+  --tp-control-gap: 8px;
+
+  --tp-control-bg: rgba(13, 18, 23, 0.88);
+  --tp-control-bg-hover: rgba(19, 25, 31, 0.96);
+  --tp-control-text: #f4f1e8;
+  --tp-control-muted: #b9c0ca;
+
+  --tp-main-tab-border: rgba(214, 177, 83, 0.78);
+  --tp-main-tab-border-active: rgba(244, 207, 111, 0.98);
+  --tp-main-tab-glow: rgba(214, 177, 83, 0.18);
+
+  --tp-sub-tab-border: rgba(103, 187, 139, 0.74);
+  --tp-sub-tab-border-active: rgba(128, 219, 166, 0.98);
+  --tp-sub-tab-glow: rgba(103, 187, 139, 0.15);
+
+  --tp-danger-border: rgba(231, 111, 111, 0.72);
+  --tp-danger-bg: rgba(70, 31, 31, 0.82);
+  --tp-danger-bg-hover: rgba(91, 37, 37, 0.95);
+}
+
+.tp-control-row,
+.tp-main-tabs,
+.tp-sub-tabs,
+.case-tabs,
+.case-actions,
+.case-card-actions,
+.case-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tp-control-gap);
+}
+
+.tp-main-tab,
+.tp-sub-tab,
+.tp-action-btn {
+  min-height: var(--tp-control-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 var(--tp-control-padding-x);
+  border-radius: var(--tp-control-radius);
+  border-width: var(--tp-control-border-width);
+  border-style: solid;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.tp-main-tab {
+  color: var(--tp-control-text);
+  background: var(--tp-control-bg);
+  border-color: var(--tp-main-tab-border);
+}
+
+.tp-main-tab:hover,
+.tp-main-tab:focus-visible,
+.tp-main-tab.is-active,
+.tp-main-tab[aria-current='page'],
+.tp-main-tab[aria-selected='true'] {
+  color: var(--tp-control-text);
+  background: var(--tp-control-bg-hover);
+  border-color: var(--tp-main-tab-border-active);
+  box-shadow:
+    0 0 0 1px var(--tp-main-tab-glow),
+    0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.tp-sub-tab {
+  min-height: 38px;
+  padding-inline: 14px;
+  color: var(--tp-control-text);
+  background: var(--tp-control-bg);
+  border-color: var(--tp-sub-tab-border);
+}
+
+.tp-sub-tab:hover,
+.tp-sub-tab:focus-visible,
+.tp-sub-tab.is-active,
+.tp-sub-tab[aria-current='page'],
+.tp-sub-tab[aria-selected='true'] {
+  color: var(--tp-control-text);
+  background: var(--tp-control-bg-hover);
+  border-color: var(--tp-sub-tab-border-active);
+  box-shadow:
+    0 0 0 1px var(--tp-sub-tab-glow),
+    0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+.tp-action-btn {
+  cursor: pointer;
+  min-height: 38px;
+  padding-inline: 16px;
+  color: #11150f;
+  background: #d6b153;
+  border-color: #d6b153;
+  font-weight: 700;
+}
+
+.tp-action-btn:hover,
+.tp-action-btn:focus-visible {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.tp-action-positive {
+  background: #67bb8b;
+  border-color: #67bb8b;
+  color: #0d140f;
+}
+
+.tp-action-secondary {
+  color: var(--tp-control-text);
+  background: rgba(26, 31, 38, 0.96);
+  border-color: rgba(244, 241, 232, 0.22);
+  font-weight: 650;
+}
+
+.tp-action-secondary:hover,
+.tp-action-secondary:focus-visible {
+  border-color: rgba(244, 241, 232, 0.36);
+  background: rgba(35, 41, 49, 0.98);
+}
+
+.tp-action-danger {
+  color: #ffecec;
+  background: var(--tp-danger-bg);
+  border-color: var(--tp-danger-border);
+  font-weight: 700;
+}
+
+.tp-action-danger:hover,
+.tp-action-danger:focus-visible {
+  background: var(--tp-danger-bg-hover);
+  border-color: rgba(255, 142, 142, 0.9);
+}
+
+/* Backward-compatible styling for common existing Cases markup. */
+.case-tabs a,
+.case-tabs button,
+.tabs a,
+.tabs button,
+.cabinet-tabs a,
+.cabinet-tabs button {
+  border-radius: var(--tp-control-radius);
+}
+
+@media (max-width: 720px) {
+  .tp-main-tab,
+  .tp-sub-tab,
+  .tp-action-btn {
+    width: 100%;
+  }
+}
