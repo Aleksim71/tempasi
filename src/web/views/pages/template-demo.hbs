@@ -16,11 +16,17 @@
         <button class="template-demo-device" type="button" data-demo-device="mobile">Mobile</button>
       </div>
 
-      <a class="template-demo-action" href="{{templateDetailsUrl}}">Buy / Rent</a>
+      <div class="template-demo-themes" aria-label="Demo background theme">
+        <button class="template-demo-theme is-active" type="button" data-demo-theme="light">Light</button>
+        <button class="template-demo-theme" type="button" data-demo-theme="dark">Dark</button>
+      </div>
+
+      <a class="template-demo-action template-demo-action--buy" href="{{templateDetailsUrl}}?intent=buy">Buy</a>
+      <a class="template-demo-action template-demo-action--rent" href="{{templateDetailsUrl}}?intent=rent">Rent</a>
     </div>
   </header>
 
-  <main class="template-demo-stage">
+  <main class="template-demo-stage" data-demo-stage data-demo-theme-current="light">
     <div class="template-demo-browser" data-demo-browser>
       <div class="template-demo-browser-bar">
         <span class="template-demo-dot"></span>
@@ -43,18 +49,31 @@
   <script>
     (() => {
       const browser = document.querySelector('[data-demo-browser]');
+      const stage = document.querySelector('[data-demo-stage]');
       const buttons = Array.from(document.querySelectorAll('[data-demo-device]'));
+      const themeButtons = Array.from(document.querySelectorAll('[data-demo-theme]'));
 
-      if (!browser || !buttons.length) return;
+      if (browser && buttons.length) {
+        buttons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const device = button.getAttribute('data-demo-device') || 'desktop';
 
-      buttons.forEach((button) => {
-        button.addEventListener('click', () => {
-          const device = button.getAttribute('data-demo-device') || 'desktop';
-
-          browser.setAttribute('data-device', device);
-          buttons.forEach((item) => item.classList.toggle('is-active', item === button));
+            browser.setAttribute('data-device', device);
+            buttons.forEach((item) => item.classList.toggle('is-active', item === button));
+          });
         });
-      });
+      }
+
+      if (stage && themeButtons.length) {
+        themeButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const theme = button.getAttribute('data-demo-theme') || 'light';
+
+            stage.setAttribute('data-demo-theme-current', theme);
+            themeButtons.forEach((item) => item.classList.toggle('is-active', item === button));
+          });
+        });
+      }
     })();
   </script>
 </section>

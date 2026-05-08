@@ -1424,7 +1424,7 @@ function normalizeCaseTemplateRow(row) {
     purchasePriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
     priceLabel: rentPriceEur ? `Rent €${rentPriceEur}` : buyPriceEur ? `Buy €${buyPriceEur}` : '',
     detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
-    liveDemoUrl: demoUrl || (slug ? `/preview/${encodeURIComponent(slug)}` : '/templates'),
+    liveDemoUrl: demoUrl || (slug ? `/templates/${encodeURIComponent(slug)}/demo` : '/templates'),
     previewUrl: resolveCaseTemplatePreviewUrl(row, slug),
     availableCases: [],
   };
