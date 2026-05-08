@@ -207,10 +207,15 @@ export async function selectTemplatesForCatalog(db) {
  * Public details by slug (DB-backed).
  * Rule: draft MUST be invisible (404), only published + not deleted.
  */
-export async function getTemplateBySlug(db, slug) {
+export async function getTemplateBySlug(db, slug, options = {}) {
   const pool = requireDb(db);
   const s = toStr(slug).trim();
   if (!s) return null;
+
+  const viewerUserId =
+    options && options.viewerUserId !== undefined && options.viewerUserId !== null
+      ? String(options.viewerUserId).trim()
+      : '';
 
   const q = `
     SELECT
@@ -250,23 +255,26 @@ export async function getTemplateBySlug(db, slug) {
       AND deleted_at IS NULL
       AND owner_withdrawn_at IS NULL
       AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
-      -- Direct URL must not bypass exclusive BUY.
+      -- Direct URL must not bypass exclusive BUY for other users.
+      -- The actual BUY owner may still open details.
       AND NOT EXISTS (
         SELECT 1
         FROM orders o
         WHERE o.template_slug = seller_templates.slug
           AND o.deal_type = 'BUY'
           AND o.status = 'paid'
+          AND ($2::text = '' OR o.user_id::text <> $2::text)
       )
-      -- Direct URL must not bypass active RENT reservation.
+      -- Direct URL must not bypass active RENT reservation for other users.
+      -- The active renter may still open details from Cabinet/Case View.
       AND NOT EXISTS (
         SELECT 1
         FROM public.entitlements e
         WHERE e.template_slug = seller_templates.slug
           AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
           AND e.closed_at IS NULL
-          AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
+          AND ($2::text = '' OR e.user_id::text <> $2::text)
       )
     AND NOT EXISTS (
       SELECT 1
@@ -278,12 +286,13 @@ export async function getTemplateBySlug(db, slug) {
           OR ci_public_cart_hold.license = 'PU'
           OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
         )
+        AND ($2::text = '' OR ci_public_cart_hold.user_id::text <> $2::text)
     )
 
     LIMIT 1
   `;
 
-  const { rows } = await pool.query(q, [s]);
+  const { rows } = await pool.query(q, [s, viewerUserId]);
   const r = rows && rows[0] ? rows[0] : null;
   if (!r) return null;
 

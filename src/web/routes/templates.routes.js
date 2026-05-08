@@ -492,7 +492,8 @@ export function createTemplatesRouter() {
     try {
       const db = req.app.locals.db;
       const slug = toStr(req.params.slug).trim();
-      const raw = await getTemplateBySlug(db, slug);
+      const currentUserId = getUserId(req);
+      const raw = await getTemplateBySlug(db, slug, { viewerUserId: currentUserId });
 
       if (!raw) {
         return res.status(404).render('pages/template', {
@@ -505,7 +506,6 @@ export function createTemplatesRouter() {
       }
 
       const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
-      const currentUserId = getUserId(req);
       template.isOwner = Boolean(
         currentUserId && Number(raw.ownerUserId || raw.owner_user_id) === Number(currentUserId),
       );
@@ -533,12 +533,15 @@ export function createTemplatesRouter() {
     try {
       const slug = toStr(req.params.slug).trim();
       const db = req.app.locals?.db;
+      const currentUserId = getUserId(req);
 
       let raw = null;
 
       // Prefer direct repo function if present
       if (getBySlug) {
-        raw = await (getBySlug.length >= 2 ? getBySlug(db, slug) : getBySlug(slug));
+        raw = await (getBySlug.length >= 2
+          ? getBySlug(db, slug, { viewerUserId: currentUserId })
+          : getBySlug(slug));
       } else {
         // Fallback: load catalog and find
         const list = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
@@ -556,7 +559,6 @@ export function createTemplatesRouter() {
       }
 
       const template = normalizeTemplateAvailability(normalizeTemplate(raw), slug);
-      const currentUserId = getUserId(req);
       template.isOwner = Boolean(
         currentUserId && Number(raw.ownerUserId || raw.owner_user_id) === Number(currentUserId),
       );

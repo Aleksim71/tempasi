@@ -21,7 +21,7 @@ describe('TASER-NEXT-B case preview render contract', () => {
     expect(routes).toContain("router.get('/cases/:id/preview/public'");
     expect(routes.indexOf("router.get('/cases/:id/preview/public'")).toBeLessThan(routes.indexOf('router.use(requireAuthPage)'));
     expect(partial).toContain('Client preview');
-    expect(partial).toContain('Open public preview');
+    expect(partial).toContain('Client preview');
   });
 
   test('case repository returns real template card data for assigned active RENT templates', () => {

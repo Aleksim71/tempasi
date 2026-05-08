@@ -11,11 +11,12 @@ function read(relPath) {
 }
 
 describe('case view / preview UI contract', () => {
-  test('case list uses final case action labels', () => {
+  test('case list uses final case action labels without internal preview', () => {
     const hbs = read('src/web/views/partials/space-cases.hbs');
 
     expect(hbs).toContain('>View</a>');
-    expect(hbs).toContain('>Preview</a>');
+    expect(hbs).not.toContain('>Preview</a>');
+    expect(hbs).toContain('>Client preview</a>');
     expect(hbs).toContain('>Add templates</a>');
     expect(hbs).toContain('>Clear</button>');
     expect(hbs).toContain('>Delete</button>');
@@ -29,7 +30,7 @@ describe('case view / preview UI contract', () => {
   test('case view has template-level actions without case-level naming collisions', () => {
     const hbs = read('src/web/views/partials/space-cases.hbs');
 
-    expect(hbs).toContain('Internal case view');
+    expect(hbs).toContain('data-tempasi-view-mode="internal-case-view"');
     expect(hbs).toContain('>Details</a>');
     expect(hbs).toContain('>Live Demo</a>');
     expect(hbs).toContain('>Exclude</button>');

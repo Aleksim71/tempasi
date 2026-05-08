@@ -795,8 +795,8 @@ res.render('pages/cabinet', {
 
     res.render('pages/cabinet', {
       activeSpace: 'cases',
-      pageTitle: 'Cases',
-      pageSubtitle: 'Client shortlists and presentations.',
+      pageTitle: '',
+      pageSubtitle: '',
       panelTitle: 'Cases',
       panelText: '',
       workspaceError,
@@ -851,8 +851,8 @@ res.render('pages/cabinet', {
 
     return res.render('pages/cabinet', {
       activeSpace: 'cases',
-      pageTitle: 'Case View',
-      pageSubtitle: 'Internal view of selected templates.',
+      pageTitle: '',
+      pageSubtitle: '',
       panelTitle: 'Case View',
       panelText: '',
       workspaceError,
@@ -1418,6 +1418,10 @@ function normalizeCaseTemplateRow(row) {
     priceRentCents: row.price_rent_cents,
     buyPriceEur,
     rentPriceEur,
+    buyPriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
+    rentPerDayLabel: rentPriceEur ? `€${rentPriceEur}` : '',
+    rentPriceLabel: rentPriceEur ? `€${rentPriceEur}` : '',
+    purchasePriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
     priceLabel: rentPriceEur ? `Rent €${rentPriceEur}` : buyPriceEur ? `Buy €${buyPriceEur}` : '',
     detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
     liveDemoUrl: demoUrl || (slug ? `/preview/${encodeURIComponent(slug)}` : '/templates'),

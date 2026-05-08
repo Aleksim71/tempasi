@@ -1,139 +1,101 @@
 # Tempasi UI Controls Contract
 
-## Purpose
+## Global rule
 
-This document fixes the visual contract for tabs, sub-tabs, and action buttons in Tempasi.
+Tempasi uses one global controls system for tabs, sub-tabs and buttons.
+Pages should not create page-specific control styles.
 
-The goal is to make interactive elements visually consistent and immediately understandable across Cabinet spaces: Cases, My Templates, Finance, Profile & Security, and Support.
+Global CSS file:
 
----
+```text
+public/css/components/ui-controls-contract.css
+```
 
-## Control hierarchy
+## Main tabs
 
-### Main tabs
-
-Main tabs are the first navigation level inside a page or Cabinet space.
+Use for first-level navigation inside a section.
 
 Examples:
 
-- List
-- Create
-- Rents
-- Analytics
-
-Contract:
-
-- shape: rounded rectangle;
-- background: dark;
-- border: yellow/gold;
-- text: light;
-- active state: stronger yellow/gold border and subtle dark highlight;
-- use only for primary navigation inside the current page.
-
-Meaning:
-
 ```text
-Yellow outlined control = main tab / primary local navigation.
+List
+Create
+Rents
+Analytics
 ```
 
----
+Classes:
 
-### Sub-tabs
+```text
+tp-control tp-tab tp-tab--main
+```
 
-Sub-tabs are the second navigation level inside an item, case, template, or local card.
+Visual rule:
+
+```text
+Main tabs = yellow outlined
+Active main tab = thicker yellow border + yellow underline + bold text
+```
+
+## Sub-tabs
+
+Use for second-level navigation inside a card, block or entity.
 
 Examples:
 
-- View
-- Preview
-- Client preview
-- Add templates
-
-Contract:
-
-- shape: rounded rectangle;
-- background: dark;
-- border: green;
-- text: light;
-- active/hover state: stronger green border and subtle dark highlight;
-- may be slightly more compact than main tabs, but must use the same radius and border-width system.
-
-Meaning:
-
 ```text
-Green outlined control = sub-tab / secondary navigation.
+View
+Preview
+Client preview
+Add templates
 ```
 
----
-
-### Action buttons
-
-Buttons execute actions. They are not tabs.
-
-Examples:
-
-- Clear
-- Delete
-- Save
-- Create
-- Complete demo checkout
-
-Contract:
-
-- primary action: yellow filled button with dark text;
-- positive/confirm action: green filled button with dark text;
-- destructive action: separate danger style, not yellow and not green;
-- secondary action: neutral dark button.
-
-Meaning:
+Classes:
 
 ```text
-Filled control = action.
-Outlined control = navigation.
+tp-control tp-tab tp-tab--sub
 ```
 
----
-
-## Color semantics
+Visual rule:
 
 ```text
-Main tabs      -> yellow outlined
-Sub-tabs       -> green outlined
-Primary action -> yellow filled
-Confirm action -> green filled
-Danger action  -> destructive / neutral-danger style
+Sub-tabs = green outlined
 ```
 
----
+## Buttons
 
-## Consistency rules
+Buttons are actions, not navigation.
 
-1. Main tabs, sub-tabs, and buttons must use the same border-radius system.
-2. Main tabs and sub-tabs must use the same border-width system.
-3. Do not use filled styles for navigation tabs.
-4. Do not use outlined tab styles for destructive actions.
-5. Do not duplicate section title text when the active Cabinet space already communicates the location.
-
----
-
-## Current Cases cleanup rule
-
-In the Cases Cabinet space, the duplicated top `Cases` page title should be removed when the left Cabinet navigation already highlights `Cases`.
-
-The local tab row should become the primary visible control group:
+Secondary action example:
 
 ```text
-List | Create | Rents | Analytics
+Clear
 ```
 
-Case-level links should be styled as sub-tabs:
+Classes:
 
 ```text
-View | Preview | Client preview | Add templates
+tp-control tp-button tp-button--secondary
 ```
 
-Case-level actions should remain buttons:
+Destructive action example:
 
 ```text
-Clear | Delete
+Delete
+```
+
+Classes:
+
+```text
+tp-control tp-button tp-button--danger
+```
+
+## Summary
+
+```text
+Main tabs        → yellow outlined
+Active main tab  → thicker yellow border + underline
+Sub-tabs         → green outlined
+Secondary action → yellow outlined
+Danger action    → danger outlined / danger tinted
 ```

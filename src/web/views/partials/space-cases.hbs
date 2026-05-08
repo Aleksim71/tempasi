@@ -3,7 +3,7 @@
   <nav class="cases-tabs" aria-label="Cases sections">
     {{#each workspaceData.cases.tabs}}
       <a
-        class="cases-tab {{#if isActive}}is-active{{/if}}"
+        class="cases-tab {{#if isActive}}is-active{{/if}} tp-control tp-tab tp-tab--main" data-tempasi-main-tab="{{key}}"
         href="{{href}}"
         {{#if isActive}}aria-current="page"{{/if}}
       >
@@ -15,12 +15,7 @@
   {{!-- LIST --}}
   {{#if (eq workspaceData.cases.tab "list")}}
     <div class="cases-panel">
-      <div class="cases-panel__header">
-        <h3 class="cases-panel__title">Case List</h3>
-        <p class="cases-panel__text">Open and manage client presentation spaces.</p>
-      </div>
-
-      {{#if workspaceData.cases.items.length}}
+{{#if workspaceData.cases.items.length}}
         <div class="cases-list">
           {{#each workspaceData.cases.items}}
             <article class="cases-card">
@@ -31,18 +26,19 @@
                 </div>
               </div>
               <div class="cases-card__actions">
-                <a class="button tp-sub-tab" href="/cabinet/cases/{{id}}">View</a>
-                <a class="button button--ghost tp-sub-tab" href="/cabinet/cases/{{id}}/preview">Preview</a>
-                {{#if publicPreviewUrl}}
-                  <a class="button button--ghost tp-sub-tab" href="{{publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
+                <a class="button tp-control tp-tab tp-tab--sub" href="/cabinet/cases/{{id}}">View</a>
+{{#if publicPreviewUrl}}
+                  <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="{{publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
                 {{/if}}
-                <a class="button button--ghost tp-sub-tab" href="/templates?caseId={{id}}">Add templates</a>
+                <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/templates?caseId={{id}}">Add templates</a>
                 <form method="post" action="/cabinet/cases/{{id}}/clear">
-                  <button class="button button--ghost tp-action-btn tp-action-secondary" type="submit">Clear</button>
+                  <button class="button button--ghost tp-action-btn tp-action-secondary tp-action-button tp-action-button--secondary tp-control tp-button tp-button--secondary" type="submit">Clear</button>
                 </form>
                 <form method="post" action="/cabinet/cases/{{id}}/delete">
-                  <button class="button button--ghost tp-action-btn tp-action-danger" type="submit">Delete</button>
+                  <button class="button button--ghost tp-action-btn tp-action-danger tp-action-button tp-action-button--danger tp-control tp-button tp-button--danger" type="submit">Delete</button>
                 </form>
+                  </div>
+                </div>
               </div>
             </article>
           {{/each}}
@@ -60,53 +56,79 @@
 
   {{!-- VIEW --}}
   {{#if (eq workspaceData.cases.tab "view")}}
-    <div class="cases-panel">
+    <div class="cases-panel cases-panel--internal-view" data-tempasi-view-mode="internal-case-view">
       <div class="cases-panel__header">
         <h3 class="cases-panel__title">{{workspaceData.cases.selectedCase.title}}</h3>
-        <p class="cases-panel__text">Internal case view. Review the selected templates and manage presentation placement.</p>
-        {{#if workspaceData.cases.selectedCase.publicPreviewUrl}}
-          <p class="cases-panel__text">
-            Client preview link:
-            <a href="{{workspaceData.cases.selectedCase.publicPreviewUrl}}" target="_blank" rel="noopener">Open public preview</a>
-          </p>
-        {{/if}}
+
+        <div class="cases-card__actions cases-card__actions--header">
+          <a class="button tp-control tp-tab tp-tab--sub is-active" href="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}" aria-current="page">View</a>
+
+          {{#if workspaceData.cases.selectedCase.publicPreviewUrl}}
+            <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="{{workspaceData.cases.selectedCase.publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
+          {{/if}}
+
+          <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/templates?caseId={{workspaceData.cases.selectedCase.id}}">Add templates</a>
+
+          <form method="post" action="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/clear">
+            <button class="button button--ghost tp-control tp-button tp-button--secondary" type="submit">Clear</button>
+          </form>
+
+          <form method="post" action="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/delete">
+            <button class="button button--ghost tp-control tp-button tp-button--danger" type="submit">Delete</button>
+          </form>
+        </div>
       </div>
 
       {{#if workspaceData.cases.templates.length}}
         <div class="cases-list">
           {{#each workspaceData.cases.templates}}
             <article class="cases-card">
-              <div class="cases-card__main">
+              <div class="cases-card__main cases-card__main--compact">
                 {{#if previewUrl}}
                   <img class="cases-template-preview" src="{{previewUrl}}" alt="{{title}} preview" loading="lazy" />
                 {{/if}}
-                <div class="cases-card__title">{{title}}</div>
-                <p class="cases-panel__text">{{shortDescription}}</p>
-                <div class="cases-card__meta">
-                  <span>Reserved until: {{endsAtLabel}}</span>
-                  <span>Time left: {{timeLeftLabel}}</span>
-                  <span>Cases: {{casesCount}}</span>
-                  {{#if priceLabel}}<span>{{priceLabel}}</span>{{/if}}
-                </div>
-                {{#if tagItems.length}}
-                  <div class="template-tags" aria-label="Template tags">
-                    {{#each tagItems}}
-                      <span class="badge">{{this}}</span>
-                    {{/each}}
-                  </div>
-                {{/if}}
-              </div>
 
-              <div class="cases-card__actions">
-                <a class="button" href="{{detailsUrl}}">Details</a>
-                <a class="button button--ghost" href="{{liveDemoUrl}}">Live Demo</a>
+                <div class="cases-compact-content">
+                  <div class="cases-compact-top">
+                    <div class="cases-card__title">{{title}}</div>
+
+                    <div class="cases-compact-prices" aria-label="Template commercial prices">
+                      {{#if buyPriceLabel}}
+                        <span><strong>Buy:</strong> {{buyPriceLabel}}</span>
+                      {{else}}
+                        {{#if purchasePriceLabel}}
+                          <span><strong>Buy:</strong> {{purchasePriceLabel}}</span>
+                        {{else}}
+                          <span><strong>Buy:</strong> —</span>
+                        {{/if}}
+                      {{/if}}
+
+                      {{#if rentPerDayLabel}}
+                        <span><strong>Rent/day:</strong> {{rentPerDayLabel}}</span>
+                      {{else}}
+                        {{#if rentPriceLabel}}
+                          <span><strong>Rent/day:</strong> {{rentPriceLabel}}</span>
+                        {{else}}
+                          {{#if priceLabel}}
+                            <span><strong>Rent/day:</strong> {{priceLabel}}</span>
+                          {{else}}
+                            <span><strong>Rent/day:</strong> —</span>
+                          {{/if}}
+                        {{/if}}
+                      {{/if}}
+                    </div>
+                  </div>
+
+                  <div class="cases-card__actions cases-card__actions--compact">
+                <a class="button cases-compact-action" href="{{detailsUrl}}">Details</a>
+                <a class="button button--ghost cases-compact-action" href="{{liveDemoUrl}}">Live Demo</a>
 
                 {{#if canExclude}}
                   <form method="post" action="/cabinet/cases/{{../workspaceData.cases.selectedCase.id}}/templates/{{orderId}}/exclude">
-                    <button class="button button--ghost" type="submit">Exclude</button>
+                    <button class="button button--ghost cases-compact-action" type="submit">Exclude</button>
                   </form>
                 {{else}}
-                  <button class="button button--ghost" type="button" disabled>Exclude</button>
+                  <button class="button button--ghost cases-compact-action" type="button" disabled>Exclude</button>
                 {{/if}}
 
                 {{#if availableCases.length}}
@@ -116,10 +138,10 @@
                         <option value="{{id}}">{{title}}</option>
                       {{/each}}
                     </select>
-                    <button class="button button--ghost" type="submit">Copy to case</button>
+                    <button class="button button--ghost cases-compact-action" type="submit">Copy to case</button>
                   </form>
                 {{else}}
-                  <button class="button button--ghost" type="button" disabled>Copy to case</button>
+                  <button class="button button--ghost cases-compact-action" type="button" disabled>Copy to case</button>
                 {{/if}}
               </div>
             </article>

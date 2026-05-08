@@ -65,7 +65,10 @@ async function listByOwner(ownerUserId, db) {
     ? 'c.public_preview_token'
     : 'NULL::text AS public_preview_token';
   const templatesCountJoin = `
-    LEFT JOIN case_templates ct ON ct.case_id = c.id
+    LEFT JOIN public.case_templates ct
+      ON ct.case_id = c.id
+    LEFT JOIN public.order_case_assignments oca_count
+      ON oca_count.case_id::text = c.id::text
   `;
 
   const { rows } = await pool.query(
@@ -77,7 +80,7 @@ async function listByOwner(ownerUserId, db) {
       ${publicPreviewTokenSelect},
       c.created_at,
       c.updated_at,
-      COUNT(ct.template_id)::int AS templates_count
+      GREATEST(COUNT(DISTINCT ct.template_id), COUNT(DISTINCT oca_count.order_id))::int AS templates_count
     FROM cases c
     ${templatesCountJoin}
     WHERE c.${schema.ownerColumn} = $1
