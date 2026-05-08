@@ -50,10 +50,14 @@ describe('TASER-NEXT-B case preview render contract', () => {
     expect(routes).toContain('liveDemoUrl');
 
     expect(partial).toContain('{{priceLabel}}');
-    expect(partial).toContain('{{#each tagItems}}');
-    expect(partial).toContain('cases-template-preview--large');
+    expect(partial).toContain('data-case-client-carousel');
+    expect(partial).toContain('case-client-slide__preview');
+    expect(partial).toContain('case-client-slide__previewLink');
+    expect(partial).toContain('Click preview to open live demo');
 
-    expect(publicPage).toContain('Tempasi client preview');
+    expect(publicPage).toContain('data-case-client-carousel');
+    expect(publicPage).toContain('case-client-slide__preview');
+    expect(publicPage).toContain('Click preview to open live demo');
     expect(publicPage).toContain('{{previewUrl}}');
     expect(publicPage).toContain('{{priceLabel}}');
     expect(publicPage).toContain('{{liveDemoUrl}}');

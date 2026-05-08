@@ -41,8 +41,9 @@ describe('case view / preview UI contract', () => {
     const hbs = read('src/web/views/partials/space-cases.hbs');
 
     expect(hbs).toContain('Presentation preview');
-    expect(hbs).toContain('>View details</a>');
-    expect(hbs).toContain('>Live demo</a>');
+    expect(hbs).toContain('data-case-client-carousel');
+    expect(hbs).toContain('case-client-slide__previewLink');
+    expect(hbs).toContain('Click preview to open live demo');
   });
 
   test('cabinet routes expose view, preview, clear, exclude and copy endpoints', () => {
