@@ -1,0 +1,49 @@
+<main class="checkout-direct-shell">
+  <section class="checkout-direct-card">
+    {{#if error}}
+      <div class="checkout-direct-error">{{error}}</div>
+    {{/if}}
+
+    <div class="checkout-direct-preview">
+      {{#if directBuy.previewUrl}}
+        <img src="{{directBuy.previewUrl}}" alt="{{directBuy.title}} preview" />
+      {{else}}
+        <div class="checkout-direct-placeholder">{{directBuy.title}}</div>
+      {{/if}}
+    </div>
+
+    <div class="checkout-direct-content">
+      <p class="checkout-direct-eyebrow">Exclusive BUY confirmation</p>
+      <h1>{{directBuy.title}}</h1>
+
+      {{#if directBuy.shortDescription}}
+        <p class="checkout-direct-description">{{directBuy.shortDescription}}</p>
+      {{/if}}
+
+      <div class="checkout-direct-prices">
+        <span><strong>Buy:</strong> {{directBuy.buyPriceLabel}}</span>
+        {{#if directBuy.rentPerDayLabel}}
+          <span><strong>Rent/day:</strong> {{directBuy.rentPerDayLabel}}</span>
+        {{/if}}
+      </div>
+
+      <div class="checkout-direct-warning">
+        After payment, this template becomes an exclusive purchase and is removed from public sale/rent.
+      </div>
+
+      <div class="checkout-direct-actions">
+        {{#unless error}}
+          <form method="post" action="/checkout/direct/buy/{{directBuy.slug}}/pay">
+            <input type="hidden" name="caseId" value="{{directBuy.caseId}}">
+            <input type="hidden" name="returnTo" value="{{directBuy.returnTo}}">
+            <button class="checkout-direct-pay" type="submit">Pay</button>
+          </form>
+        {{/unless}}
+
+        <a class="checkout-direct-link" href="{{directBuy.returnTo}}">Back</a>
+        <a class="checkout-direct-link" href="/templates/{{directBuy.slug}}">Details</a>
+        <a class="checkout-direct-link" href="{{directBuy.demoUrl}}">Live Demo</a>
+      </div>
+    </div>
+  </section>
+</main>
