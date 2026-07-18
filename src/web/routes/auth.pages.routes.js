@@ -288,7 +288,7 @@ export function createAuthPagesRouter() {
       const email = normalizeEmail(req.body?.email);
       const password = String(req.body?.password || '');
       const remember = parseBool(req.body?.remember);
-      const nextUrl = safeNext(req.body?.next) || '/templates';
+      const explicitNext = safeNext(req.body?.next);
       if (!email || !password)
         return redirectWithError(
           res,
@@ -300,7 +300,7 @@ export function createAuthPagesRouter() {
         return redirectWithError(res, '/login', 'AUTH_TIMEOUT', safeNext(req.body?.next) || '');
       const pool = getPool();
       const { rows } = await pool.query(
-        `SELECT id, password_hash, status FROM users WHERE email = $1::citext LIMIT 1`,
+        `SELECT id, password_hash, status, role FROM users WHERE email = $1::citext LIMIT 1`,
         [email],
       );
       const u = rows && rows[0];
@@ -323,6 +323,8 @@ export function createAuthPagesRouter() {
       const maxAgeSeconds = remember ? TTL_REMEMBER_SECONDS : TTL_SHORT_SECONDS;
       const { sid } = await createSessionForUser(u.id, maxAgeSeconds);
       setSessionCookie(req, res, sid, { maxAgeSeconds });
+      const isAdminRole = u.role === 'admin' || u.role === 'superadmin';
+      const nextUrl = explicitNext || (isAdminRole ? '/admin' : '/templates');
       return res.redirect(nextUrl);
     } catch (err) {
       return next(err);

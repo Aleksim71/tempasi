@@ -1,0 +1,48 @@
+<div class="admin-dashboard">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Дашборд</h1>
+
+    <nav class="admin-period-switch" aria-label="Период">
+      {{#each periods}}
+        <a
+          class="admin-period-switch__link{{#if this.active}} admin-period-switch__link--active{{/if}}"
+          href="/admin?period={{this.days}}"
+        >{{this.label}}</a>
+      {{/each}}
+    </nav>
+  </div>
+
+  <div class="admin-kpi-grid">
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.users.label}}</div>
+      <div class="admin-kpi-card__value">{{kpis.users.total}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.users.deltaSign}}">
+        {{kpis.users.delta}} за период
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.templates.label}}</div>
+      <div class="admin-kpi-card__value">{{kpis.templates.total}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.templates.deltaSign}}">
+        {{kpis.templates.delta}} за период
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.rent.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.rent.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.rent.deltaSign}}">
+        {{kpis.rent.delta}}€ к пред. периоду
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.buy.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.buy.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.buy.deltaSign}}">
+        {{kpis.buy.delta}}€ к пред. периоду
+      </div>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,7 @@ import { createRequire } from 'module';
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
 import { requireAuthWeb } from './web/middleware/require-auth.web.js';
+import { requireAdminWeb } from './web/middleware/require-admin.web.js';
 import checkoutRouter from './web/routes/checkout.routes.js';
 
 const require = createRequire(import.meta.url);
@@ -99,6 +100,9 @@ const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // ap
 
 // Cabinet pages router (CJS)
 const { createCabinetPagesRouter } = require('./web/routes/cabinet.pages.routes.cjs');
+
+// Admin pages router (CJS)
+const { createAdminPagesRouter } = require('./web/routes/admin.pages.routes.cjs');
 
 // --------------------
 // helpers
@@ -349,6 +353,9 @@ if (process.env.TEMPASI_SKIP_SSR) {
     requireAuthWeb({ loginPath: '/login', defaultNext: '/profile' }),
     profileRouter,
   );
+
+  // ✅ Protect Admin pages (role admin/superadmin only)
+  webApp.use('/admin', requireAdminWeb({ loginPath: '/login' }), createAdminPagesRouter({ db }));
 
   webApp.use('/checkout', checkoutRouter);
 
