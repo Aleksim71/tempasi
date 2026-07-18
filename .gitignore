@@ -76,3 +76,4 @@ artifacts/
 .uri/
 .runner-work/
 outbox/
+*.bak_*

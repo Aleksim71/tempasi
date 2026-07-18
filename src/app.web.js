@@ -101,6 +101,7 @@ export function createWebApp({ db }) {
   const pIconsDash = path.join(partialsRoot, 'icons-sprite.hbs');
   const pIconsUnd = path.join(partialsRoot, 'icons_sprite.hbs');
   const pHeader = path.join(partialsRoot, 'site-header.hbs');
+  const pAdminHeader = path.join(partialsRoot, 'admin-header.hbs');
   const pFooter = path.join(partialsRoot, 'footer.hbs');
 
   // header icons
@@ -146,6 +147,7 @@ export function createWebApp({ db }) {
   const iconsDash = safeRead(pIconsDash);
   const iconsUnd = safeRead(pIconsUnd);
   const header = safeRead(pHeader);
+  const adminHeader = safeRead(pAdminHeader);
   const footer = safeRead(pFooter);
 
   const iconSearch = safeRead(pIconSearch);
@@ -162,6 +164,7 @@ export function createWebApp({ db }) {
 
   // layout partials
   registerPartialSafe('site-header', header);
+  registerPartialSafe('admin-header', adminHeader);
   registerPartialSafe('footer', footer);
 
   // icon partials (dash + underscore)

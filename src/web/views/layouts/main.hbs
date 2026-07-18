@@ -21,6 +21,11 @@
       <link rel="stylesheet" href="/css/pages/cabinet.css" />
     {{/if}}
 
+    {{!-- Admin page styles (always) --}}
+    {{#if isAdmin}}
+      <link rel="stylesheet" href="/css/pages/admin.css" />
+    {{/if}}
+
     {{!-- Page-specific styles --}}
     {{#if styles}}
       {{#each styles}}
@@ -36,7 +41,11 @@
 
     {{!-- GLOBAL HEADER (can be disabled per page) --}}
     {{#unless hideHeader}}
-      {{> site-header}}
+      {{#if isAdmin}}
+        {{> admin-header}}
+      {{else}}
+        {{> site-header}}
+      {{/if}}
     {{/unless}}
 
     <main class="l-page">

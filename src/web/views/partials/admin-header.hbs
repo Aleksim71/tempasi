@@ -1,0 +1,57 @@
+{{!-- src/web/views/partials/admin-header.hbs
+  Own header for /admin/*. Visually copied from site-header.hbs (same
+  layout grid, same header.css tokens), but with its own nav and no
+  cart/Cabinet — kept separate so public header stays untouched. --}}
+<header class="site-header admin-header">
+  <div class="l-container">
+    <div class="site-header__inner admin-header__inner">
+
+      <!-- LEFT -->
+      <div class="site-header__left admin-header__left">
+        <a href="/templates" class="site-header__brand" aria-label="Tempasi home">
+          <img
+            class="site-header__brand-logo"
+            src="/img/logo-tempasi.png"
+            alt="Tempasi"
+            width="22"
+            height="22"
+            loading="eager"
+            decoding="async"
+          />
+          <span class="site-header__title">TEMPASI</span>
+        </a>
+        <span class="badge admin-header__badge">Admin</span>
+      </div>
+
+      <!-- CENTER -->
+      <nav class="site-header__nav" aria-label="Admin navigation">
+        <a
+          href="/admin"
+          class="nav-link{{#if (eq currentPage 'dashboard')}} nav-link--active{{/if}}"
+        >Dashboard</a>
+        <a
+          href="/admin/templates"
+          class="nav-link{{#if (eq currentPage 'templates')}} nav-link--active{{/if}}"
+        >Templates</a>
+        <a
+          href="/admin/users"
+          class="nav-link{{#if (eq currentPage 'users')}} nav-link--active{{/if}}"
+        >Users</a>
+        <a
+          href="/admin/finance"
+          class="nav-link{{#if (eq currentPage 'finance')}} nav-link--active{{/if}}"
+        >Finance</a>
+      </nav>
+
+      <!-- RIGHT -->
+      <div class="site-header__actions">
+        <form method="post" action="/api/auth/logout" class="header-icon">
+          <button type="submit" aria-label="Logout">
+            {{> icon-logout}}
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</header>

@@ -1,0 +1,150 @@
+/* public/css/pages/admin.css
+   Стили только для /admin/*. Переиспользует токены core.css
+   (--c-surface, --c-border, --c-success, --c-danger, --s-*, --r-*),
+   header/footer/шрифты берутся общие с публичным сайтом (см. решение
+   в PILGRIM.md: визуал админки полностью как в магазине). */
+
+.admin-header__left {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-12);
+}
+
+.admin-header__badge {
+  color: var(--c-primary);
+  border-color: color-mix(in srgb, var(--c-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--c-primary) 12%, transparent);
+}
+
+.nav-link--active {
+  color: #fff;
+  position: relative;
+}
+
+.nav-link--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--c-primary);
+}
+
+.admin-dashboard {
+  display: grid;
+  gap: var(--s-24);
+  padding-top: var(--s-24);
+  padding-bottom: var(--s-40);
+}
+
+.admin-dashboard__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-16);
+}
+
+.admin-dashboard__title {
+  font-size: var(--fs-24);
+  color: var(--c-text);
+}
+
+.admin-period-switch {
+  display: inline-flex;
+  gap: var(--s-6);
+  padding: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-12);
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+}
+
+.admin-period-switch__link {
+  padding: var(--s-6) var(--s-12);
+  border-radius: var(--r-8);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  color: var(--c-muted);
+}
+
+.admin-period-switch__link:hover {
+  color: var(--c-text);
+}
+
+.admin-period-switch__link--active {
+  background: var(--c-primary);
+  color: var(--c-bg);
+}
+
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-16);
+}
+
+.admin-kpi-card {
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-16);
+  box-shadow: var(--sh-1);
+  padding: var(--s-20);
+  display: grid;
+  gap: var(--s-8);
+}
+
+.admin-kpi-card__label {
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.admin-kpi-card__value {
+  font-size: 32px;
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  letter-spacing: -0.01em;
+}
+
+.admin-kpi-delta {
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+}
+
+.admin-kpi-delta--up {
+  color: var(--c-success);
+}
+
+.admin-kpi-delta--down {
+  color: var(--c-danger);
+}
+
+.admin-kpi-delta--flat {
+  color: var(--c-muted);
+}
+
+.admin-stub {
+  display: grid;
+  gap: var(--s-8);
+  padding-top: var(--s-24);
+  padding-bottom: var(--s-40);
+}
+
+.admin-stub__title {
+  font-size: var(--fs-24);
+  color: var(--c-text);
+}
+
+.admin-stub__text {
+  color: var(--c-muted);
+}
+
+.admin-error-page {
+  padding: var(--s-40) 0;
+  display: grid;
+  gap: var(--s-16);
+  justify-items: start;
+}
