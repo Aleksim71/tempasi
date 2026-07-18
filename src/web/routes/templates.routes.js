@@ -356,6 +356,18 @@ async function loadOwnerTemplateForAction(db, slug, userId) {
   return template;
 }
 
+function normalizeDemoBackUrl(value, fallback = '/') {
+  const raw = toStr(value).trim();
+
+  if (!raw) return fallback;
+
+  // Only same-site relative URLs are allowed.
+  // This prevents open redirects like https://evil.example.
+  if (!raw.startsWith('/') || raw.startsWith('//')) return fallback;
+
+  return raw;
+}
+
 export function createTemplatesRouter() {
   const router = Router();
 
@@ -513,6 +525,8 @@ export function createTemplatesRouter() {
       const demoFrameUrl =
         template.demoUrl ||
         `/t/${encodeURIComponent(String(template.slug || slug))}/demo/index.html`;
+      const templateDetailsUrl = `/templates/${encodeURIComponent(String(template.slug || slug))}`;
+      const demoBackUrl = normalizeDemoBackUrl(req.query?.back, templateDetailsUrl);
 
       return res.status(200).render('pages/template-demo', {
         title: `${template.title} — Live Demo — Tempasi`,
@@ -521,7 +535,8 @@ export function createTemplatesRouter() {
         styles: ['/css/pages/template-demo.css'],
         template,
         demoFrameUrl,
-        templateDetailsUrl: `/templates/${encodeURIComponent(String(template.slug || slug))}`,
+        templateDetailsUrl,
+        demoBackUrl,
         isOwner: Boolean(template.isOwner),
       });
     } catch (err) {

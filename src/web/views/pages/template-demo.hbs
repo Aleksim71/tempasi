@@ -2,7 +2,7 @@
 <section class="template-demo-page" data-template-demo-page>
   <header class="template-demo-toolbar">
     <div class="template-demo-brand">
-      <a class="template-demo-back" href="{{templateDetailsUrl}}">← Back to template</a>
+      <a class="template-demo-back" href="{{demoBackUrl}}" data-smart-demo-back>← Back</a>
       <div>
         <p class="template-demo-eyebrow">Live demo</p>
         <h1>{{template.title}}</h1>
@@ -10,15 +10,15 @@
     </div>
 
     <div class="template-demo-toolbar-actions">
-      <div class="template-demo-devices" aria-label="Preview device size">
-        <button class="template-demo-device is-active" type="button" data-demo-device="desktop">Desktop</button>
-        <button class="template-demo-device" type="button" data-demo-device="tablet">Tablet</button>
-        <button class="template-demo-device" type="button" data-demo-device="mobile">Mobile</button>
+      <div class="template-demo-control-group" aria-label="Preview device size">
+        <button class="template-demo-choice is-active" type="button" data-demo-device="desktop"><span></span>Desktop</button>
+        <button class="template-demo-choice" type="button" data-demo-device="tablet"><span></span>Tablet</button>
+        <button class="template-demo-choice" type="button" data-demo-device="mobile"><span></span>Mobile</button>
       </div>
 
-      <div class="template-demo-themes" aria-label="Demo background theme">
-        <button class="template-demo-theme is-active" type="button" data-demo-theme="light">Light</button>
-        <button class="template-demo-theme" type="button" data-demo-theme="dark">Dark</button>
+      <div class="template-demo-control-group" aria-label="Demo background theme">
+        <button class="template-demo-choice is-active" type="button" data-demo-theme="light"><span></span>Light</button>
+        <button class="template-demo-choice" type="button" data-demo-theme="dark"><span></span>Dark</button>
       </div>
 
       <a class="template-demo-action template-demo-action--buy" href="{{templateDetailsUrl}}?intent=buy">Buy</a>
@@ -77,3 +77,21 @@
     })();
   </script>
 </section>
+
+<script>
+  (() => {
+    const backLink = document.querySelector('[data-smart-demo-back]');
+    if (!backLink) return;
+
+    backLink.addEventListener('click', (event) => {
+      const referrer = document.referrer || '';
+      const currentOrigin = window.location.origin;
+
+      if (window.history.length > 1 && referrer.startsWith(currentOrigin)) {
+        event.preventDefault();
+        window.history.back();
+      }
+    });
+  })();
+</script>
+

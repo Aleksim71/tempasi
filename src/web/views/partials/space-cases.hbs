@@ -179,7 +179,7 @@
 
             <div class="case-client-carousel__track">
               {{#each workspaceData.cases.templates}}
-                <article class="case-client-slide {{#if @first}}is-active{{/if}}" data-carousel-slide data-details-url="{{detailsUrl}}" data-demo-url="{{liveDemoUrl}}" data-buy-url="/checkout/direct/buy/{{slug}}?caseId={{../workspaceData.cases.selectedCase.id}}">
+                <article class="case-client-slide {{#if @first}}is-active{{/if}}" data-carousel-slide data-details-url="{{detailsUrl}}" data-demo-url="{{liveDemoUrl}}" data-demo-back-url="{{../workspaceData.cases.selectedCase.publicPreviewUrl}}" data-buy-url="/checkout/direct/buy/{{slug}}?caseId={{../workspaceData.cases.selectedCase.id}}">
                   <header class="case-client-slide__header">
                     <h2 class="case-client-slide__title">{{title}}</h2>
 
@@ -210,7 +210,7 @@
                     </div>
                   </header>
 
-                  <a class="case-client-slide__previewLink" href="{{liveDemoUrl}}" aria-label="Open live demo for {{title}}">
+                  <a class="case-client-slide__previewLink" href="{{liveDemoUrl}}" data-slide-demo-link aria-label="Open live demo for {{title}}">
                     {{#if previewUrl}}
                       <img class="case-client-slide__preview" src="{{previewUrl}}" alt="{{title}} preview" loading="lazy" />
                     {{else}}
@@ -244,20 +244,31 @@
             const buyLink = root.querySelector('[data-carousel-buy]');
             let index = Math.max(0, slides.findIndex((slide) => slide.classList.contains('is-active')));
 
+            function withBack(url, backUrl) {
+              if (!url) return '#';
+              if (!backUrl) return url;
+              const separator = url.includes('?') ? '&' : '?';
+              return `${url}${separator}back=${encodeURIComponent(backUrl)}`;
+            }
+
             function render() {
               slides.forEach((slide, i) => {
                 slide.classList.toggle('is-active', i === index);
                 slide.setAttribute('aria-hidden', i === index ? 'false' : 'true');
+
+                const slideDemoLink = slide.querySelector('[data-slide-demo-link]');
+                if (slideDemoLink) {
+                  slideDemoLink.href = withBack(slide.dataset.demoUrl, slide.dataset.demoBackUrl);
+                }
               });
 
-              if (counter) counter.textContent = `${index + 1} / ${slides.length}`;
+              const activeSlide = slides[index];
 
-              const active = slides[index];
-              if (active) {
-                if (detailsLink) detailsLink.href = active.dataset.detailsUrl || '#';
-                if (demoLink) demoLink.href = active.dataset.demoUrl || '#';
-                if (buyLink) buyLink.href = active.dataset.buyUrl || '#';
-              }
+              if (counter) counter.textContent = `${index + 1} / ${slides.length}`;
+              if (detailsLink) detailsLink.href = activeSlide?.dataset.detailsUrl || '#';
+              if (demoLink) demoLink.href = withBack(activeSlide?.dataset.demoUrl, activeSlide?.dataset.demoBackUrl);
+              if (buyLink) buyLink.href = activeSlide?.dataset.buyUrl || '#';
+
               if (prev) prev.disabled = slides.length <= 1;
               if (next) next.disabled = slides.length <= 1;
             }

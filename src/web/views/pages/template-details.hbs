@@ -92,7 +92,7 @@
           <h2>No longer available</h2>
           <p class="template-action-note">This template has already been bought exclusively and is no longer available for BUY or RENT.</p>
           {{#if template.slug}}
-            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo?back=/templates/{{template.slug}}">Live Demo</a>
           {{/if}}
         </section>
       {{else if isOwner}}
@@ -115,7 +115,7 @@
             </form>
 
             {{#if template.slug}}
-            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo?back=/templates/{{template.slug}}">Live Demo</a>
           {{/if}}
           </div>
         </section>
@@ -214,7 +214,7 @@
             </form>
 
             {{#if template.slug}}
-            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo?back=/templates/{{template.slug}}">Live Demo</a>
           {{/if}}
           {{else}}
             <div class="template-rent-form template-rent-form-disabled">
@@ -242,7 +242,7 @@
               <a class="btn btn-secondary" href="/login">Add rent to cart</a>
 
               {{#if template.slug}}
-            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo">Live Demo</a>
+            <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo?back=/templates/{{template.slug}}">Live Demo</a>
           {{/if}}
 
               <p class="template-login-note">Sign in or create an account to rent this template or attach it to cases.</p>

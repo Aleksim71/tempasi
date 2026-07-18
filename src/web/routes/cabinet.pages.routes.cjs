@@ -1368,6 +1368,17 @@ function resolveCaseTemplatePreviewUrl(row, slug) {
   return normalizedSlug ? `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.png` : '';
 }
 
+
+function withBackParam(url, backUrl) {
+  const target = String(url || '').trim();
+  const back = String(backUrl || '').trim();
+
+  if (!target || !back) return target;
+
+  const separator = target.includes('?') ? '&' : '?';
+  return `${target}${separator}back=${encodeURIComponent(back)}`;
+}
+
 function normalizeCaseTemplateTags(value) {
   const raw = String(value || '').trim();
   if (!raw) return [];
@@ -1395,6 +1406,8 @@ function normalizeCaseTemplateRow(row) {
   const buyPriceEur = formatCaseTemplateMoneyEur(row.price_buy_cents);
   const rentPriceEur = formatCaseTemplateMoneyEur(row.price_rent_cents);
   const demoUrl = String(row.demo_url || '').trim();
+  const templateDetailsUrl = slug ? `/templates/${encodeURIComponent(slug)}` : '/templates';
+  const templateDemoUrl = slug ? `/templates/${encodeURIComponent(slug)}/demo` : demoUrl || '/templates';
 
   return {
     orderId: row.order_id,
@@ -1424,7 +1437,7 @@ function normalizeCaseTemplateRow(row) {
     purchasePriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
     priceLabel: rentPriceEur ? `Rent €${rentPriceEur}` : buyPriceEur ? `Buy €${buyPriceEur}` : '',
     detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
-    liveDemoUrl: demoUrl || (slug ? `/templates/${encodeURIComponent(slug)}/demo` : '/templates'),
+    liveDemoUrl: templateDemoUrl,
     previewUrl: resolveCaseTemplatePreviewUrl(row, slug),
     availableCases: [],
   };
