@@ -1,8 +1,8 @@
 <div class="admin-dashboard">
   <div class="admin-dashboard__header">
-    <h1 class="admin-dashboard__title">Дашборд</h1>
+    <h1 class="admin-dashboard__title">Dashboard</h1>
 
-    <nav class="admin-period-switch" aria-label="Период">
+    <nav class="admin-period-switch" aria-label="Period">
       {{#each periods}}
         <a
           class="admin-period-switch__link{{#if this.active}} admin-period-switch__link--active{{/if}}"
@@ -17,7 +17,7 @@
       <div class="admin-kpi-card__label">{{kpis.users.label}}</div>
       <div class="admin-kpi-card__value">{{kpis.users.total}}</div>
       <div class="admin-kpi-delta admin-kpi-delta--{{kpis.users.deltaSign}}">
-        {{kpis.users.delta}} за период
+        <span class="admin-kpi-delta__value">{{kpis.users.delta}}</span> over period
       </div>
     </div>
 
@@ -25,7 +25,7 @@
       <div class="admin-kpi-card__label">{{kpis.templates.label}}</div>
       <div class="admin-kpi-card__value">{{kpis.templates.total}}</div>
       <div class="admin-kpi-delta admin-kpi-delta--{{kpis.templates.deltaSign}}">
-        {{kpis.templates.delta}} за период
+        <span class="admin-kpi-delta__value">{{kpis.templates.delta}}</span> over period
       </div>
     </div>
 
@@ -33,7 +33,7 @@
       <div class="admin-kpi-card__label">{{kpis.rent.label}}</div>
       <div class="admin-kpi-card__value">€{{kpis.rent.totalEur}}</div>
       <div class="admin-kpi-delta admin-kpi-delta--{{kpis.rent.deltaSign}}">
-        {{kpis.rent.delta}}€ к пред. периоду
+        <span class="admin-kpi-delta__value">{{kpis.rent.delta}}€</span> vs previous period
       </div>
     </div>
 
@@ -41,7 +41,7 @@
       <div class="admin-kpi-card__label">{{kpis.buy.label}}</div>
       <div class="admin-kpi-card__value">€{{kpis.buy.totalEur}}</div>
       <div class="admin-kpi-delta admin-kpi-delta--{{kpis.buy.deltaSign}}">
-        {{kpis.buy.delta}}€ к пред. периоду
+        <span class="admin-kpi-delta__value">{{kpis.buy.delta}}€</span> vs previous period
       </div>
     </div>
   </div>

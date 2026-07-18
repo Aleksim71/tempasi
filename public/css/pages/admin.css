@@ -112,6 +112,15 @@
 .admin-kpi-delta {
   font-size: var(--fs-14);
   font-weight: var(--fw-medium);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-6);
+}
+
+.admin-kpi-delta__value {
+  font-size: 32px;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
 }
 
 .admin-kpi-delta--up {

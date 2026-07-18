@@ -115,25 +115,25 @@ async function getDashboardKpis(periodDays) {
 
   return {
     users: {
-      label: 'Пользователи',
+      label: 'Users',
       total: usersTotal,
       delta: formatSignedCount(usersNew),
       deltaSign: deltaSign(usersNew),
     },
     templates: {
-      label: 'Шаблоны (published)',
+      label: 'Templates (published)',
       total: templatesTotal,
       delta: formatSignedCount(templatesNet),
       deltaSign: deltaSign(templatesNet),
     },
     rent: {
-      label: 'Выручка \u00b7 аренда',
+      label: 'Revenue \u00b7 rent',
       totalEur: formatEurFromCents(rent.currentCents),
       delta: formatSignedEur(rent.deltaCents),
       deltaSign: deltaSign(rent.deltaCents),
     },
     buy: {
-      label: 'Выручка \u00b7 продажа',
+      label: 'Revenue \u00b7 sale',
       totalEur: formatEurFromCents(buy.currentCents),
       delta: formatSignedEur(buy.deltaCents),
       deltaSign: deltaSign(buy.deltaCents),
@@ -157,7 +157,7 @@ function createAdminPagesRouter() {
         periodDays,
         periods: [1, 7, 28].map((days) => ({
           days,
-          label: days === 1 ? '1 день' : days === 7 ? '7 дней' : '28 дней',
+          label: days === 1 ? '1 day' : days === 7 ? '7 days' : '28 days',
           active: days === periodDays,
         })),
         kpis,
