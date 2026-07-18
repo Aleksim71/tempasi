@@ -126,7 +126,7 @@ function valueForColumn(column) {
   if (name === "email") return uniqueEmail("step5l");
   if (name === "name" || name === "display_name" || name === "full_name") return "Step 5L Test User";
   if (name === "password_hash" || name === "password_digest" || name === "password") return "test-password-hash";
-  if (name === "role") return "observer";
+  if (name === "role") return "user";
   if (name === "status") return "active";
   if (name === "currency") return "EUR";
   if (name === "source") return "step_5l_integration_test";
@@ -193,7 +193,7 @@ async function ensureTestUser(userId) {
   if (hasColumn(columns, "name")) overrides.name = "Step 5L Test User";
   if (hasColumn(columns, "display_name")) overrides.display_name = "Step 5L Test User";
   if (hasColumn(columns, "password_hash")) overrides.password_hash = "step5l-password-hash";
-  if (hasColumn(columns, "role")) overrides.role = "observer";
+  if (hasColumn(columns, "role")) overrides.role = "user";
   if (hasColumn(columns, "status")) overrides.status = "active";
   if (hasColumn(columns, "created_at")) overrides.created_at = new Date();
   if (hasColumn(columns, "updated_at")) overrides.updated_at = new Date();

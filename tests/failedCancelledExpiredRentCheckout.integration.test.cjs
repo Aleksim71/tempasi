@@ -72,7 +72,7 @@ async function insertUser(client, email) {
   add('password', 'test-hash');
   add('display_name', email.split('@')[0]);
   add('name', email.split('@')[0]);
-  add('role', 'observer');
+  add('role', 'user');
   add('status', 'active');
   add('created_at', new Date());
   add('updated_at', new Date());
