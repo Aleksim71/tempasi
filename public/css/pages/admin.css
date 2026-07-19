@@ -151,6 +151,159 @@
   color: var(--c-muted);
 }
 
+/* ---- Templates page: filters ---- */
+
+.admin-filters {
+  display: grid;
+  gap: var(--s-12);
+  padding: var(--s-16);
+  margin-top: var(--s-16);
+  margin-bottom: var(--s-16);
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-16);
+}
+
+.admin-filters__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-12);
+}
+
+.admin-filters__field {
+  display: grid;
+  gap: var(--s-6);
+  min-width: 160px;
+}
+
+.admin-filters__field--grow {
+  flex: 1 1 220px;
+}
+
+.admin-filters__actions {
+  display: flex;
+  gap: var(--s-8);
+}
+
+/* ---- Templates page: table ---- */
+
+.admin-table-card {
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-16);
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--s-12);
+  text-align: left;
+  border-bottom: 1px solid var(--c-border);
+  font-size: var(--fs-14);
+  color: var(--c-text);
+  vertical-align: middle;
+}
+
+.admin-table th {
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 40px;
+  border-radius: var(--r-12);
+  border: 1px solid color-mix(in srgb, var(--c-border) 70%, transparent);
+  background: color-mix(in srgb, var(--c-surface-2) 90%, transparent);
+  overflow: hidden;
+}
+
+.admin-table__preview-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- Status pills (self-contained: not the unused cabinet-finance ones) ---- */
+
+.admin-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+}
+
+.admin-status-pill--published {
+  background: color-mix(in srgb, var(--c-success) 18%, transparent);
+  color: var(--c-success);
+}
+
+.admin-status-pill--draft {
+  background: color-mix(in srgb, var(--c-muted) 18%, transparent);
+  color: var(--c-muted);
+}
+
+.admin-status-pill--sold {
+  background: color-mix(in srgb, var(--c-danger) 18%, transparent);
+  color: var(--c-danger);
+}
+
+.admin-status-pill--available {
+  background: color-mix(in srgb, var(--c-success) 18%, transparent);
+  color: var(--c-success);
+}
+
+/* ---- Pagination ---- */
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-12);
+  padding: var(--s-12) var(--s-16);
+}
+
+.admin-pagination__summary {
+  font-size: var(--fs-14);
+  color: var(--c-muted);
+}
+
+.admin-pagination__links {
+  display: flex;
+  gap: var(--s-8);
+}
+
+/* ---- Empty state ---- */
+
+.admin-empty-state {
+  display: grid;
+  gap: var(--s-8);
+  padding: var(--s-40) var(--s-16);
+  text-align: center;
+}
+
+.admin-empty-state__hint {
+  color: var(--c-muted);
+}
+
 .admin-error-page {
   padding: var(--s-40) 0;
   display: grid;

@@ -43,6 +43,33 @@ function deltaSign(n) {
   return 'flat';
 }
 
+// Same convention as cabinet.pages.routes.cjs / cart.routes.js.
+function formatDateYMD(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
+function formatEurOrDash(cents) {
+  if (cents === null || cents === undefined) return '\u2014';
+  return `\u20ac${formatEurFromCents(cents)}`;
+}
+
+// Accepts 'YYYY-MM-DD' from a <input type="date">; returns null if absent/invalid.
+function parseDateParam(raw) {
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const d = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isFinite(d.getTime()) ? raw : null;
+}
+
+const TEMPLATES_PAGE_SIZE = 25;
+
+function parsePage(raw) {
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
 // Сумма paid-заказов заданного deal_type за последние periodDays дней,
 // плюс сумма за предыдущий период такой же длины (для дельты в деньгах).
 async function getRevenueWindow(pool, dealType, periodDays) {
@@ -141,6 +168,111 @@ async function getDashboardKpis(periodDays) {
   };
 }
 
+const TEMPLATE_STATUS_FILTERS = new Set(['draft', 'published']);
+const TEMPLATE_SOLD_FILTERS = new Set(['sold', 'not_sold']);
+
+async function getTemplateCategories() {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    `SELECT DISTINCT category FROM seller_templates
+      WHERE deleted_at IS NULL
+      ORDER BY category ASC`,
+  );
+  return rows.map((r) => r.category);
+}
+
+// Read-only cross-module report query (seller_templates + orders + user_profiles).
+// Per PILGRIM isolation rule this is fine for admin reads; any WRITE to
+// seller_templates must instead go through sellerTemplates.service.cjs.
+async function listAdminTemplates(filters) {
+  const pool = getPool();
+
+  const conditions = ['st.deleted_at IS NULL'];
+  const params = [];
+  const addParam = (value) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  if (filters.regFrom) conditions.push(`st.created_at >= ${addParam(filters.regFrom)}::date`);
+  if (filters.regTo) conditions.push(`st.created_at < (${addParam(filters.regTo)}::date + INTERVAL '1 day')`);
+  if (filters.modFrom) conditions.push(`st.updated_at >= ${addParam(filters.modFrom)}::date`);
+  if (filters.modTo) conditions.push(`st.updated_at < (${addParam(filters.modTo)}::date + INTERVAL '1 day')`);
+  if (filters.category) conditions.push(`st.category = ${addParam(filters.category)}`);
+  if (filters.status) conditions.push(`st.status = ${addParam(filters.status)}`);
+  if (filters.owner) {
+    const p = addParam(`%${filters.owner}%`);
+    conditions.push(`(u.email ILIKE ${p} OR up.full_name ILIKE ${p} OR up.nickname ILIKE ${p})`);
+  }
+  if (filters.q) {
+    const p = addParam(`%${filters.q}%`);
+    conditions.push(`(st.title ILIKE ${p} OR st.slug ILIKE ${p})`);
+  }
+  if (filters.sold === 'sold') {
+    conditions.push(
+      `EXISTS (SELECT 1 FROM orders o WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid')`,
+    );
+  } else if (filters.sold === 'not_sold') {
+    conditions.push(
+      `NOT EXISTS (SELECT 1 FROM orders o WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid')`,
+    );
+  }
+
+  const whereSql = conditions.join(' AND ');
+
+  const countRes = await pool.query(
+    `
+    SELECT COUNT(*)::int AS n
+    FROM seller_templates st
+    JOIN users u ON u.id = st.owner_user_id
+    LEFT JOIN user_profiles up ON up.user_id = u.id
+    WHERE ${whereSql}
+    `,
+    params,
+  );
+  const total = countRes.rows[0]?.n || 0;
+
+  const limitParam = addParam(TEMPLATES_PAGE_SIZE);
+  const offsetParam = addParam((filters.page - 1) * TEMPLATES_PAGE_SIZE);
+
+  const rowsRes = await pool.query(
+    `
+    SELECT
+      st.id, st.slug, st.title, st.preview_image, st.preview_url,
+      st.created_at, st.updated_at, st.price_buy_cents, st.price_rent_cents,
+      st.status,
+      COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS owner_display,
+      EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+      ) AS is_sold
+    FROM seller_templates st
+    JOIN users u ON u.id = st.owner_user_id
+    LEFT JOIN user_profiles up ON up.user_id = u.id
+    WHERE ${whereSql}
+    ORDER BY st.created_at DESC, st.id DESC
+    LIMIT ${limitParam} OFFSET ${offsetParam}
+    `,
+    params,
+  );
+
+  return { rows: rowsRes.rows, total };
+}
+
+function buildFilterQueryString(filters) {
+  const qs = new URLSearchParams();
+  if (filters.regFrom) qs.set('regFrom', filters.regFrom);
+  if (filters.regTo) qs.set('regTo', filters.regTo);
+  if (filters.modFrom) qs.set('modFrom', filters.modFrom);
+  if (filters.modTo) qs.set('modTo', filters.modTo);
+  if (filters.category) qs.set('category', filters.category);
+  if (filters.status) qs.set('status', filters.status);
+  if (filters.owner) qs.set('owner', filters.owner);
+  if (filters.q) qs.set('q', filters.q);
+  if (filters.sold) qs.set('sold', filters.sold);
+  return qs;
+}
+
 function createAdminPagesRouter() {
   const router = express.Router();
 
@@ -167,16 +299,94 @@ function createAdminPagesRouter() {
     }
   });
 
-  // Stubs for Part 2: nav is live, content lands page by page.
-  router.get('/templates', (req, res) => {
-    return res.status(200).render('pages/admin/templates', {
-      title: 'Admin \u00b7 Templates',
-      bodyClass: 'admin',
-      isAdmin: true,
-      currentPage: 'templates',
-    });
+  router.get('/templates', async (req, res, next) => {
+    try {
+      const q = req.query || {};
+      const filters = {
+        regFrom: parseDateParam(q.regFrom),
+        regTo: parseDateParam(q.regTo),
+        modFrom: parseDateParam(q.modFrom),
+        modTo: parseDateParam(q.modTo),
+        category: typeof q.category === 'string' && q.category.trim() ? q.category.trim() : null,
+        status: TEMPLATE_STATUS_FILTERS.has(q.status) ? q.status : null,
+        owner: typeof q.owner === 'string' && q.owner.trim() ? q.owner.trim() : null,
+        q: typeof q.q === 'string' && q.q.trim() ? q.q.trim() : null,
+        sold: TEMPLATE_SOLD_FILTERS.has(q.sold) ? q.sold : null,
+        page: parsePage(q.page),
+      };
+
+      const [categories, { rows, total }] = await Promise.all([
+        getTemplateCategories(),
+        listAdminTemplates(filters),
+      ]);
+
+      const totalPages = Math.max(1, Math.ceil(total / TEMPLATES_PAGE_SIZE));
+      const filterQs = buildFilterQueryString(filters);
+      const hrefForPage = (p) => {
+        const qs = new URLSearchParams(filterQs);
+        qs.set('page', String(p));
+        return `/admin/templates?${qs.toString()}`;
+      };
+
+      const templates = rows.map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        title: r.title,
+        previewSrc: r.preview_image || r.preview_url || null,
+        createdLabel: formatDateYMD(r.created_at),
+        updatedLabel: formatDateYMD(r.updated_at),
+        priceBuyLabel: formatEurOrDash(r.price_buy_cents),
+        priceRentLabel: formatEurOrDash(r.price_rent_cents),
+        ownerDisplay: r.owner_display,
+        statusLabel: r.status === 'published' ? 'Published' : 'Draft',
+        statusSlug: r.status,
+        isSold: r.is_sold,
+        soldLabel: r.is_sold ? 'Sold' : 'Available',
+      }));
+
+      return res.status(200).render('pages/admin/templates', {
+        title: 'Admin \u00b7 Templates',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'templates',
+        filters: {
+          regFrom: filters.regFrom || '',
+          regTo: filters.regTo || '',
+          modFrom: filters.modFrom || '',
+          modTo: filters.modTo || '',
+          category: filters.category || '',
+          owner: filters.owner || '',
+          q: filters.q || '',
+        },
+        statusOptions: [
+          { value: '', label: 'All', selected: !filters.status },
+          { value: 'published', label: 'Published', selected: filters.status === 'published' },
+          { value: 'draft', label: 'Draft', selected: filters.status === 'draft' },
+        ],
+        soldOptions: [
+          { value: '', label: 'All', selected: !filters.sold },
+          { value: 'sold', label: 'Sold', selected: filters.sold === 'sold' },
+          { value: 'not_sold', label: 'Not sold', selected: filters.sold === 'not_sold' },
+        ],
+        categoryOptions: [
+          { value: '', label: 'All', selected: !filters.category },
+          ...categories.map((c) => ({ value: c, label: c, selected: c === filters.category })),
+        ],
+        templates,
+        total,
+        page: filters.page,
+        totalPages,
+        hasPrev: filters.page > 1,
+        hasNext: filters.page < totalPages,
+        prevHref: hrefForPage(Math.max(1, filters.page - 1)),
+        nextHref: hrefForPage(Math.min(totalPages, filters.page + 1)),
+      });
+    } catch (err) {
+      return next(err);
+    }
   });
 
+  // Still stubs — Users/Finance land later.
   router.get('/users', (req, res) => {
     return res.status(200).render('pages/admin/users', {
       title: 'Admin \u00b7 Users',

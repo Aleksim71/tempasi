@@ -1,4 +1,136 @@
-<div class="admin-stub">
-  <h1 class="admin-stub__title">Templates</h1>
-  <p class="admin-stub__text">Template moderation is coming soon.</p>
+<div class="admin-templates">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Templates</h1>
+  </div>
+
+  <form class="admin-filters" method="get" action="/admin/templates">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="regFrom">Registered from</label>
+        <input class="input" type="date" id="regFrom" name="regFrom" value="{{filters.regFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="regTo">to</label>
+        <input class="input" type="date" id="regTo" name="regTo" value="{{filters.regTo}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="modFrom">Modified from</label>
+        <input class="input" type="date" id="modFrom" name="modFrom" value="{{filters.modFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="modTo">to</label>
+        <input class="input" type="date" id="modTo" name="modTo" value="{{filters.modTo}}" />
+      </div>
+    </div>
+
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="category">Catalog</label>
+        <select class="select" id="category" name="category">
+          {{#each categoryOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="status">Status</label>
+        <select class="select" id="status" name="status">
+          {{#each statusOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="sold">Sale status</label>
+        <select class="select" id="sold" name="sold">
+          {{#each soldOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="owner">Seller</label>
+        <input class="input" type="text" id="owner" name="owner" value="{{filters.owner}}" placeholder="email or name" />
+      </div>
+      <div class="admin-filters__field admin-filters__field--grow">
+        <label class="form__label" for="q">Search</label>
+        <input class="input" type="text" id="q" name="q" value="{{filters.q}}" placeholder="title or slug" />
+      </div>
+    </div>
+
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Apply</button>
+      <a class="c-btn" href="/admin/templates">Reset</a>
+    </div>
+  </form>
+
+  <section class="admin-table-card">
+    {{#if templates.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Preview</th>
+            <th>Title</th>
+            <th>Registered</th>
+            <th>Modified</th>
+            <th>Sale price</th>
+            <th>Rent price</th>
+            <th>Seller</th>
+            <th>Status</th>
+            <th>Sale status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each templates}}
+            <tr>
+              <td>
+                <span class="admin-table__preview">
+                  {{#if this.previewSrc}}
+                    <img
+                      class="admin-table__preview-img"
+                      src="{{this.previewSrc}}"
+                      alt="{{this.title}}"
+                      loading="lazy"
+                      onerror="this.remove()"
+                    />
+                  {{/if}}
+                </span>
+              </td>
+              <td>{{this.title}}</td>
+              <td>{{this.createdLabel}}</td>
+              <td>{{this.updatedLabel}}</td>
+              <td>{{this.priceBuyLabel}}</td>
+              <td>{{this.priceRentLabel}}</td>
+              <td>{{this.ownerDisplay}}</td>
+              <td><span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span></td>
+              <td>
+                {{#if this.isSold}}
+                  <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
+                {{else}}
+                  <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                {{/if}}
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="admin-pagination">
+        <span class="admin-pagination__summary">{{total}} templates &middot; page {{page}} of {{totalPages}}</span>
+        <div class="admin-pagination__links">
+          {{#if hasPrev}}
+            <a class="c-btn" href="{{prevHref}}">Previous</a>
+          {{/if}}
+          {{#if hasNext}}
+            <a class="c-btn" href="{{nextHref}}">Next</a>
+          {{/if}}
+        </div>
+      </div>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>No templates match these filters</h2>
+        <p class="admin-empty-state__hint">Try widening the date range or clearing a filter.</p>
+      </div>
+    {{/if}}
+  </section>
 </div>
