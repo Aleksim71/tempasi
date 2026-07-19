@@ -394,6 +394,15 @@ async function updateMyTemplateStatus({ pool, user, id, status }) {
     throw err;
   }
 
+  // Admin block takes precedence over the seller's own publish action.
+  // The repo-level WHERE guard is the real safety net (race-safe); this
+  // check just gives a clear error code instead of a silent no-op.
+  if (status === 'published' && row.admin_blocked_at) {
+    const err = new Error('TEMPLATE_BLOCKED_BY_ADMIN');
+    err.code = 'TEMPLATE_BLOCKED_BY_ADMIN';
+    throw err;
+  }
+
   // Enforce publish requirements server-side
   if (status === 'published') {
     const data = {
@@ -448,6 +457,13 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
 
   const v = validateAddOrEditTemplateForm(body);
   if (!v.ok) throwValidationFailed(v);
+
+  const nextStatus = v.data.status || 'draft';
+  if (nextStatus === 'published' && existing.admin_blocked_at) {
+    const err = new Error('TEMPLATE_BLOCKED_BY_ADMIN');
+    err.code = 'TEMPLATE_BLOCKED_BY_ADMIN';
+    throw err;
+  }
 
   // If new zip is provided, validate it and later replace old zip + preview
   const newZipPath = file && file.path ? String(file.path) : undefined;
@@ -535,6 +551,31 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
   return { updated };
 }
 
+// ------------------------------------------------------------
+// ADMIN block/unblock (not owner-scoped). Callers (admin routes) are
+// responsible for writing the admin_audit_log entry — this function
+// only performs the actual mutation via the module's own repo.
+// ------------------------------------------------------------
+async function adminBlockTemplate({ pool, id }) {
+  const updated = await repo.adminSetBlocked({ pool, id, blocked: true });
+  if (!updated) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { updated };
+}
+
+async function adminUnblockTemplate({ pool, id }) {
+  const updated = await repo.adminSetBlocked({ pool, id, blocked: false });
+  if (!updated) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { updated };
+}
+
 async function deleteMyTemplate({ pool, user, id }) {
   if (!user) throw new Error('AUTH_REQUIRED');
 
@@ -557,4 +598,8 @@ module.exports = {
   updateMyTemplateStatus,
   updateSellerTemplate,
   deleteMyTemplate,
+
+  // admin-only (not owner-scoped)
+  adminBlockTemplate,
+  adminUnblockTemplate,
 };

@@ -53,6 +53,10 @@
                   <div><strong>Rent:</strong> €{{price_rent_eur}}</div>
                 {{/if}}
 
+                {{#if is_admin_blocked}}
+                  <div><strong>Status:</strong> <span class="badge badge--blocked">BLOCKED BY ADMIN</span></div>
+                {{/if}}
+
                 {{#if is_sold}}
                   <div><strong>Status:</strong> <span class="badge badge--sold">SOLD</span></div>
                   {{#if sold_at_str}}
@@ -75,12 +79,23 @@
                     </button>
                   </form>
                 {{else}}
-                  <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
-                    <input type="hidden" name="status" value="published" />
-                    <button type="submit" class="button button--primary">
-                      Publish
-                    </button>
-                  </form>
+                  {{#if is_admin_blocked}}
+                    <span
+                      class="button"
+                      aria-disabled="true"
+                      style="opacity:0.5; cursor:not-allowed;"
+                      title="This template was blocked by an admin and cannot be republished right now."
+                    >
+                      Publish (blocked)
+                    </span>
+                  {{else}}
+                    <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
+                      <input type="hidden" name="status" value="published" />
+                      <button type="submit" class="button button--primary">
+                        Publish
+                      </button>
+                    </form>
+                  {{/if}}
                 {{/if}}
 
                 <form method="post" action="/cabinet/my-templates/{{id}}/delete" style="display:inline;">

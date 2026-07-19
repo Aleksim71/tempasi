@@ -7,6 +7,7 @@
 const express = require('express');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
+const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
 
 const ALLOWED_PERIOD_DAYS = new Set([1, 7, 28]);
 const DEFAULT_PERIOD_DAYS = 7;
@@ -168,7 +169,7 @@ async function getDashboardKpis(periodDays) {
   };
 }
 
-const TEMPLATE_STATUS_FILTERS = new Set(['draft', 'published']);
+const TEMPLATE_STATUS_FILTERS = new Set(['draft', 'published', 'blocked']);
 const TEMPLATE_SOLD_FILTERS = new Set(['sold', 'not_sold']);
 
 async function getTemplateCategories() {
@@ -199,7 +200,11 @@ async function listAdminTemplates(filters) {
   if (filters.modFrom) conditions.push(`st.updated_at >= ${addParam(filters.modFrom)}::date`);
   if (filters.modTo) conditions.push(`st.updated_at < (${addParam(filters.modTo)}::date + INTERVAL '1 day')`);
   if (filters.category) conditions.push(`st.category = ${addParam(filters.category)}`);
-  if (filters.status) conditions.push(`st.status = ${addParam(filters.status)}`);
+  if (filters.status === 'blocked') {
+    conditions.push('st.admin_blocked_at IS NOT NULL');
+  } else if (filters.status) {
+    conditions.push(`st.status = ${addParam(filters.status)}`);
+  }
   if (filters.owner) {
     const p = addParam(`%${filters.owner}%`);
     conditions.push(`(u.email ILIKE ${p} OR up.full_name ILIKE ${p} OR up.nickname ILIKE ${p})`);
@@ -240,7 +245,7 @@ async function listAdminTemplates(filters) {
     SELECT
       st.id, st.slug, st.title, st.preview_image, st.preview_url,
       st.created_at, st.updated_at, st.price_buy_cents, st.price_rent_cents,
-      st.status,
+      st.status, st.admin_blocked_at,
       COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS owner_display,
       EXISTS (
         SELECT 1 FROM orders o
@@ -338,8 +343,9 @@ function createAdminPagesRouter() {
         priceBuyLabel: formatEurOrDash(r.price_buy_cents),
         priceRentLabel: formatEurOrDash(r.price_rent_cents),
         ownerDisplay: r.owner_display,
-        statusLabel: r.status === 'published' ? 'Published' : 'Draft',
-        statusSlug: r.status,
+        statusLabel: r.admin_blocked_at ? 'Blocked' : r.status === 'published' ? 'Published' : 'Draft',
+        statusSlug: r.admin_blocked_at ? 'blocked' : r.status,
+        isBlocked: Boolean(r.admin_blocked_at),
         isSold: r.is_sold,
         soldLabel: r.is_sold ? 'Sold' : 'Available',
       }));
@@ -362,6 +368,7 @@ function createAdminPagesRouter() {
           { value: '', label: 'All', selected: !filters.status },
           { value: 'published', label: 'Published', selected: filters.status === 'published' },
           { value: 'draft', label: 'Draft', selected: filters.status === 'draft' },
+          { value: 'blocked', label: 'Blocked', selected: filters.status === 'blocked' },
         ],
         soldOptions: [
           { value: '', label: 'All', selected: !filters.sold },
@@ -380,10 +387,66 @@ function createAdminPagesRouter() {
         hasNext: filters.page < totalPages,
         prevHref: hrefForPage(Math.max(1, filters.page - 1)),
         nextHref: hrefForPage(Math.min(totalPages, filters.page + 1)),
+        currentHref: hrefForPage(filters.page),
       });
     } catch (err) {
       return next(err);
     }
+  });
+
+  function safeReturnTo(raw) {
+    return typeof raw === 'string' && raw.startsWith('/admin/templates') ? raw : '/admin/templates';
+  }
+
+  function resolveActorUserId(req) {
+    return (
+      req?.user?.id ??
+      req?.user?.user_id ??
+      req?.user?.userId ??
+      req?.userId ??
+      req?.session?.userId ??
+      req?.session?.user_id ??
+      null
+    );
+  }
+
+  // Write path for block/unblock goes through sellerTemplates.service.cjs
+  // (the owning module), not raw SQL here — per the isolation rule.
+  // Only the admin_audit_log INSERT (owned by this module) happens directly.
+  router.post('/templates/:id/block', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeReturnTo(req.body?.returnTo);
+    try {
+      const { updated } = await sellerTemplatesService.adminBlockTemplate({ pool, id });
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'template_block', 'seller_template', $2, $3::jsonb)`,
+        [resolveActorUserId(req), String(id), JSON.stringify({ slug: updated.slug })],
+      );
+    } catch (err) {
+      if (err && err.code === 'NOT_FOUND') return res.redirect(returnTo);
+      return next(err);
+    }
+    return res.redirect(returnTo);
+  });
+
+  router.post('/templates/:id/unblock', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeReturnTo(req.body?.returnTo);
+    try {
+      const { updated } = await sellerTemplatesService.adminUnblockTemplate({ pool, id });
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'template_unblock', 'seller_template', $2, $3::jsonb)`,
+        [resolveActorUserId(req), String(id), JSON.stringify({ slug: updated.slug })],
+      );
+    } catch (err) {
+      if (err && err.code === 'NOT_FOUND') return res.redirect(returnTo);
+      return next(err);
+    }
+    return res.redirect(returnTo);
   });
 
   // Still stubs — Users/Finance land later.

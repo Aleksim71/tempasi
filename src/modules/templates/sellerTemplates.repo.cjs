@@ -157,6 +157,7 @@ async function listByOwner({ pool, ownerUserId }) {
       st.zip_path,
       st.zip_original_name,
       st.zip_uploaded_at,
+      st.admin_blocked_at,
       st.deleted_at,
       st.created_at,
       st.updated_at,
@@ -179,6 +180,7 @@ async function listByOwner({ pool, ownerUserId }) {
       st.zip_path,
       st.zip_original_name,
       st.zip_uploaded_at,
+      st.admin_blocked_at,
       st.deleted_at,
       st.created_at,
       st.updated_at
@@ -215,6 +217,7 @@ async function getSellerTemplateForOwnerById({ pool, ownerUserId, id }) {
       zip_path,
       zip_original_name,
       zip_uploaded_at,
+      admin_blocked_at,
       deleted_at,
       created_at,
       updated_at
@@ -286,6 +289,7 @@ async function updateSellerTemplateByOwner({
       WHERE id = $11
         AND owner_user_id = $12
         AND deleted_at IS NULL
+        AND ($8 <> 'published' OR admin_blocked_at IS NULL)
       RETURNING
         id,
         owner_user_id,
@@ -317,6 +321,7 @@ async function updateSellerTemplateByOwner({
       WHERE id = $9
         AND owner_user_id = $10
         AND deleted_at IS NULL
+        AND ($8 <> 'published' OR admin_blocked_at IS NULL)
       RETURNING
         id,
         owner_user_id,
@@ -392,10 +397,43 @@ async function updateStatusByOwner({ pool, ownerUserId, id, status }) {
     WHERE id = $2
       AND owner_user_id = $3
       AND deleted_at IS NULL
+      AND ($1 <> 'published' OR admin_blocked_at IS NULL)
     RETURNING id, status
   `;
 
   const { rows } = await pool.query(q, [status, id, ownerUserId]);
+  return rows[0] || null;
+}
+
+// ------------------------------------------------------------
+// ADMIN block/unblock (NOT owner-scoped — admin-only write path).
+// Block forces status='draft'; unblock does NOT restore 'published'
+// (seller must republish manually). See PILGRIM.md for the decision.
+// ------------------------------------------------------------
+async function adminSetBlocked({ pool, id, blocked }) {
+  if (!pool) throw new Error('DB_POOL_REQUIRED');
+  if (!id) throw new Error('ID_REQUIRED');
+
+  const q = blocked
+    ? `
+      UPDATE seller_templates
+      SET status = 'draft',
+          admin_blocked_at = NOW(),
+          updated_at = NOW()
+      WHERE id = $1
+        AND deleted_at IS NULL
+      RETURNING id, slug, status, admin_blocked_at
+    `
+    : `
+      UPDATE seller_templates
+      SET admin_blocked_at = NULL,
+          updated_at = NOW()
+      WHERE id = $1
+        AND deleted_at IS NULL
+      RETURNING id, slug, status, admin_blocked_at
+    `;
+
+  const { rows } = await pool.query(q, [id]);
   return rows[0] || null;
 }
 
@@ -432,6 +470,9 @@ module.exports = {
   updateSellerTemplateByOwner,
   updateStatusByOwner,
   softDeleteByOwner,
+
+  // admin-only (not owner-scoped)
+  adminSetBlocked,
 
   // utils
   normalizeSlug,

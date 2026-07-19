@@ -271,6 +271,11 @@
   color: var(--c-success);
 }
 
+.admin-status-pill--blocked {
+  background: color-mix(in srgb, #b45309 22%, transparent);
+  color: #f5a524;
+}
+
 /* ---- Pagination ---- */
 
 .admin-pagination {

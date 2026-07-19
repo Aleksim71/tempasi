@@ -262,6 +262,7 @@ function createCabinetPagesRouter() {
         slug: r.slug,
         status: r.status,
         is_published: r.status === 'published',
+        is_admin_blocked: Boolean(r.admin_blocked_at),
         is_sold: Number(r.sold_count || 0) > 0,
         sold_at: r.sold_at || null,
         sold_at_str: r.sold_at ? formatDateYMD(r.sold_at) : '',

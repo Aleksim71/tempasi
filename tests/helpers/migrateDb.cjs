@@ -199,7 +199,8 @@ async function migrateDb() {
       ADD COLUMN IF NOT EXISTS zip_original_name TEXT,
       ADD COLUMN IF NOT EXISTS zip_mime TEXT,
       ADD COLUMN IF NOT EXISTS zip_size_bytes BIGINT,
-      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ;
+      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS admin_blocked_at TIMESTAMPTZ;
 
       ALTER TABLE seller_templates
         ADD COLUMN IF NOT EXISTS tags TEXT NOT NULL DEFAULT '';

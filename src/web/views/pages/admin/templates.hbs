@@ -78,6 +78,7 @@
             <th>Seller</th>
             <th>Status</th>
             <th>Sale status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -108,6 +109,19 @@
                   <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
                 {{else}}
                   <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                {{/if}}
+              </td>
+              <td>
+                {{#if this.isBlocked}}
+                  <form method="post" action="/admin/templates/{{this.id}}/unblock">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm">Unblock</button>
+                  </form>
+                {{else}}
+                  <form method="post" action="/admin/templates/{{this.id}}/block">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm">Block</button>
+                  </form>
                 {{/if}}
               </td>
             </tr>
