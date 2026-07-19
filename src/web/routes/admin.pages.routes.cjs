@@ -449,7 +449,7 @@ function createAdminPagesRouter() {
     return res.redirect(returnTo);
   });
 
-  // Still stubs — Users/Finance land later.
+  // Still stubs — Users/Finance/Settings/Security land later.
   router.get('/users', (req, res) => {
     return res.status(200).render('pages/admin/users', {
       title: 'Admin \u00b7 Users',
@@ -465,6 +465,24 @@ function createAdminPagesRouter() {
       bodyClass: 'admin',
       isAdmin: true,
       currentPage: 'finance',
+    });
+  });
+
+  router.get('/settings', (req, res) => {
+    return res.status(200).render('pages/admin/settings', {
+      title: 'Admin \u00b7 Settings',
+      bodyClass: 'admin',
+      isAdmin: true,
+      currentPage: 'settings',
+    });
+  });
+
+  router.get('/security', (req, res) => {
+    return res.status(200).render('pages/admin/security', {
+      title: 'Admin \u00b7 Security',
+      bodyClass: 'admin',
+      isAdmin: true,
+      currentPage: 'security',
     });
   });
 
