@@ -185,6 +185,21 @@
   gap: var(--s-8);
 }
 
+.admin-filters__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-8);
+  font-size: var(--fs-14);
+  color: var(--c-text);
+  margin-right: var(--s-16);
+}
+
+.admin-filters__checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--c-primary);
+}
+
 /* ---- Templates page: table ---- */
 
 .admin-table-card {

@@ -278,6 +278,93 @@ function buildFilterQueryString(filters) {
   return qs;
 }
 
+const USERS_PAGE_SIZE = 25;
+
+// Read-only cross-module report (users + user_profiles + orders +
+// seller_templates). Same isolation rule as Templates: fine for reads,
+// any WRITE would need to go through the owning module instead.
+async function listAdminUsers(filters) {
+  const pool = getPool();
+
+  const conditions = [];
+  const params = [];
+  const addParam = (value) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  if (filters.regFrom) conditions.push(`u.created_at >= ${addParam(filters.regFrom)}::date`);
+  if (filters.regTo) conditions.push(`u.created_at < (${addParam(filters.regTo)}::date + INTERVAL '1 day')`);
+
+  const isBuyerSql = `EXISTS (SELECT 1 FROM orders bo WHERE bo.user_id = u.id AND bo.status = 'paid')`;
+  const isSellerSql = `EXISTS (
+    SELECT 1 FROM orders so
+    JOIN seller_templates st ON st.slug = so.template_slug
+    WHERE st.owner_user_id = u.id AND so.status = 'paid'
+  )`;
+
+  const categoryConditions = [];
+  if (filters.empty) categoryConditions.push(`(NOT ${isBuyerSql} AND NOT ${isSellerSql})`);
+  if (filters.buyers) categoryConditions.push(isBuyerSql);
+  if (filters.sellers) categoryConditions.push(isSellerSql);
+  if (categoryConditions.length) conditions.push(`(${categoryConditions.join(' OR ')})`);
+
+  const whereSql = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM users u ${whereSql}`,
+    params,
+  );
+  const total = countRes.rows[0]?.n || 0;
+
+  const limitParam = addParam(USERS_PAGE_SIZE);
+  const offsetParam = addParam((filters.page - 1) * USERS_PAGE_SIZE);
+
+  const rowsRes = await pool.query(
+    `
+    SELECT
+      u.id, u.email, u.role, u.status, u.created_at,
+      COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS display_name,
+      (
+        SELECT COUNT(*) FROM orders so
+        JOIN seller_templates st ON st.slug = so.template_slug
+        WHERE st.owner_user_id = u.id AND so.deal_type = 'BUY' AND so.status = 'paid'
+      )::int AS sold_buy_count,
+      (
+        SELECT COUNT(*) FROM orders so
+        JOIN seller_templates st ON st.slug = so.template_slug
+        WHERE st.owner_user_id = u.id AND so.deal_type = 'RENT' AND so.status = 'paid'
+      )::int AS sold_rent_count,
+      (
+        SELECT COUNT(*) FROM orders bo
+        WHERE bo.user_id = u.id AND bo.deal_type = 'BUY' AND bo.status = 'paid'
+      )::int AS bought_buy_count,
+      (
+        SELECT COUNT(*) FROM orders bo
+        WHERE bo.user_id = u.id AND bo.deal_type = 'RENT' AND bo.status = 'paid'
+      )::int AS bought_rent_count
+    FROM users u
+    LEFT JOIN user_profiles up ON up.user_id = u.id
+    ${whereSql}
+    ORDER BY u.created_at DESC, u.id DESC
+    LIMIT ${limitParam} OFFSET ${offsetParam}
+    `,
+    params,
+  );
+
+  return { rows: rowsRes.rows, total };
+}
+
+function buildUsersFilterQueryString(filters) {
+  const qs = new URLSearchParams();
+  if (filters.regFrom) qs.set('regFrom', filters.regFrom);
+  if (filters.regTo) qs.set('regTo', filters.regTo);
+  if (filters.empty) qs.set('empty', '1');
+  if (filters.buyers) qs.set('buyers', '1');
+  if (filters.sellers) qs.set('sellers', '1');
+  return qs;
+}
+
 function createAdminPagesRouter() {
   const router = express.Router();
 
@@ -450,13 +537,66 @@ function createAdminPagesRouter() {
   });
 
   // Still stubs — Users/Finance/Settings/Security land later.
-  router.get('/users', (req, res) => {
-    return res.status(200).render('pages/admin/users', {
-      title: 'Admin \u00b7 Users',
-      bodyClass: 'admin',
-      isAdmin: true,
-      currentPage: 'users',
-    });
+  router.get('/users', async (req, res, next) => {
+    try {
+      const q = req.query || {};
+      const filters = {
+        regFrom: parseDateParam(q.regFrom),
+        regTo: parseDateParam(q.regTo),
+        empty: q.empty === '1',
+        buyers: q.buyers === '1',
+        sellers: q.sellers === '1',
+        page: parsePage(q.page),
+      };
+
+      const { rows, total } = await listAdminUsers(filters);
+      const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+      const filterQs = buildUsersFilterQueryString(filters);
+      const hrefForPage = (p) => {
+        const qs = new URLSearchParams(filterQs);
+        qs.set('page', String(p));
+        return `/admin/users?${qs.toString()}`;
+      };
+
+      const users = rows.map((r) => ({
+        id: r.id,
+        email: r.email,
+        displayName: r.display_name,
+        role: r.role,
+        status: r.status,
+        registeredLabel: formatDateYMD(r.created_at),
+        soldBuyCount: r.sold_buy_count,
+        soldRentCount: r.sold_rent_count,
+        boughtBuyCount: r.bought_buy_count,
+        boughtRentCount: r.bought_rent_count,
+      }));
+
+      return res.status(200).render('pages/admin/users', {
+        title: 'Admin \u00b7 Users',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'users',
+        filters: {
+          regFrom: filters.regFrom || '',
+          regTo: filters.regTo || '',
+        },
+        checkboxes: {
+          empty: filters.empty,
+          buyers: filters.buyers,
+          sellers: filters.sellers,
+        },
+        users,
+        total,
+        page: filters.page,
+        totalPages,
+        hasPrev: filters.page > 1,
+        hasNext: filters.page < totalPages,
+        prevHref: hrefForPage(Math.max(1, filters.page - 1)),
+        nextHref: hrefForPage(Math.min(totalPages, filters.page + 1)),
+      });
+    } catch (err) {
+      return next(err);
+    }
   });
 
   router.get('/finance', (req, res) => {
