@@ -199,8 +199,7 @@ async function migrateDb() {
       ADD COLUMN IF NOT EXISTS zip_original_name TEXT,
       ADD COLUMN IF NOT EXISTS zip_mime TEXT,
       ADD COLUMN IF NOT EXISTS zip_size_bytes BIGINT,
-      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ,
-      ADD COLUMN IF NOT EXISTS admin_blocked_at TIMESTAMPTZ;
+      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ;
 
       ALTER TABLE seller_templates
         ADD COLUMN IF NOT EXISTS tags TEXT NOT NULL DEFAULT '';
@@ -219,6 +218,42 @@ async function migrateDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS catalog_categories (
+      id BIGSERIAL PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    INSERT INTO catalog_categories (slug, label) VALUES
+      ('landing', 'Landing pages'),
+      ('ecommerce', 'E-commerce'),
+      ('blog', 'Blog / Media'),
+      ('portfolio', 'Portfolio'),
+      ('saas', 'SaaS / IT'),
+      ('restaurant', 'Restaurant / Caf\u00e9'),
+      ('real-estate', 'Real estate'),
+      ('education', 'Education'),
+      ('events', 'Events'),
+      ('health', 'Healthcare'),
+      ('other', 'Other')
+    ON CONFLICT (slug) DO NOTHING;
+
+    CREATE TABLE IF NOT EXISTS commission_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      rent_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+      sale_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_by BIGINT,
+      CONSTRAINT commission_settings_single_row CHECK (id = 1),
+      CONSTRAINT commission_settings_rent_percent_range CHECK (rent_percent >= 0 AND rent_percent <= 100),
+      CONSTRAINT commission_settings_sale_percent_range CHECK (sale_percent >= 0 AND sale_percent <= 100)
+    );
+
+    INSERT INTO commission_settings (id, rent_percent, sale_percent)
+    VALUES (1, 0, 0)
+    ON CONFLICT (id) DO NOTHING;
   `);
 
 

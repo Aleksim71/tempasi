@@ -117,23 +117,35 @@ function inferSellingOptionFromRow(row) {
 }
 
 
-const TEMPASI_ALLOWED_TEMPLATE_CATEGORIES = new Set([
-  'landing',
-  'ecommerce',
-  'blog',
-  'portfolio',
-  'saas',
-  'restaurant',
-  'real-estate',
-  'education',
-  'events',
-  'health',
-  'other',
-]);
+// TEMPASI_CATALOG_CATEGORIES_FROM_DB (2026-07-20)
+// Categories used to be a hardcoded Set duplicated across this file and
+// two <select> blocks in space-my-templates.hbs. They are now managed by
+// the admin (Settings > Catalog, catalog_categories table) so both the
+// dropdown options AND this validation must read from the DB, not a
+// static list — otherwise an admin-added category would show up in the
+// dropdown but silently get rejected back to 'other' on save.
+const FALLBACK_CATEGORY_OPTIONS = [
+  { slug: 'other', label: 'Other' },
+];
 
-function normalizeTemplateCategoryForRoute(value) {
+async function getCatalogCategoryOptions(pool) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT slug, label FROM catalog_categories ORDER BY label ASC',
+    );
+    return rows.length ? rows : FALLBACK_CATEGORY_OPTIONS;
+  } catch (e) {
+    // catalog_categories missing (e.g. migration not applied yet) —
+    // degrade gracefully instead of breaking template add/edit entirely.
+    console.error('[cabinet] failed to load catalog_categories, falling back:', e.message);
+    return FALLBACK_CATEGORY_OPTIONS;
+  }
+}
+
+function normalizeTemplateCategoryForRoute(value, allowedSlugs) {
   const category = String(value || '').trim().toLowerCase();
-  return TEMPASI_ALLOWED_TEMPLATE_CATEGORIES.has(category) ? category : 'other';
+  const allowed = allowedSlugs instanceof Set ? allowedSlugs : new Set(['other']);
+  return allowed.has(category) ? category : 'other';
 }
 
 function normalizeTemplateTagsForRoute(value) {
@@ -158,23 +170,6 @@ function normalizeTemplateTagsForRoute(value) {
 }
 
 
-function categoryFlags(value) {
-  const category = normalizeTemplateCategoryForRoute(value || 'other');
-
-  return {
-    formCategoryLanding: category === 'landing',
-    formCategoryEcommerce: category === 'ecommerce',
-    formCategoryBlog: category === 'blog',
-    formCategoryPortfolio: category === 'portfolio',
-    formCategorySaas: category === 'saas',
-    formCategoryRestaurant: category === 'restaurant',
-    formCategoryRealEstate: category === 'real-estate',
-    formCategoryEducation: category === 'education',
-    formCategoryEvents: category === 'events',
-    formCategoryHealth: category === 'health',
-    formCategoryOther: category === 'other',
-  };
-}
 
 function createCabinetPagesRouter() {
   const router = express.Router();
@@ -252,6 +247,7 @@ function createCabinetPagesRouter() {
     const pool = getPool();
     let workspaceError = null;
     let items = [];
+    const categoryOptions = await getCatalogCategoryOptions(pool);
 
     try {
       const rows = await sellerTemplatesService.listMyTemplates({ pool, user: req.user });
@@ -290,6 +286,8 @@ function createCabinetPagesRouter() {
 
       workspaceData: { items },
       workspaceError,
+      categoryOptions,
+      form: { category: 'other' },
 
       pageTitle: 'My Templates',
       pageSubtitle: 'Your templates for sale and rent.',
@@ -298,7 +296,10 @@ function createCabinetPagesRouter() {
     });
   });
 
-  router.get('/my-templates/add', (req, res) => {
+  router.get('/my-templates/add', async (req, res) => {
+    const pool = getPool();
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
@@ -309,6 +310,7 @@ function createCabinetPagesRouter() {
 
       workspaceData: { items: [] },
       workspaceError: null,
+      categoryOptions,
 
       form: { title: '', shortDescription: '', category: 'other', tags: '', priceBuy: '', priceRent: '', sellingOption: 'buy_rent', status: 'draft' },
       formErrors: {},
@@ -425,6 +427,8 @@ function createCabinetPagesRouter() {
   router.get('/my-templates/:id/edit', async (req, res) => {
     const pool = getPool();
     const id = Number(req.params.id);
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+    const allowedSlugs = new Set(categoryOptions.map((c) => c.slug));
 
     let row = null;
     let workspaceError = null;
@@ -446,7 +450,7 @@ function createCabinetPagesRouter() {
     
     // TEMPASI_EDIT_GET_CATEGORY_TAGS_META_FETCH_CURRENT
     // Force-load saved catalog metadata for the edit form from DB.
-    let editCategory = normalizeTemplateCategoryForRoute(row?.category || 'other');
+    let editCategory = normalizeTemplateCategoryForRoute(row?.category || 'other', allowedSlugs);
     let editTags = String(row?.tags || '');
 
     if (row && row.id) {
@@ -462,7 +466,7 @@ function createCabinetPagesRouter() {
       );
 
       const meta = metaResult.rows[0] || {};
-      editCategory = normalizeTemplateCategoryForRoute(meta.category || row.category || 'other');
+      editCategory = normalizeTemplateCategoryForRoute(meta.category || row.category || 'other', allowedSlugs);
       editTags = String(meta.tags || row.tags || '');
     }
 
@@ -474,6 +478,7 @@ res.render('pages/cabinet', {
       isMyTemplatesEdit: true,
       workspaceData: { items: [] },
       workspaceError,
+      categoryOptions,
       form: row
         ? {
             title: row.title || '',
@@ -499,7 +504,6 @@ res.render('pages/cabinet', {
       formIsPublished: row ? row.status === 'published' : false,
       formIsBuyOnly: row ? inferSellingOptionFromRow(row) === 'buy_only' : false,
       formIsBuyRent: row ? inferSellingOptionFromRow(row) === 'buy_rent' : true,
-      ...categoryFlags(editCategory),
       pageTitle: 'Edit Template',
       pageSubtitle: 'Update template details.',
       panelTitle: 'Edit Template',
@@ -511,6 +515,8 @@ res.render('pages/cabinet', {
   router.post('/my-templates/:id/edit', upload.single('templateZip'), async (req, res) => {
     const pool = getPool();
     const id = Number(req.params.id);
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+    const allowedSlugs = new Set(categoryOptions.map((c) => c.slug));
 
     const form = {
       title: String(req.body?.title || ''),
@@ -561,7 +567,7 @@ res.render('pages/cabinet', {
               AND deleted_at IS NULL
           `,
           [
-            normalizeTemplateCategoryForRoute(req.body?.category),
+            normalizeTemplateCategoryForRoute(req.body?.category, allowedSlugs),
             normalizeTemplateTagsForRoute(req.body?.tags),
             id,
             ownerUserId,
@@ -596,6 +602,7 @@ res.render('pages/cabinet', {
       isMyTemplatesEdit: true,
       workspaceData: { items: [] },
       workspaceError,
+      categoryOptions,
       form,
       formErrors,
       formIsDraft: status === 'draft',

@@ -1,0 +1,65 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+  </nav>
+
+  {{#if error}}
+    <div class="admin-form-error">{{error}}</div>
+  {{/if}}
+
+  <form class="admin-filters" method="post" action="/admin/settings/catalog">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field admin-filters__field--grow">
+        <label class="form__label" for="label">New category label</label>
+        <input class="input" type="text" id="label" name="label" placeholder="e.g. Fitness" required />
+      </div>
+    </div>
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Add category</button>
+    </div>
+  </form>
+
+  <section class="admin-table-card">
+    {{#if categories.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Slug</th>
+            <th>Templates using it</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each categories}}
+            <tr>
+              <td>{{this.label}}</td>
+              <td>{{this.slug}}</td>
+              <td>{{this.in_use_count}}</td>
+              <td>
+                {{#if (eq this.slug 'other')}}
+                  <span class="admin-empty-state__hint">fallback — can't delete</span>
+                {{else}}
+                  <form method="post" action="/admin/settings/catalog/{{this.id}}/delete">
+                    <button type="submit" class="c-btn c-btn--sm">Delete</button>
+                  </form>
+                {{/if}}
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>No categories yet</h2>
+        <p class="admin-empty-state__hint">Add the first one above.</p>
+      </div>
+    {{/if}}
+  </section>
+</div>

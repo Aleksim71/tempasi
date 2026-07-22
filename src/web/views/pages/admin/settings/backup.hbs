@@ -1,0 +1,61 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+  </nav>
+
+  <p class="admin-empty-state__hint">
+    Read-only. Backups themselves are produced by a cron job outside this application — this page only lists what is currently on disk.
+  </p>
+
+  {{#unless backupDirConfigured}}
+    <div class="admin-empty-state">
+      <h2>BACKUP_DIR is not configured</h2>
+      <p class="admin-empty-state__hint">Set the BACKUP_DIR environment variable to the folder your backup cron writes to.</p>
+    </div>
+  {{else}}
+    {{#if dirError}}
+      <div class="admin-form-error">Could not read {{backupDir}}: {{dirError}}</div>
+    {{else}}
+      {{#unless dirExists}}
+        <div class="admin-empty-state">
+          <h2>Backup folder not found</h2>
+          <p class="admin-empty-state__hint">{{backupDir}} does not exist yet.</p>
+        </div>
+      {{else}}
+        <section class="admin-table-card">
+          {{#if files.length}}
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Size</th>
+                  <th>Modified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each files}}
+                  <tr>
+                    <td>{{this.name}}</td>
+                    <td>{{this.sizeLabel}}</td>
+                    <td>{{this.modifiedLabel}}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            <div class="admin-empty-state">
+              <h2>No backup files found</h2>
+              <p class="admin-empty-state__hint">{{backupDir}} is empty.</p>
+            </div>
+          {{/if}}
+        </section>
+      {{/unless}}
+    {{/if}}
+  {{/unless}}
+</div>

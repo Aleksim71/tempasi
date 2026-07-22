@@ -5,6 +5,8 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
@@ -50,6 +52,18 @@ function formatDateYMD(value) {
   const d = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(d.getTime())) return '';
   return d.toISOString().slice(0, 10);
+}
+
+function formatBytesForBackup(bytes) {
+  if (!Number.isFinite(bytes)) return '\u2014';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let n = bytes;
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i += 1;
+  }
+  return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
 function formatEurOrDash(cents) {
@@ -609,11 +623,228 @@ function createAdminPagesRouter() {
   });
 
   router.get('/settings', (req, res) => {
-    return res.status(200).render('pages/admin/settings', {
-      title: 'Admin \u00b7 Settings',
+    return res.redirect('/admin/settings/catalog');
+  });
+
+  function slugifyLabel(raw) {
+    return String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+  }
+
+  function resolveActorUserIdForSettings(req) {
+    return (
+      req?.user?.id ??
+      req?.user?.user_id ??
+      req?.user?.userId ??
+      req?.userId ??
+      req?.session?.userId ??
+      req?.session?.user_id ??
+      null
+    );
+  }
+
+  // ---- Settings > Catalog ----
+  router.get('/settings/catalog', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const { rows } = await pool.query(
+        `
+        SELECT
+          cc.id, cc.slug, cc.label, cc.created_at,
+          (SELECT COUNT(*) FROM seller_templates st WHERE st.category = cc.slug AND st.deleted_at IS NULL)::int AS in_use_count
+        FROM catalog_categories cc
+        ORDER BY cc.label ASC
+        `,
+      );
+      return res.status(200).render('pages/admin/settings/catalog', {
+        title: 'Admin \u00b7 Settings \u00b7 Catalog',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'settings',
+        settingsTab: 'catalog',
+        categories: rows,
+        error: req.query.error || null,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/settings/catalog', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const label = String(req.body?.label || '').trim();
+    const slug = slugifyLabel(label);
+
+    if (!label || !slug) {
+      return res.redirect('/admin/settings/catalog?error=' + encodeURIComponent('Label is required.'));
+    }
+
+    try {
+      const { rows } = await pool.query(
+        `INSERT INTO catalog_categories (slug, label)
+         VALUES ($1, $2)
+         ON CONFLICT (slug) DO NOTHING
+         RETURNING id`,
+        [slug, label],
+      );
+      if (!rows[0]) {
+        return res.redirect('/admin/settings/catalog?error=' + encodeURIComponent('That category already exists.'));
+      }
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'catalog_category_add', 'catalog_category', $2, $3::jsonb)`,
+        [resolveActorUserIdForSettings(req), String(rows[0].id), JSON.stringify({ slug, label })],
+      );
+    } catch (err) {
+      return next(err);
+    }
+    return res.redirect('/admin/settings/catalog');
+  });
+
+  router.post('/settings/catalog/:id/delete', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+
+    try {
+      const { rows } = await pool.query('SELECT slug, label FROM catalog_categories WHERE id = $1', [id]);
+      const target = rows[0];
+      if (!target) return res.redirect('/admin/settings/catalog');
+
+      if (target.slug === 'other') {
+        return res.redirect(
+          '/admin/settings/catalog?error=' + encodeURIComponent('"Other" cannot be deleted — it is the fallback category.'),
+        );
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Reassign templates in the deleted theme to "Other" (bottom of
+        // the seller's category list) rather than leaving them orphaned.
+        await client.query(
+          `UPDATE seller_templates SET category = 'other', updated_at = NOW() WHERE category = $1`,
+          [target.slug],
+        );
+        await client.query('DELETE FROM catalog_categories WHERE id = $1', [id]);
+        await client.query(
+          `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+           VALUES ($1, 'catalog_category_delete', 'catalog_category', $2, $3::jsonb)`,
+          [resolveActorUserIdForSettings(req), String(id), JSON.stringify({ slug: target.slug, label: target.label })],
+        );
+        await client.query('COMMIT');
+      } catch (txErr) {
+        await client.query('ROLLBACK');
+        throw txErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      return next(err);
+    }
+    return res.redirect('/admin/settings/catalog');
+  });
+
+  // ---- Settings > Commission fee ----
+  router.get('/settings/commission', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const { rows } = await pool.query('SELECT rent_percent, sale_percent, updated_at FROM commission_settings WHERE id = 1');
+      const row = rows[0] || { rent_percent: 0, sale_percent: 0, updated_at: null };
+      return res.status(200).render('pages/admin/settings/commission', {
+        title: 'Admin \u00b7 Settings \u00b7 Commission fee',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'settings',
+        settingsTab: 'commission',
+        rentPercent: row.rent_percent,
+        salePercent: row.sale_percent,
+        updatedLabel: row.updated_at ? formatDateYMD(row.updated_at) : null,
+        error: req.query.error || null,
+        saved: req.query.saved === '1',
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/settings/commission', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const rentPercent = Number.parseFloat(req.body?.rentPercent);
+    const salePercent = Number.parseFloat(req.body?.salePercent);
+
+    const valid = (n) => Number.isFinite(n) && n >= 0 && n <= 100;
+    if (!valid(rentPercent) || !valid(salePercent)) {
+      return res.redirect(
+        '/admin/settings/commission?error=' + encodeURIComponent('Both percentages must be between 0 and 100.'),
+      );
+    }
+
+    try {
+      await pool.query(
+        `UPDATE commission_settings
+         SET rent_percent = $1, sale_percent = $2, updated_at = NOW(), updated_by = $3
+         WHERE id = 1`,
+        [rentPercent, salePercent, resolveActorUserIdForSettings(req)],
+      );
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'commission_settings_update', 'commission_settings', '1', $2::jsonb)`,
+        [resolveActorUserIdForSettings(req), JSON.stringify({ rentPercent, salePercent })],
+      );
+    } catch (err) {
+      return next(err);
+    }
+    return res.redirect('/admin/settings/commission?saved=1');
+  });
+
+  // ---- Settings > Backup (read-only: an external cron performs the
+  // actual backup; this page only lists what is on disk) ----
+  router.get('/settings/backup', (req, res) => {
+    const configuredDir = process.env.BACKUP_DIR;
+    const backupDir = configuredDir ? path.resolve(configuredDir) : null;
+
+    let files = [];
+    let dirExists = false;
+    let dirError = null;
+
+    if (backupDir) {
+      try {
+        dirExists = fs.existsSync(backupDir);
+        if (dirExists) {
+          files = fs
+            .readdirSync(backupDir)
+            .filter((name) => !name.startsWith('.'))
+            .map((name) => {
+              const stat = fs.statSync(path.join(backupDir, name));
+              return {
+                name,
+                sizeLabel: formatBytesForBackup(stat.size),
+                modifiedLabel: formatDateYMD(stat.mtime),
+                modifiedTs: stat.mtime.getTime(),
+              };
+            })
+            .sort((a, b) => b.modifiedTs - a.modifiedTs);
+        }
+      } catch (e) {
+        dirError = e.message;
+      }
+    }
+
+    return res.status(200).render('pages/admin/settings/backup', {
+      title: 'Admin \u00b7 Settings \u00b7 Backup',
       bodyClass: 'admin',
       isAdmin: true,
       currentPage: 'settings',
+      settingsTab: 'backup',
+      backupDirConfigured: Boolean(backupDir),
+      backupDir,
+      dirExists,
+      dirError,
+      files,
     });
   });
 

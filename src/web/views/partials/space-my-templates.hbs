@@ -168,17 +168,9 @@
           <div class="form__row">
             <label class="form__label" for="category">Category *</label>
             <select class="input" id="editCategory" name="category" required>
-              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
-              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
-              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
-              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
-              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
-              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
-              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
-              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
-              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
-              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
-              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+              {{#each categoryOptions}}
+                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
             </select>
           </div>
 
@@ -193,17 +185,9 @@
           <div class="form__row">
             <label class="form__label" for="category">Category *</label>
             <select class="input" id="category" name="category" required>
-              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
-              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
-              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
-              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
-              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
-              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
-              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
-              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
-              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
-              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
-              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+              {{#each categoryOptions}}
+                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
             </select>
           </div>
 
@@ -341,17 +325,9 @@
           <div class="form__row">
             <label class="form__label" for="editCategory">Category *</label>
             <select class="input" id="editCategory" name="category" required>
-              <option value="landing" {{#if formCategoryLanding}}selected{{/if}}>Landing pages</option>
-              <option value="ecommerce" {{#if formCategoryEcommerce}}selected{{/if}}>E-commerce</option>
-              <option value="blog" {{#if formCategoryBlog}}selected{{/if}}>Blog / Media</option>
-              <option value="portfolio" {{#if formCategoryPortfolio}}selected{{/if}}>Portfolio</option>
-              <option value="saas" {{#if formCategorySaas}}selected{{/if}}>SaaS / IT</option>
-              <option value="restaurant" {{#if formCategoryRestaurant}}selected{{/if}}>Restaurant / Café</option>
-              <option value="real-estate" {{#if formCategoryRealEstate}}selected{{/if}}>Real estate</option>
-              <option value="education" {{#if formCategoryEducation}}selected{{/if}}>Education</option>
-              <option value="events" {{#if formCategoryEvents}}selected{{/if}}>Events</option>
-              <option value="health" {{#if formCategoryHealth}}selected{{/if}}>Healthcare</option>
-              <option value="other" {{#if formCategoryOther}}selected{{/if}}>Other</option>
+              {{#each categoryOptions}}
+                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
             </select>
           </div>
 

@@ -1,0 +1,42 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+  </nav>
+
+  <p class="admin-empty-state__hint">
+    These percentages are stored here but are not yet applied anywhere in checkout or seller payouts —
+    wiring them into the actual money calculation is separate future work.
+  </p>
+
+  {{#if error}}
+    <div class="admin-form-error">{{error}}</div>
+  {{/if}}
+  {{#if saved}}
+    <div class="admin-form-success">Saved.</div>
+  {{/if}}
+
+  <form class="admin-filters" method="post" action="/admin/settings/commission">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="rentPercent">Rent commission, %</label>
+        <input class="input" type="number" min="0" max="100" step="0.01" id="rentPercent" name="rentPercent" value="{{rentPercent}}" required />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="salePercent">Sale commission, %</label>
+        <input class="input" type="number" min="0" max="100" step="0.01" id="salePercent" name="salePercent" value="{{salePercent}}" required />
+      </div>
+    </div>
+    {{#if updatedLabel}}
+      <p class="admin-empty-state__hint">Last updated: {{updatedLabel}}</p>
+    {{/if}}
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Save</button>
+    </div>
+  </form>
+</div>
