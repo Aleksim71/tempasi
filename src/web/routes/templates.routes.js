@@ -13,6 +13,38 @@ function getTemplateDetailsUserId(req) {
   return req.userId || req.user?.id || req.session?.userId || req.session?.user?.id || null;
 }
 
+// TEMPASI_CATALOG_CATEGORIES_FROM_DB (2026-07-21, corrected 2026-07-22)
+// Was a hardcoded 10-item list duplicated here; categories are now
+// admin-managed (Settings > Catalog, catalog_categories table).
+// "Other" IS shown here (confirmed with the user 2026-07-22) — an
+// earlier version of this fix excluded it by mistake.
+const FALLBACK_CATEGORY_CHIPS = [
+  { slug: 'landing', label: 'Landing pages' },
+  { slug: 'ecommerce', label: 'E-commerce' },
+  { slug: 'blog', label: 'Blog / Media' },
+  { slug: 'portfolio', label: 'Portfolio' },
+  { slug: 'saas', label: 'SaaS / IT' },
+  { slug: 'restaurant', label: 'Restaurant / Caf\u00e9' },
+  { slug: 'real-estate', label: 'Real estate' },
+  { slug: 'education', label: 'Education' },
+  { slug: 'events', label: 'Events' },
+  { slug: 'health', label: 'Healthcare' },
+  { slug: 'other', label: 'Other' },
+];
+
+async function getCatalogCategoryChips(db) {
+  if (!db || typeof db.query !== 'function') return FALLBACK_CATEGORY_CHIPS;
+  try {
+    const { rows } = await db.query(
+      "SELECT slug, label FROM catalog_categories ORDER BY (slug = 'other') ASC, label ASC",
+    );
+    return rows.length ? rows : FALLBACK_CATEGORY_CHIPS;
+  } catch (e) {
+    console.error('[templates.routes] failed to load catalog_categories, falling back:', e.message);
+    return FALLBACK_CATEGORY_CHIPS;
+  }
+}
+
 async function loadUserCasesForTemplateDetails(db, userId) {
   if (!db || typeof db.query !== 'function' || !userId) return [];
 
@@ -392,12 +424,15 @@ export function createTemplatesRouter() {
         selectedCaseId,
       );
 
+      const categoryOptions = await getCatalogCategoryChips(db);
+
       res.render('pages/templates/index', {
         title: 'Templates — Tempasi',
         bodyClass: 'templates-page',
         activePage: 'templates',
         styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
         templates,
+        categoryOptions,
         selectedCaseId,
         selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
       });
@@ -413,6 +448,7 @@ export function createTemplatesRouter() {
           activePage: 'templates',
           styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
           templates: [],
+          categoryOptions: FALLBACK_CATEGORY_CHIPS,
         });
       } catch (e2) {
         return next(e2);

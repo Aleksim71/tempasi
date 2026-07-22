@@ -47,16 +47,9 @@
           <div class="templates-side__title">Categories</div>
 
           <div class="templates-chips templates-chips--wide">
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="landing" /><span class="chip-label">Landing pages</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="ecommerce" /><span class="chip-label">E-commerce</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="blog" /><span class="chip-label">Blog / Media</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="portfolio" /><span class="chip-label">Portfolio</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="saas" /><span class="chip-label">SaaS / IT</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="restaurant" /><span class="chip-label">Restaurant / Café</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="real-estate" /><span class="chip-label">Real estate</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="education" /><span class="chip-label">Education</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="events" /><span class="chip-label">Events</span></label>
-            <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="health" /><span class="chip-label">Healthcare</span></label>
+            {{#each categoryOptions}}
+              <label class="chip chip--toggle"><input class="chip-input" type="checkbox" name="cat" value="{{this.slug}}" /><span class="chip-label">{{this.label}}</span></label>
+            {{/each}}
           </div>
         </div>
 
