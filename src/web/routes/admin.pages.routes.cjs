@@ -614,12 +614,146 @@ function createAdminPagesRouter() {
   });
 
   router.get('/finance', (req, res) => {
-    return res.status(200).render('pages/admin/finance', {
-      title: 'Admin \u00b7 Finance',
-      bodyClass: 'admin',
-      isAdmin: true,
-      currentPage: 'finance',
-    });
+    return res.redirect('/admin/finance/catalog');
+  });
+
+  // ---- Finance > Catalog (revenue per catalog theme) ----
+  router.get('/finance/catalog', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const regFrom = parseDateParam(req.query.regFrom);
+      const regTo = parseDateParam(req.query.regTo);
+
+      const params = [];
+      const addParam = (v) => {
+        params.push(v);
+        return `$${params.length}`;
+      };
+      let dateSql = '';
+      if (regFrom) dateSql += ` AND o.created_at >= ${addParam(regFrom)}::date`;
+      if (regTo) dateSql += ` AND o.created_at < (${addParam(regTo)}::date + INTERVAL '1 day')`;
+
+      const { rows } = await pool.query(
+        `
+        SELECT
+          cc.id, cc.slug, cc.label,
+          COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'RENT'), 0)::bigint AS rent_cents,
+          COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'BUY'), 0)::bigint AS sale_cents
+        FROM catalog_categories cc
+        LEFT JOIN seller_templates st ON st.category = cc.slug AND st.deleted_at IS NULL
+        LEFT JOIN orders o ON o.template_slug = st.slug AND o.status = 'paid' ${dateSql}
+        GROUP BY cc.id, cc.slug, cc.label
+        ORDER BY (COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'RENT'), 0)
+                + COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'BUY'), 0)) DESC,
+                cc.label ASC
+        `,
+        params,
+      );
+
+      const categories = rows.map((r) => ({
+        label: r.label,
+        slug: r.slug,
+        rentLabel: formatEurFromCents(Number(r.rent_cents)),
+        saleLabel: formatEurFromCents(Number(r.sale_cents)),
+        totalLabel: formatEurFromCents(Number(r.rent_cents) + Number(r.sale_cents)),
+      }));
+
+      return res.status(200).render('pages/admin/finance/catalog', {
+        title: 'Admin \u00b7 Finance \u00b7 Catalog',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'finance',
+        financeTab: 'catalog',
+        filters: { regFrom: regFrom || '', regTo: regTo || '' },
+        categories,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // ---- Finance > Users (revenue per seller) ----
+  const FINANCE_USERS_PAGE_SIZE = 25;
+
+  router.get('/finance/users', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const regFrom = parseDateParam(req.query.regFrom);
+      const regTo = parseDateParam(req.query.regTo);
+      const page = parsePage(req.query.page);
+
+      const params = [];
+      const addParam = (v) => {
+        params.push(v);
+        return `$${params.length}`;
+      };
+      let dateSql = '';
+      if (regFrom) dateSql += ` AND o.created_at >= ${addParam(regFrom)}::date`;
+      if (regTo) dateSql += ` AND o.created_at < (${addParam(regTo)}::date + INTERVAL '1 day')`;
+
+      const countRes = await pool.query('SELECT COUNT(*)::int AS n FROM users');
+      const total = countRes.rows[0]?.n || 0;
+      const totalPages = Math.max(1, Math.ceil(total / FINANCE_USERS_PAGE_SIZE));
+
+      const limitParam = addParam(FINANCE_USERS_PAGE_SIZE);
+      const offsetParam = addParam((page - 1) * FINANCE_USERS_PAGE_SIZE);
+
+      const { rows } = await pool.query(
+        `
+        SELECT
+          u.id, u.email,
+          COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS display_name,
+          COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'RENT'), 0)::bigint AS rent_cents,
+          COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'BUY'), 0)::bigint AS sale_cents
+        FROM users u
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        LEFT JOIN seller_templates st ON st.owner_user_id = u.id AND st.deleted_at IS NULL
+        LEFT JOIN orders o ON o.template_slug = st.slug AND o.status = 'paid' ${dateSql}
+        GROUP BY u.id, u.email, up.nickname, up.full_name
+        ORDER BY (COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'RENT'), 0)
+                + COALESCE(SUM(o.amount_cents) FILTER (WHERE o.deal_type = 'BUY'), 0)) DESC,
+                u.id DESC
+        LIMIT ${limitParam} OFFSET ${offsetParam}
+        `,
+        params,
+      );
+
+      const users = rows.map((r) => ({
+        displayName: r.display_name,
+        email: r.email,
+        rentLabel: formatEurFromCents(Number(r.rent_cents)),
+        saleLabel: formatEurFromCents(Number(r.sale_cents)),
+        totalLabel: formatEurFromCents(Number(r.rent_cents) + Number(r.sale_cents)),
+      }));
+
+      const filterQs = new URLSearchParams();
+      if (regFrom) filterQs.set('regFrom', regFrom);
+      if (regTo) filterQs.set('regTo', regTo);
+      const hrefForPage = (p) => {
+        const qs = new URLSearchParams(filterQs);
+        qs.set('page', String(p));
+        return `/admin/finance/users?${qs.toString()}`;
+      };
+
+      return res.status(200).render('pages/admin/finance/users', {
+        title: 'Admin \u00b7 Finance \u00b7 Users',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'finance',
+        financeTab: 'users',
+        filters: { regFrom: regFrom || '', regTo: regTo || '' },
+        users,
+        total,
+        page,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+        prevHref: hrefForPage(Math.max(1, page - 1)),
+        nextHref: hrefForPage(Math.min(totalPages, page + 1)),
+      });
+    } catch (err) {
+      return next(err);
+    }
   });
 
   router.get('/settings', (req, res) => {

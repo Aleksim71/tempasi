@@ -1,0 +1,57 @@
+<div class="admin-finance">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Finance</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Finance sections">
+    <a href="/admin/finance/catalog" class="admin-subnav__link{{#if (eq financeTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/finance/users" class="admin-subnav__link{{#if (eq financeTab 'users')}} admin-subnav__link--active{{/if}}">Users</a>
+  </nav>
+
+  <form class="admin-filters" method="get" action="/admin/finance/catalog">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="regFrom">From</label>
+        <input class="input" type="date" id="regFrom" name="regFrom" value="{{filters.regFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="regTo">to</label>
+        <input class="input" type="date" id="regTo" name="regTo" value="{{filters.regTo}}" />
+      </div>
+    </div>
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Apply</button>
+      <a class="c-btn" href="/admin/finance/catalog">Reset</a>
+    </div>
+  </form>
+
+  <section class="admin-table-card">
+    {{#if categories.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Theme</th>
+            <th>Rent revenue</th>
+            <th>Sale revenue</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each categories}}
+            <tr>
+              <td>{{this.label}}</td>
+              <td>&euro;{{this.rentLabel}}</td>
+              <td>&euro;{{this.saleLabel}}</td>
+              <td>&euro;{{this.totalLabel}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>No catalog themes yet</h2>
+        <p class="admin-empty-state__hint">Add themes in Settings &gt; Catalog first.</p>
+      </div>
+    {{/if}}
+  </section>
+</div>
