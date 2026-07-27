@@ -362,6 +362,113 @@
   font-size: var(--fs-14);
 }
 
+/* ---- Templates: list/card view toggle ---- */
+
+.admin-view-toggle {
+  display: inline-flex;
+  gap: var(--s-8);
+}
+
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-12);
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.view-toggle.active {
+  color: var(--c-text);
+  border-color: var(--c-primary);
+}
+
+#adminTemplatesView[data-view='list'] #adminTemplatesCards {
+  display: none;
+}
+
+#adminTemplatesView[data-view='cards'] #adminTemplatesTable {
+  display: none;
+}
+
+.admin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--s-16);
+  padding: var(--s-16);
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-16);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--c-surface-2) 60%, transparent);
+}
+
+.admin-card__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 220px;
+  border-bottom: 1px solid var(--c-border);
+  background: color-mix(in srgb, var(--c-surface-2) 90%, transparent);
+  overflow: hidden;
+}
+
+.admin-card__preview-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-card__body {
+  display: grid;
+  gap: var(--s-8);
+  padding: var(--s-16);
+}
+
+.admin-card__title {
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-16);
+  color: var(--c-text);
+}
+
+.admin-card__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-8);
+  font-size: var(--fs-14);
+  color: var(--c-text);
+}
+
+.admin-card__label {
+  color: var(--c-muted);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-card__pills {
+  justify-content: flex-start;
+  gap: var(--s-8);
+}
+
+.admin-card__actions {
+  display: flex;
+  gap: var(--s-8);
+  margin-top: var(--s-8);
+}
+
 .admin-error-page {
   padding: var(--s-40) 0;
   display: grid;

@@ -1,6 +1,11 @@
 <div class="admin-templates">
   <div class="admin-dashboard__header">
     <h1 class="admin-dashboard__title">Templates</h1>
+
+    <div class="admin-view-toggle" aria-label="View mode">
+      <button type="button" id="adminViewList" class="view-toggle" aria-label="List view" aria-pressed="true">&#9776;</button>
+      <button type="button" id="adminViewCards" class="view-toggle" aria-label="Card view" aria-pressed="false">&#9638;</button>
+    </div>
   </div>
 
   <form class="admin-filters" method="get" action="/admin/templates">
@@ -66,68 +71,108 @@
 
   <section class="admin-table-card">
     {{#if templates.length}}
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Preview</th>
-            <th>Title</th>
-            <th>Registered</th>
-            <th>Modified</th>
-            <th>Sale price</th>
-            <th>Rent price</th>
-            <th>Seller</th>
-            <th>Status</th>
-            <th>Sale status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each templates}}
+      <div id="adminTemplatesView" data-view="list">
+        <table class="admin-table" id="adminTemplatesTable">
+          <thead>
             <tr>
-              <td>
-                <span class="admin-table__preview">
-                  {{#if this.previewSrc}}
-                    <img
-                      class="admin-table__preview-img"
-                      src="{{this.previewSrc}}"
-                      alt="{{this.title}}"
-                      loading="lazy"
-                      onerror="this.remove()"
-                    />
-                  {{/if}}
-                </span>
-              </td>
-              <td>{{this.title}}</td>
-              <td>{{this.createdLabel}}</td>
-              <td>{{this.updatedLabel}}</td>
-              <td>{{this.priceBuyLabel}}</td>
-              <td>{{this.priceRentLabel}}</td>
-              <td>{{this.ownerDisplay}}</td>
-              <td><span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span></td>
-              <td>
-                {{#if this.isSold}}
-                  <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
-                {{else}}
-                  <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
-                {{/if}}
-              </td>
-              <td>
-                {{#if this.isBlocked}}
-                  <form method="post" action="/admin/templates/{{this.id}}/unblock">
-                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
-                    <button type="submit" class="c-btn c-btn--sm">Unblock</button>
-                  </form>
-                {{else}}
-                  <form method="post" action="/admin/templates/{{this.id}}/block">
-                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
-                    <button type="submit" class="c-btn c-btn--sm">Block</button>
-                  </form>
-                {{/if}}
-              </td>
+              <th>Title</th>
+              <th>Registered</th>
+              <th>Modified</th>
+              <th>Sale price</th>
+              <th>Rent price</th>
+              <th>Seller</th>
+              <th>Status</th>
+              <th>Sale status</th>
+              <th>Actions</th>
+              <th>Delete</th>
             </tr>
+          </thead>
+          <tbody>
+            {{#each templates}}
+              <tr>
+                <td>{{this.title}}</td>
+                <td>{{this.createdLabel}}</td>
+                <td>{{this.updatedLabel}}</td>
+                <td>{{this.priceBuyLabel}}</td>
+                <td>{{this.priceRentLabel}}</td>
+                <td>{{this.ownerDisplay}}</td>
+                <td><span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span></td>
+                <td>
+                  {{#if this.isSold}}
+                    <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
+                  {{else}}
+                    <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.isBlocked}}
+                    <form method="post" action="/admin/templates/{{this.id}}/unblock">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Unblock</button>
+                    </form>
+                  {{else}}
+                    <form method="post" action="/admin/templates/{{this.id}}/block">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Block</button>
+                    </form>
+                  {{/if}}
+                </td>
+                <td>
+                  <button type="button" class="c-btn c-btn--sm" disabled title="Coming soon">Delete</button>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="admin-cards-grid" id="adminTemplatesCards">
+          {{#each templates}}
+            <div class="admin-card">
+              <div class="admin-card__preview">
+                {{#if this.previewSrc}}
+                  <img
+                    class="admin-card__preview-img"
+                    src="{{this.previewSrc}}"
+                    alt="{{this.title}}"
+                    loading="lazy"
+                    onerror="this.remove()"
+                  />
+                {{/if}}
+              </div>
+              <div class="admin-card__body">
+                <div class="admin-card__title">{{this.title}}</div>
+                <div class="admin-card__row"><span class="admin-card__label">Registered</span><span>{{this.createdLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Modified</span><span>{{this.updatedLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Sale price</span><span>{{this.priceBuyLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Rent price</span><span>{{this.priceRentLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Seller</span><span>{{this.ownerDisplay}}</span></div>
+                <div class="admin-card__row admin-card__pills">
+                  <span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span>
+                  {{#if this.isSold}}
+                    <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
+                  {{else}}
+                    <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                  {{/if}}
+                </div>
+                <div class="admin-card__actions">
+                  {{#if this.isBlocked}}
+                    <form method="post" action="/admin/templates/{{this.id}}/unblock">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Unblock</button>
+                    </form>
+                  {{else}}
+                    <form method="post" action="/admin/templates/{{this.id}}/block">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Block</button>
+                    </form>
+                  {{/if}}
+                  <button type="button" class="c-btn c-btn--sm" disabled title="Coming soon">Delete</button>
+                </div>
+              </div>
+            </div>
           {{/each}}
-        </tbody>
-      </table>
+        </div>
+      </div>
 
       <div class="admin-pagination">
         <span class="admin-pagination__summary">{{total}} templates &middot; page {{page}} of {{totalPages}}</span>
@@ -148,3 +193,29 @@
     {{/if}}
   </section>
 </div>
+
+<script>
+(function () {
+  var container = document.getElementById('adminTemplatesView');
+  var listBtn = document.getElementById('adminViewList');
+  var cardsBtn = document.getElementById('adminViewCards');
+  if (!container || !listBtn || !cardsBtn) return;
+
+  function setMode(mode) {
+    var isCards = mode === 'cards';
+    container.dataset.view = isCards ? 'cards' : 'list';
+    listBtn.classList.toggle('active', !isCards);
+    cardsBtn.classList.toggle('active', isCards);
+    listBtn.setAttribute('aria-pressed', isCards ? 'false' : 'true');
+    cardsBtn.setAttribute('aria-pressed', isCards ? 'true' : 'false');
+    try { localStorage.setItem('adminTemplatesView', isCards ? 'cards' : 'list'); } catch (e) {}
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem('adminTemplatesView'); } catch (e) {}
+  setMode(saved === 'cards' ? 'cards' : 'list');
+
+  listBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('list'); });
+  cardsBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('cards'); });
+})();
+</script>
