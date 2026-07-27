@@ -56,7 +56,13 @@ function normalizeProfilePayload(body) {
   }
 
   if (Object.prototype.hasOwnProperty.call(src, 'nickname')) {
-    out.nickname = src.nickname == null ? null : String(src.nickname).trim().toLowerCase();
+    // TEMPASI_NICKNAME_PRESERVE_CASE (2026-07-26): used to force
+    // .toLowerCase() here, which silently lowercased whatever the user
+    // typed. Uniqueness is already enforced case-insensitively at the
+    // DB level (user_profiles_nickname_unique_idx on lower(nickname)),
+    // so dropping the app-level lowercase just lets the display keep
+    // the casing the user actually entered.
+    out.nickname = src.nickname == null ? null : String(src.nickname).trim();
   }
 
   if (Object.prototype.hasOwnProperty.call(src, 'about')) {

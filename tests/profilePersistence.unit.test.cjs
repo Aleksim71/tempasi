@@ -86,7 +86,7 @@ describe('profile persistence API', () => {
       ok: true,
       profile: {
         full_name: 'Alex Tempasi',
-        nickname: 'alex_tempasi',
+        nickname: 'Alex_Tempasi',
         about: 'I create exclusive website templates.',
       },
     });
@@ -94,7 +94,7 @@ describe('profile persistence API', () => {
     expect(db.state.profile).toMatchObject({
       user_id: 42,
       full_name: 'Alex Tempasi',
-      nickname: 'alex_tempasi',
+      nickname: 'Alex_Tempasi',
       about: 'I create exclusive website templates.',
     });
   });
