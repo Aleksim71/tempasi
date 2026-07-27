@@ -1,4 +1,89 @@
-<div class="admin-stub">
-  <h1 class="admin-stub__title">Security</h1>
-  <p class="admin-stub__text">Security settings are coming soon.</p>
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Security</h1>
+  </div>
+
+  <div class="profile-section card">
+    <h2 class="section-title">Password</h2>
+
+    <form class="profile-form" id="adminPasswordForm">
+      <div class="form-row">
+        <label for="admin_password_current">Current Password</label>
+        <input id="admin_password_current" name="current_password" type="password" />
+      </div>
+
+      <div class="form-row">
+        <label for="admin_password_new">New Password</label>
+        <input id="admin_password_new" name="new_password" type="password" />
+      </div>
+
+      <div class="form-row">
+        <label for="admin_password_repeat">Repeat Password</label>
+        <input id="admin_password_repeat" name="repeat_password" type="password" />
+      </div>
+
+      <div class="form-actions">
+        <button type="reset" class="btn alt">Cancel</button>
+        <button type="submit" class="btn primary">Update</button>
+      </div>
+
+      <div id="adminPasswordFormStatus" class="security-note" style="display:none;"></div>
+    </form>
+  </div>
 </div>
+
+<script>
+  (function () {
+    var form = document.getElementById('adminPasswordForm');
+    var status = document.getElementById('adminPasswordFormStatus');
+    if (!form || !status) return;
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      status.style.display = 'block';
+      status.textContent = 'Updating...';
+
+      var payload = {
+        current_password: form.elements.current_password.value,
+        new_password: form.elements.new_password.value,
+        repeat_password: form.elements.repeat_password.value,
+      };
+
+      try {
+        var response = await fetch('/api/profile/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        var data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          switch (data && data.error) {
+            case 'PASSWORD_FIELDS_REQUIRED':
+              status.textContent = 'Fill all password fields.';
+              break;
+            case 'PASSWORD_TOO_SHORT':
+              status.textContent = 'New password must be at least 8 characters.';
+              break;
+            case 'PASSWORD_REPEAT_MISMATCH':
+              status.textContent = 'Passwords do not match.';
+              break;
+            case 'CURRENT_PASSWORD_INVALID':
+              status.textContent = 'Current password is incorrect.';
+              break;
+            default:
+              status.textContent = 'Password update failed.';
+          }
+          return;
+        }
+
+        form.reset();
+        status.textContent = 'Password updated.';
+      } catch (error) {
+        status.textContent = 'Network error.';
+      }
+    });
+  })();
+</script>
