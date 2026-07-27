@@ -110,10 +110,33 @@ async function getRevenueWindow(pool, dealType, periodDays) {
   return { currentCents, previousCents, deltaCents: currentCents - previousCents };
 }
 
+async function getAvgCheckWindow(pool, dealType, periodDays) {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      COALESCE(ROUND(AVG(amount_cents) FILTER (
+        WHERE created_at >= NOW() - make_interval(days => $2::int)
+      )), 0)::bigint AS current_cents,
+      COALESCE(ROUND(AVG(amount_cents) FILTER (
+        WHERE created_at >= NOW() - make_interval(days => $2::int * 2)
+          AND created_at <  NOW() - make_interval(days => $2::int)
+      )), 0)::bigint AS previous_cents
+    FROM orders
+    WHERE deal_type = $1 AND status = 'paid'
+      AND created_at >= NOW() - make_interval(days => $2::int * 2)
+    `,
+    [dealType, periodDays],
+  );
+
+  const currentCents = Number(rows[0]?.current_cents || 0);
+  const previousCents = Number(rows[0]?.previous_cents || 0);
+  return { currentCents, previousCents, deltaCents: currentCents - previousCents };
+}
+
 async function getDashboardKpis(periodDays) {
   const pool = getPool();
 
-  const [usersTotalRes, usersNewRes, templatesTotalRes, templatesNetRes, rent, buy] =
+  const [usersTotalRes, usersNewRes, templatesTotalRes, templatesNetRes, rent, buy, avgRent, avgBuy] =
     await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS n FROM users`),
       pool.query(
@@ -148,6 +171,8 @@ async function getDashboardKpis(periodDays) {
       ),
       getRevenueWindow(pool, 'RENT', periodDays),
       getRevenueWindow(pool, 'BUY', periodDays),
+      getAvgCheckWindow(pool, 'RENT', periodDays),
+      getAvgCheckWindow(pool, 'BUY', periodDays),
     ]);
 
   const usersTotal = usersTotalRes.rows[0]?.n || 0;
@@ -179,6 +204,18 @@ async function getDashboardKpis(periodDays) {
       totalEur: formatEurFromCents(buy.currentCents),
       delta: formatSignedEur(buy.deltaCents),
       deltaSign: deltaSign(buy.deltaCents),
+    },
+    avgRent: {
+      label: 'Avg check \u00b7 rent',
+      totalEur: formatEurFromCents(avgRent.currentCents),
+      delta: formatSignedEur(avgRent.deltaCents),
+      deltaSign: deltaSign(avgRent.deltaCents),
+    },
+    avgSale: {
+      label: 'Avg check \u00b7 sale',
+      totalEur: formatEurFromCents(avgBuy.currentCents),
+      delta: formatSignedEur(avgBuy.deltaCents),
+      deltaSign: deltaSign(avgBuy.deltaCents),
     },
   };
 }

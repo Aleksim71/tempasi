@@ -44,5 +44,21 @@
         <span class="admin-kpi-delta__value">{{kpis.buy.delta}}€</span> vs previous period
       </div>
     </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.avgRent.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.avgRent.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.avgRent.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.avgRent.delta}}€</span> vs previous period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.avgSale.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.avgSale.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.avgSale.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.avgSale.delta}}€</span> vs previous period
+      </div>
+    </div>
   </div>
 </div>
