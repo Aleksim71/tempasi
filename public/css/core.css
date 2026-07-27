@@ -79,6 +79,8 @@ ol {
    Tokens (design system)
    ========================= */
 :root {
+  color-scheme: dark;
+
   /* Colors */
   --c-bg: #0b0f14;
   --c-surface: #101826;
