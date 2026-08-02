@@ -120,13 +120,92 @@
         aria-label="Templates"
       >
         {{#each templates}}
-          {{> template-card.v2 t=this }}
+          {{> template-card.v2 t=this isAuthenticated=../isAuthenticated }}
         {{/each}}
       </section>
     </div>
 
   </div>
 </section>
+
+<div id="rentModal" class="rent-modal" hidden>
+  <div class="rent-modal__backdrop" data-rent-modal-close></div>
+  <div class="rent-modal__panel" role="dialog" aria-modal="true" aria-labelledby="rentModalTitle">
+    <button type="button" class="rent-modal__close" data-rent-modal-close aria-label="Close">&times;</button>
+    <h3 id="rentModalTitle" class="rent-modal__title">Rent <span id="rentModalPrice"></span></h3>
+
+    <form method="post" action="/cart/add" id="rentModalForm">
+      <input type="hidden" name="template_slug" id="rentModalSlug" value="">
+      <input type="hidden" name="deal_type" value="RENT">
+      <input type="hidden" name="license" value="PU">
+      <input type="hidden" name="next" value="/templates">
+
+      <div class="rent-modal__field">
+        <label for="rentModalDays">Days</label>
+        <input type="number" min="1" step="1" name="rent_days" id="rentModalDays" value="1" required>
+      </div>
+
+      <div class="rent-modal__field">
+        <label>Cases</label>
+        {{#if userCases.length}}
+          <div class="rent-modal__cases">
+            {{#each userCases}}
+              <label class="rent-modal__case">
+                <input type="checkbox" name="case_ids" value="{{this.id}}">
+                <span>{{this.title}}</span>
+              </label>
+            {{/each}}
+          </div>
+        {{else}}
+          <p class="rent-modal__empty">No cases yet. You can create a case in Cabinet.</p>
+        {{/if}}
+      </div>
+
+      <div class="rent-modal__actions">
+        <button type="button" class="tbtn" data-rent-modal-close>Cancel</button>
+        <button type="submit" class="tbtn tbtn--primary">Add rent to cart</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById('rentModal');
+  if (!modal) return;
+
+  const slugInput = document.getElementById('rentModalSlug');
+  const priceEl = document.getElementById('rentModalPrice');
+  const daysInput = document.getElementById('rentModalDays');
+
+  function openModal(slug, price) {
+    slugInput.value = slug || '';
+    priceEl.textContent = price ? price + '€' : '';
+    daysInput.value = '1';
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('[data-rent-modal-trigger]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openModal(btn.getAttribute('data-slug'), btn.getAttribute('data-price'));
+    });
+  });
+
+  modal.querySelectorAll('[data-rent-modal-close]').forEach(function (el) {
+    el.addEventListener('click', closeModal);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
+})();
+</script>
 
 <script>
 (function () {

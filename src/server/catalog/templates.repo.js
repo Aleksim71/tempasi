@@ -90,46 +90,51 @@ export async function selectTemplatesForCatalog(db) {
 
   const q = `
     SELECT
-      id,
-      owner_user_id,
-      title,
-      slug,
-      short_description,
-      description,
-      preview_image,
-      preview_url,
-      demo_url,
-      category,
-      price_buy_cents,
-      price_rent_cents,
-      status,
-      zip_path,
-      created_at,
-      updated_at,
+      st.id,
+      st.owner_user_id,
+      st.title,
+      st.slug,
+      st.short_description,
+      st.description,
+      st.preview_image,
+      st.preview_url,
+      st.demo_url,
+      st.category,
+      st.price_buy_cents,
+      st.price_rent_cents,
+      st.status,
+      st.zip_path,
+      st.created_at,
+      st.updated_at,
+      COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS author_name,
+      COALESCE(cc.label, st.category) AS category_label,
       EXISTS (
         SELECT 1
         FROM orders o
-        WHERE o.template_slug = seller_templates.slug
+        WHERE o.template_slug = st.slug
           AND o.deal_type = 'BUY'
           AND o.status = 'paid'
       ) AS is_sold,
       (
         SELECT MAX(o.created_at)
         FROM orders o
-        WHERE o.template_slug = seller_templates.slug
+        WHERE o.template_slug = st.slug
           AND o.deal_type = 'BUY'
           AND o.status = 'paid'
       ) AS sold_at
-    FROM seller_templates
-    WHERE status = 'published'
-      AND deleted_at IS NULL
-      AND owner_withdrawn_at IS NULL
-      AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
+    FROM seller_templates st
+    LEFT JOIN users u ON u.id = st.owner_user_id
+    LEFT JOIN user_profiles up ON up.user_id = u.id
+    LEFT JOIN catalog_categories cc ON cc.slug = st.category
+    WHERE st.status = 'published'
+      AND st.deleted_at IS NULL
+      AND st.owner_withdrawn_at IS NULL
+      AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
       -- Hide templates already bought exclusively.
       AND NOT EXISTS (
         SELECT 1
         FROM orders o
-        WHERE o.template_slug = seller_templates.slug
+        WHERE o.template_slug = st.slug
           AND o.deal_type = 'BUY'
           AND o.status = 'paid'
       )
@@ -137,7 +142,7 @@ export async function selectTemplatesForCatalog(db) {
       AND NOT EXISTS (
         SELECT 1
         FROM public.entitlements e
-        WHERE e.template_slug = seller_templates.slug
+        WHERE e.template_slug = st.slug
           AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
           AND e.closed_at IS NULL
           AND (e.ends_at IS NULL OR e.ends_at > now())
@@ -146,7 +151,7 @@ export async function selectTemplatesForCatalog(db) {
     AND NOT EXISTS (
       SELECT 1
       FROM cart_items ci_public_cart_hold
-      WHERE ci_public_cart_hold.template_slug = seller_templates.slug
+      WHERE ci_public_cart_hold.template_slug = st.slug
         AND (
           ci_public_cart_hold.license = 'BUY'
           OR ci_public_cart_hold.license = 'RENT'
@@ -155,7 +160,7 @@ export async function selectTemplatesForCatalog(db) {
         )
     )
 
-    ORDER BY created_at DESC, id DESC
+    ORDER BY st.created_at DESC, st.id DESC
     LIMIT 200
   `;
 
@@ -179,7 +184,8 @@ export async function selectTemplatesForCatalog(db) {
       description: toStr(r.short_description || ''),
       shortDescription: toStr(r.short_description || ''),
       fullDescription: toStr(r.description || ''),
-      category: toStr(r.category || ''),
+      category: toStr(r.category_label || r.category || ''),
+      authorName: toStr(r.author_name || ''),
 
       // ✅ ALWAYS go through /t/<slug>/preview.png
       previewUrl: resolveStoredTemplatePreviewUrl(r),

@@ -131,6 +131,30 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.tcard__seller {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tcard__category {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: capitalize;
+}
+
+.tcard__cart {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tcard__cart-form {
+  display: inline-flex;
+  margin: 0;
+}
+
 .tcard__meta {
   display: flex;
   align-items: center;
@@ -180,10 +204,9 @@
 }
 
 .tcard__foot {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 12px;
   margin-top: 4px;
 }
 

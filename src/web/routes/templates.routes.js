@@ -300,7 +300,7 @@ function normalizeTemplate(raw, slugFromUrl) {
 
   const tech = Array.isArray(raw?.tech) ? raw.tech : Array.isArray(meta?.tech) ? meta.tech : null;
 
-  const author = raw?.author || meta?.author || null;
+  const author = raw?.authorName || raw?.author || meta?.author || null;
 
   const features = Array.isArray(raw?.features)
     ? raw.features
@@ -425,6 +425,8 @@ export function createTemplatesRouter() {
       );
 
       const categoryOptions = await getCatalogCategoryChips(db);
+      const listingUserId = getTemplateDetailsUserId(req);
+      const userCases = await loadUserCasesForTemplateDetails(db, listingUserId);
 
       res.render('pages/templates/index', {
         title: 'Templates — Tempasi',
@@ -433,6 +435,8 @@ export function createTemplatesRouter() {
         styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
         templates,
         categoryOptions,
+        isAuthenticated: Boolean(listingUserId),
+        userCases,
         selectedCaseId,
         selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
       });
@@ -449,6 +453,8 @@ export function createTemplatesRouter() {
           styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
           templates: [],
           categoryOptions: FALLBACK_CATEGORY_CHIPS,
+          isAuthenticated: Boolean(getTemplateDetailsUserId(req)),
+          userCases: [],
         });
       } catch (e2) {
         return next(e2);

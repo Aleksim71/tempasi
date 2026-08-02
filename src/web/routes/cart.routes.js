@@ -522,7 +522,16 @@ export function createCartRouter() {
       if (!['BUY', 'RENT'].includes(dealType)) {
         return res.redirect(302, `${nextPath}?cart=unsupported`);
       }
-      if (!['PU', 'CU', 'EL', 'ML', 'EX'].includes(licenseForValidation)) {
+      // TEMPASI_LICENSE_VALIDATION_MATCH_DB_CHECK (2026-07-31)
+      // Used to check against ['PU','CU','EL','ML','EX'] — a 5-tier
+      // license model that does NOT match the actual live DB
+      // constraint on cart_items.license, which only allows
+      // 'BUY' / 'RENT' / 'PU' / 'PU:<days>d'. That mismatch let
+      // invalid values (e.g. 'EX') pass this check and then crash
+      // with an unhandled DB constraint violation instead of the
+      // graceful redirect below, while rejecting the correct 'BUY'
+      // value real Buy forms actually send. Matches the DB now.
+      if (!['BUY', 'RENT', 'PU'].includes(licenseForValidation)) {
         return res.redirect(302, `${nextPath}?cart=bad_license`);
       }
 
