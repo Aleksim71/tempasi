@@ -95,6 +95,19 @@
             >{{workspaceData.profile.form.about}}</textarea>
           </div>
 
+          <div class="form-row form-row--checkbox">
+            <label class="checkbox-label" for="profile_public_profile">
+              <input
+                id="profile_public_profile"
+                name="public_profile"
+                type="checkbox"
+                {{#if workspaceData.profile.form.publicProfile}}checked{{/if}}
+              />
+              Show my profile in Community
+            </label>
+            <small class="form-help">Lets other registered users find you and your templates in the Community directory.</small>
+          </div>
+
           <div class="form-actions">
             <button type="reset" class="btn alt">Cancel</button>
             <button type="submit" class="btn primary">Save</button>
@@ -124,6 +137,7 @@
             nickname: form.elements.nickname.value,
             about: form.elements.about.value,
             public_email: form.elements.public_email.value,
+            public_profile: form.elements.public_profile.checked,
           };
 
           try {

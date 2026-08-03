@@ -101,6 +101,9 @@ const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // ap
 // Cabinet pages router (CJS)
 const { createCabinetPagesRouter } = require('./web/routes/cabinet.pages.routes.cjs');
 
+// Community pages router (CJS)
+const { createCommunityPagesRouter } = require('./web/routes/community.pages.routes.cjs');
+
 // Admin pages router (CJS)
 const { createAdminPagesRouter } = require('./web/routes/admin.pages.routes.cjs');
 
@@ -352,6 +355,13 @@ if (process.env.TEMPASI_SKIP_SSR) {
     '/profile',
     requireAuthWeb({ loginPath: '/login', defaultNext: '/profile' }),
     profileRouter,
+  );
+
+  // ✅ Protect Community pages (registered users only)
+  webApp.use(
+    '/community',
+    requireAuthWeb({ loginPath: '/login', defaultNext: '/community' }),
+    createCommunityPagesRouter({ db }),
   );
 
   // ✅ Protect Admin pages (role admin/superadmin only)

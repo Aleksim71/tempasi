@@ -1262,6 +1262,7 @@ res.render('pages/cabinet', {
             public_email: profileRow?.public_email || '',
             email: req?.user?.email || '',
             avatarUrl: profileRow?.avatar_url || '',
+            publicProfile: Boolean(profileRow?.public_profile),
           },
           downloads,
         },

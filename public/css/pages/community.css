@@ -1,0 +1,263 @@
+/* public/css/pages/community.css */
+
+.community-page-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+/* ---- Header ---- */
+
+.community-header {
+  margin-bottom: 24px;
+}
+
+.community-header h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.community-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* ---- Grid + card ---- */
+
+.community-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.community-card {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.community-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.community-card__avatar {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.community-card__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-card__avatar-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.community-card__body {
+  min-width: 0;
+}
+
+.community-card__name {
+  font-weight: 600;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.94);
+  margin-bottom: 4px;
+}
+
+.community-card__about {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.68);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.community-card__stats {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ---- Pagination ---- */
+
+.community-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.community-pagination__summary {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.community-pagination__links {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Empty state ---- */
+
+.community-empty {
+  padding: 60px 16px;
+  text-align: center;
+}
+
+.community-empty h2 {
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.community-empty__hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* ---- Member detail page ---- */
+
+.community-back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+}
+
+.community-back-link:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.community-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.community-profile-avatar {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.community-profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-profile-avatar__placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.community-profile-header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.community-profile-role,
+.community-profile-location {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.community-profile-section {
+  margin-bottom: 28px;
+}
+
+.community-profile-section h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.community-profile-section p {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---- Member's templates grid ---- */
+
+.community-templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.community-template-card {
+  display: block;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+
+.community-template-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.community-template-card__preview {
+  height: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.community-template-card__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-template-card__title {
+  padding: 10px 12px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.community-template-card__prices {
+  padding: 0 12px 12px;
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}

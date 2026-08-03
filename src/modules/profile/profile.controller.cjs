@@ -75,6 +75,10 @@ function normalizeProfilePayload(body) {
     out.public_email = value || null;
   }
 
+  if (Object.prototype.hasOwnProperty.call(src, 'public_profile')) {
+    out.public_profile = Boolean(src.public_profile);
+  }
+
   return out;
 }
 
@@ -152,6 +156,7 @@ async function getMyProfileJson(req, res) {
       nickname: row ? row.nickname : null,
       about: row ? row.about : null,
       public_email: row ? row.public_email : null,
+      public_profile: row ? row.public_profile : false,
     },
   });
 }
@@ -192,6 +197,11 @@ async function updateMyProfileJson(req, res) {
       ? payload.public_email
       : existing?.public_email ?? null;
 
+  const publicProfile =
+    Object.prototype.hasOwnProperty.call(payload, 'public_profile')
+      ? payload.public_profile
+      : existing?.public_profile ?? false;
+
   const { rows } = await db.query(
     `
       INSERT INTO user_profiles (
@@ -199,15 +209,17 @@ async function updateMyProfileJson(req, res) {
         full_name,
         nickname,
         about,
-        public_email
+        public_email,
+        public_profile
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (user_id)
       DO UPDATE SET
         full_name = EXCLUDED.full_name,
         nickname = EXCLUDED.nickname,
         about = EXCLUDED.about,
         public_email = EXCLUDED.public_email,
+        public_profile = EXCLUDED.public_profile,
         updated_at = now()
       RETURNING
         user_id,
@@ -215,9 +227,10 @@ async function updateMyProfileJson(req, res) {
         nickname,
         about,
         public_email,
+        public_profile,
         updated_at
     `,
-    [userId, fullName, nickname, about, publicEmail],
+    [userId, fullName, nickname, about, publicEmail, publicProfile],
   );
 
   return res.json({
@@ -227,6 +240,7 @@ async function updateMyProfileJson(req, res) {
       nickname: rows[0].nickname,
       about: rows[0].about,
       public_email: rows[0].public_email,
+      public_profile: rows[0].public_profile,
     },
     updated_at: rows[0].updated_at,
   });
