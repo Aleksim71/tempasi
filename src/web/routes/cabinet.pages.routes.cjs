@@ -176,6 +176,7 @@ function createCabinetPagesRouter() {
 
   router.use((req, res, next) => {
     res.locals.isCabinet = true;
+    res.locals.activePage = 'cabinet';
     res.locals.metrics = {
       today: { revenue: 0, invested: 0 },
     };
@@ -1197,7 +1198,6 @@ res.render('pages/cabinet', {
             full_name,
             nickname,
             about,
-            avatar_url,
             public_email,
             website_url,
             public_profile,
@@ -1261,8 +1261,6 @@ res.render('pages/cabinet', {
             about: profileRow?.about || '',
             public_email: profileRow?.public_email || '',
             email: req?.user?.email || '',
-            avatarUrl: profileRow?.avatar_url || '',
-            publicProfile: Boolean(profileRow?.public_profile),
           },
           downloads,
         },

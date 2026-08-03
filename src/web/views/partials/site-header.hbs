@@ -20,11 +20,11 @@
 
       <!-- CENTER -->
       <nav class="site-header__nav" aria-label="Main navigation">
-        <a href="/templates" class="nav-link">Templates</a>
+        <a href="/templates" class="nav-link{{#if (eq activePage 'templates')}} nav-link--active{{/if}}">Templates</a>
 
         {{#if isAuthed}}
-          <a href="/community" class="nav-link">Community</a>
-          <a href="/cabinet" class="nav-link">Cabinet</a>
+          <a href="/community" class="nav-link{{#if (eq activePage 'community')}} nav-link--active{{/if}}">Community</a>
+          <a href="/cabinet" class="nav-link{{#if (eq activePage 'cabinet')}} nav-link--active{{/if}}">Cabinet</a>
         {{/if}}
       </nav>
 

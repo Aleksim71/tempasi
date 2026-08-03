@@ -46,16 +46,33 @@
 }
 
 .nav-link {
+  position: relative;
   color: #d8d8d8;
   text-decoration: none;
   font-size: 13px;
   line-height: 1;
+  padding-bottom: 8px;
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
   color: #fff;
   outline: none;
+}
+
+.nav-link--active {
+  color: #fff;
+}
+
+.nav-link--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(255, 215, 128);
 }
 
 /* RIGHT */
