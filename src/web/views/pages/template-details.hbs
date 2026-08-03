@@ -142,19 +142,10 @@
                 <input type="hidden" name="template_slug" value="{{template.slug}}">
                 <input type="hidden" name="deal_type" value="BUY">
                 <input type="hidden" name="license" value="BUY">
-                <input type="hidden" name="next" value="/cart">
-                <button class="btn btn-primary" type="submit">Buy now</button>
-              </form>
-
-              <form method="post" action="/cart/add">
-                <input type="hidden" name="template_slug" value="{{template.slug}}">
-                <input type="hidden" name="deal_type" value="BUY">
-                <input type="hidden" name="license" value="BUY">
-                <button class="btn btn-secondary" type="submit">Add to cart</button>
+                <button class="btn btn-primary" type="submit">Add to cart</button>
               </form>
             {{else}}
-              <a class="btn btn-primary" href="/login">Buy now</a>
-              <a class="btn btn-secondary" href="/login">Add to cart</a>
+              <a class="btn btn-primary" href="/login">Add to cart</a>
               <p class="template-login-note">Sign in or create an account to buy, rent, or save templates to your cases.</p>
             {{/if}}
           </div>
@@ -209,8 +200,7 @@
                 {{/if}}
               </div>
 
-              <button class="btn btn-primary" type="submit" name="next" value="/cart{{#if selectedCaseParam}}?{{selectedCaseParam}}{{/if}}">Rent now</button>
-              <button class="btn btn-secondary" type="submit">Add rent to cart</button>
+              <button class="btn btn-primary" type="submit">Add rent to cart</button>
             </form>
 
             {{#if template.slug}}
@@ -238,8 +228,7 @@
                 </label>
               </div>
 
-              <a class="btn btn-primary" href="/login">Rent now</a>
-              <a class="btn btn-secondary" href="/login">Add rent to cart</a>
+              <a class="btn btn-primary" href="/login">Add rent to cart</a>
 
               {{#if template.slug}}
             <a class="btn btn-secondary" href="/templates/{{template.slug}}/demo?back=/templates/{{template.slug}}">Live Demo</a>

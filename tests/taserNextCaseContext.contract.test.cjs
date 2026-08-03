@@ -27,7 +27,16 @@ describe('TASER-NEXT-A selected Case context contract', () => {
     expect(route).toContain('isSelected: selectedCaseId && String(item.id) === String(selectedCaseId)');
     expect(details).toContain('name="case_ids"');
     expect(details).toContain('{{#if this.isSelected}}checked{{/if}}');
-    expect(details).toContain('/cart{{#if selectedCaseParam}}?{{selectedCaseParam}}{{/if}}');
+    // NOTE (2026-08-03): the "Rent now" button (which had
+    // next="/cart{{#if selectedCaseParam}}?{{selectedCaseParam}}{{/if}}")
+    // was removed at the user's request — Buy/Rent now duplicated
+    // "Add to cart"/"Add rent to cart" exactly (same /cart/add handler,
+    // only differing in that redirect target) and risked an accidental
+    // purchase-feeling click. Case context is still preserved in the
+    // submission itself via the caseId hidden field below; only the
+    // auto-navigate-to-/cart-with-context nicety went away with the
+    // button that implemented it.
+    expect(details).toContain('name="caseId" value="{{selectedCaseId}}"');
   });
 
   test('cart persists selected RENT case ids until checkout pass creates order assignment', () => {

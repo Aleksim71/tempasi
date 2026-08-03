@@ -23,13 +23,11 @@ describe('template details product page UX contract', () => {
     expect(src).toContain('Details from the author');
 
     expect(src).toContain('Exclusive purchase');
-    expect(src).toContain('Buy now');
     expect(src).toContain('Add to cart');
 
     expect(src).toContain('Client reservation');
     expect(src).toContain('name="rent_days"');
     expect(src).toContain('name="case_ids"');
-    expect(src).toContain('Rent now');
     expect(src).toContain('Add rent to cart');
 
     expect(src).toContain('Demo');
