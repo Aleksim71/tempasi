@@ -15,6 +15,22 @@
       <div class="profile-section card">
         <h2 class="section-title">Basic Information</h2>
 
+        <div class="profile-avatar-row">
+          <div class="profile-avatar" id="profileAvatarPreview">
+            {{#if workspaceData.profile.form.avatarUrl}}
+              <img src="{{workspaceData.profile.form.avatarUrl}}" alt="Profile photo" />
+            {{else}}
+              <div class="profile-avatar__placeholder" aria-hidden="true"></div>
+            {{/if}}
+          </div>
+          <div class="profile-avatar-controls">
+            <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" hidden />
+            <button type="button" class="btn alt" id="avatarChangeBtn">Change photo</button>
+            <p class="form-help">JPG, PNG or WebP, up to 2MB.</p>
+            <div id="avatarUploadStatus" class="security-note" style="display:none;"></div>
+          </div>
+        </div>
+
         <form class="profile-form" id="profileForm">
           <div class="form-row">
             <label for="profile_full_name">Full Name <span aria-hidden="true">*</span></label>
@@ -127,6 +143,60 @@
             status.textContent = 'Saved.';
           } catch (error) {
             status.textContent = 'Network error.';
+          }
+        });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        var fileInput = document.getElementById('avatarFileInput');
+        var changeBtn = document.getElementById('avatarChangeBtn');
+        var status = document.getElementById('avatarUploadStatus');
+        var preview = document.getElementById('profileAvatarPreview');
+        if (!fileInput || !changeBtn || !status || !preview) return;
+
+        changeBtn.addEventListener('click', function () {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async function () {
+          var file = fileInput.files[0];
+          if (!file) return;
+
+          status.style.display = 'block';
+          status.textContent = 'Uploading...';
+
+          var formData = new FormData();
+          formData.append('avatar', file);
+
+          try {
+            var response = await fetch('/api/profile/avatar', {
+              method: 'POST',
+              body: formData,
+            });
+            var data = await response.json();
+
+            if (!response.ok || !data.ok) {
+              switch (data && data.error) {
+                case 'ONLY_IMAGE_ALLOWED':
+                  status.textContent = 'Only JPG, PNG or WebP images are allowed.';
+                  break;
+                case 'AVATAR_TOO_LARGE':
+                  status.textContent = 'Image is too large (max 2MB).';
+                  break;
+                default:
+                  status.textContent = 'Upload failed.';
+              }
+              return;
+            }
+
+            preview.innerHTML = '<img src="' + data.avatar_url + '" alt="Profile photo" />';
+            status.textContent = 'Photo updated.';
+          } catch (error) {
+            status.textContent = 'Network error.';
+          } finally {
+            fileInput.value = '';
           }
         });
       })();

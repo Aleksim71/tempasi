@@ -81,6 +81,46 @@ export function createWebApp({ db }) {
     return res.status(404).send('Not found');
   });
 
+  // TEMPASI_USER_AVATAR_ROUTE (2026-08-04)
+  // Serve uploaded profile avatars. Same pattern as the template
+  // preview route above (dedicated route + path-traversal guard,
+  // not express.static — matches this codebase's existing convention
+  // for user-uploaded files).
+  app.get('/u/:userId/avatar.:ext', (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const ext = String(req.params.ext || '')
+      .trim()
+      .toLowerCase();
+
+    if (!/^[0-9]+$/.test(userId)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!/^(png|jpg|jpeg|webp)$/.test(ext)) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.AVATAR_UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'avatars'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const candidate = path.resolve(resolvedRoot, userId, `avatar.${ext}`);
+
+      if (!candidate.startsWith(resolvedRoot + path.sep)) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate)) {
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
   app.locals.db = db;
 
   const viewsRoot = path.join(__dirname, 'web', 'views');

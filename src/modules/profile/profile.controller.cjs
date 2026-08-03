@@ -2,6 +2,7 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
+const path = require('path');
 const EntitlementsService = require('../payments/entitlements.service.cjs');
 
 function mustGetDb(req) {
@@ -305,6 +306,38 @@ async function changeMyPasswordJson(req, res) {
   });
 }
 
+// TEMPASI_PROFILE_AVATAR_UPLOAD (2026-08-04)
+// Called after multer (see profile.api.routes.cjs) has already saved
+// the file to AVATAR_UPLOAD_DIR/<userId>/avatar.<ext>. This just
+// records the resulting URL in user_profiles.avatar_url. Serving is
+// handled by a dedicated route in app.web.js (same pattern as the
+// template preview route), not express.static.
+async function uploadMyAvatarJson(req, res) {
+  const userId = getCurrentUserId(req);
+  const db = mustGetDb(req);
+
+  if (!req.file) {
+    return res.status(400).json({ ok: false, error: 'AVATAR_FILE_REQUIRED' });
+  }
+
+  const ext = path.extname(req.file.filename).replace('.', '').toLowerCase();
+  const avatarUrl = `/u/${userId}/avatar.${ext}?v=${Date.now()}`;
+
+  await db.query(
+    `
+      INSERT INTO user_profiles (user_id, avatar_url)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = now()
+    `,
+    [userId, avatarUrl],
+  );
+
+  return res.json({ ok: true, avatar_url: avatarUrl });
+}
+
 async function getMyDownloadsJson(req, res) {
   const userId = getCurrentUserId(req);
   const db = mustGetDb(req);
@@ -327,4 +360,5 @@ module.exports = {
   getMyDownloadsJson,
   getMyProfileJson,
   updateMyProfileJson,
+  uploadMyAvatarJson,
 };

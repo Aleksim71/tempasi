@@ -133,4 +133,46 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .profile-avatar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---- Profile avatar (upload) ---- */
+
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar__placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.profile-avatar-controls {
+  display: grid;
+  gap: 6px;
 }
