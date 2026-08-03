@@ -16,6 +16,16 @@
 html {
   line-height: 1.15;
   -webkit-text-size-adjust: 100%;
+  /* TEMPASI_STABLE_SCROLLBAR_GUTTER (2026-08-04): without this, a
+     short page (no vertical scrollbar) renders a few pixels wider
+     than a tall page (scrollbar present), shifting the whole
+     centered layout sideways when navigating between them — most
+     visible switching between Community (often short) and
+     Templates/Cabinet (usually tall). overflow-y: scroll works in
+     every browser; scrollbar-gutter is added as progressive
+     enhancement where supported. */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 body {
   margin: 0;
