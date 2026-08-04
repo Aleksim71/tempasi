@@ -1,0 +1,87 @@
+<div class="admin-templates">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Trash</h1>
+
+    <div class="admin-view-toggle" aria-label="Back to Templates">
+      <a href="/admin/templates" class="c-btn c-btn--sm">Back to Templates</a>
+    </div>
+  </div>
+
+  <p class="admin-empty-state__hint">
+    Deleted templates land here first. Restore brings them back exactly as they were.
+    Delete forever removes the database record and its ZIP/preview files &mdash; this cannot be undone.
+  </p>
+
+  <section class="admin-table-card">
+    {{#if templates.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Seller</th>
+            <th>Deleted</th>
+            <th>Restore</th>
+            <th>Delete forever</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each templates}}
+            <tr>
+              <td>{{this.title}}</td>
+              <td>{{this.ownerDisplay}}</td>
+              <td>{{this.deletedAtLabel}}</td>
+              <td>
+                <form method="post" action="/admin/trash/{{this.id}}/restore">
+                  <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                  <button type="submit" class="c-btn c-btn--sm">Restore</button>
+                </form>
+              </td>
+              <td>
+                <form method="post" action="/admin/trash/{{this.id}}/purge" class="admin-purge-form" data-confirm-title="{{this.title}}">
+                  <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                  <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete forever</button>
+                </form>
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="admin-pagination">
+        <span class="admin-pagination__summary">{{total}} in trash &middot; page {{page}} of {{totalPages}}</span>
+        <div class="admin-pagination__links">
+          {{#if hasPrev}}
+            <a class="c-btn" href="{{prevHref}}">Previous</a>
+          {{/if}}
+          {{#if hasNext}}
+            <a class="c-btn" href="{{nextHref}}">Next</a>
+          {{/if}}
+        </div>
+      </div>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>Trash is empty</h2>
+        <p class="admin-empty-state__hint">Deleted templates from the Templates page will show up here.</p>
+      </div>
+    {{/if}}
+  </section>
+</div>
+
+<script>
+(function () {
+  // Same apostrophe-safe confirm pattern as the Templates page's
+  // Delete button — read from a data attribute, never interpolate
+  // the title into an inline onsubmit string.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.classList || !form.classList.contains('admin-purge-form')) return;
+
+    var title = form.getAttribute('data-confirm-title') || 'this template';
+    var ok = window.confirm(
+      'Permanently delete "' + title + '"? This removes the database record and its files on disk. This CANNOT be undone.',
+    );
+
+    if (!ok) e.preventDefault();
+  });
+})();
+</script>

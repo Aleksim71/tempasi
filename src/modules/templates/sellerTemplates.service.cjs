@@ -576,6 +576,69 @@ async function adminUnblockTemplate({ pool, id }) {
   return { updated };
 }
 
+async function adminDeleteTemplate({ pool, id }) {
+  const deleted = await repo.adminSoftDelete({ pool, id });
+  if (!deleted) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { deleted };
+}
+
+const ADMIN_TRASH_PAGE_SIZE = 25;
+
+async function adminListTrash({ pool, page }) {
+  const safePage = Number.isFinite(Number(page)) && Number(page) > 0 ? Number(page) : 1;
+  const limit = ADMIN_TRASH_PAGE_SIZE;
+  const offset = (safePage - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    repo.adminListTrash({ pool, limit, offset }),
+    repo.adminCountTrash({ pool }),
+  ]);
+
+  return { items, total, page: safePage, pageSize: limit };
+}
+
+async function adminRestoreTemplate({ pool, id }) {
+  const restored = await repo.adminRestore({ pool, id });
+  if (!restored) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { restored };
+}
+
+// "Delete forever" — real DB row removal + best-effort file cleanup.
+// File cleanup NEVER blocks or fails the DB deletion: the upload dir
+// can be a network mount (e.g. sshfs to a separate machine acting as
+// file server) that may be temporarily unreachable, and the admin
+// still needs to be able to permanently clear trash regardless of
+// that mount's availability. Same non-throwing bestEffortUnlink
+// helper already used elsewhere in this file when a ZIP gets
+// replaced on update.
+async function adminPurgeTemplate({ pool, id }) {
+  const deleted = await repo.adminHardDelete({ pool, id });
+  if (!deleted) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+
+  bestEffortUnlink(deleted.zip_path);
+
+  try {
+    bestEffortUnlink(getPreviewPathForTemplateSlug(deleted.slug));
+  } catch (_) {
+    // getPreviewPathForTemplateSlug only throws on an empty slug;
+    // nothing to clean up in that case.
+  }
+
+  return { deleted };
+}
+
 async function deleteMyTemplate({ pool, user, id }) {
   if (!user) throw new Error('AUTH_REQUIRED');
 
@@ -602,4 +665,8 @@ module.exports = {
   // admin-only (not owner-scoped)
   adminBlockTemplate,
   adminUnblockTemplate,
+  adminDeleteTemplate,
+  adminListTrash,
+  adminRestoreTemplate,
+  adminPurgeTemplate,
 };

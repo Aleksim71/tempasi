@@ -587,6 +587,97 @@ function createAdminPagesRouter() {
     return res.redirect(returnTo);
   });
 
+  router.post('/templates/:id/delete', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeReturnTo(req.body?.returnTo);
+    try {
+      const { deleted } = await sellerTemplatesService.adminDeleteTemplate({ pool, id });
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'template_delete', 'seller_template', $2, $3::jsonb)`,
+        [resolveActorUserId(req), String(id), JSON.stringify({ slug: deleted.slug })],
+      );
+    } catch (err) {
+      if (err && err.code === 'NOT_FOUND') return res.redirect(returnTo);
+      return next(err);
+    }
+    return res.redirect(returnTo);
+  });
+
+  // ---- Trash (soft-deleted templates: restore, or delete forever) ----
+  router.get('/trash', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const page = parsePage(req.query.page);
+      const { items, total, pageSize } = await sellerTemplatesService.adminListTrash({ pool, page });
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+      const templates = items.map((r) => ({
+        id: r.id,
+        title: r.title,
+        ownerDisplay: r.owner_display,
+        deletedAtLabel: formatDateYMD(r.deleted_at),
+      }));
+
+      const currentHref = `/admin/trash?page=${page}`;
+
+      res.render('pages/admin/trash', {
+        title: 'Admin \u00b7 Trash',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'templates',
+        templates,
+        total,
+        page,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+        prevHref: `/admin/trash?page=${Math.max(1, page - 1)}`,
+        nextHref: `/admin/trash?page=${Math.min(totalPages, page + 1)}`,
+        currentHref,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/trash/:id/restore', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeReturnTo(req.body?.returnTo) || '/admin/trash';
+    try {
+      const { restored } = await sellerTemplatesService.adminRestoreTemplate({ pool, id });
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'template_restore', 'seller_template', $2, $3::jsonb)`,
+        [resolveActorUserId(req), String(id), JSON.stringify({ slug: restored.slug })],
+      );
+    } catch (err) {
+      if (err && err.code === 'NOT_FOUND') return res.redirect(returnTo);
+      return next(err);
+    }
+    return res.redirect(returnTo);
+  });
+
+  router.post('/trash/:id/purge', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeReturnTo(req.body?.returnTo) || '/admin/trash';
+    try {
+      const { deleted } = await sellerTemplatesService.adminPurgeTemplate({ pool, id });
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'template_purge', 'seller_template', $2, $3::jsonb)`,
+        [resolveActorUserId(req), String(id), JSON.stringify({ slug: deleted.slug })],
+      );
+    } catch (err) {
+      if (err && err.code === 'NOT_FOUND') return res.redirect(returnTo);
+      return next(err);
+    }
+    return res.redirect(returnTo);
+  });
+
   // Still stubs — Users/Finance/Settings/Security land later.
   router.get('/users', async (req, res, next) => {
     try {

@@ -469,6 +469,15 @@
   margin-top: var(--s-8);
 }
 
+.c-btn--danger {
+  border-color: color-mix(in srgb, var(--c-danger) 45%, transparent);
+  color: var(--c-danger);
+}
+
+.c-btn--danger:hover {
+  background: color-mix(in srgb, var(--c-danger) 12%, transparent);
+}
+
 .admin-error-page {
   padding: var(--s-40) 0;
   display: grid;

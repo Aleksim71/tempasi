@@ -3,6 +3,7 @@
     <h1 class="admin-dashboard__title">Templates</h1>
 
     <div class="admin-view-toggle" aria-label="View mode">
+      <a href="/admin/trash" class="c-btn c-btn--sm">Trash</a>
       <button type="button" id="adminViewList" class="view-toggle" aria-label="List view" aria-pressed="true">&#9776;</button>
       <button type="button" id="adminViewCards" class="view-toggle" aria-label="Card view" aria-pressed="false">&#9638;</button>
     </div>
@@ -118,7 +119,10 @@
                   {{/if}}
                 </td>
                 <td>
-                  <button type="button" class="c-btn c-btn--sm" disabled title="Coming soon">Delete</button>
+                  <form method="post" action="/admin/templates/{{this.id}}/delete" class="admin-delete-form" data-confirm-title="{{this.title}}">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete</button>
+                  </form>
                 </td>
               </tr>
             {{/each}}
@@ -166,7 +170,10 @@
                       <button type="submit" class="c-btn c-btn--sm">Block</button>
                     </form>
                   {{/if}}
-                  <button type="button" class="c-btn c-btn--sm" disabled title="Coming soon">Delete</button>
+                  <form method="post" action="/admin/templates/{{this.id}}/delete" class="admin-delete-form" data-confirm-title="{{this.title}}">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete</button>
+                  </form>
                 </div>
               </div>
             </div>
@@ -217,5 +224,26 @@
 
   listBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('list'); });
   cardsBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('cards'); });
+})();
+</script>
+
+<script>
+(function () {
+  // Confirm before deleting a template. Reads the title from a data
+  // attribute (already HTML-decoded by the DOM) instead of
+  // interpolating it into an inline onsubmit string, since an
+  // apostrophe in the title would otherwise break out of that string
+  // after the browser's HTML-entity decoding runs.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.classList || !form.classList.contains('admin-delete-form')) return;
+
+    var title = form.getAttribute('data-confirm-title') || 'this template';
+    var ok = window.confirm(
+      'Delete "' + title + '"? It will move to Trash, where you can restore it or delete it forever.',
+    );
+
+    if (!ok) e.preventDefault();
+  });
 })();
 </script>

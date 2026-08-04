@@ -458,6 +458,86 @@ async function softDeleteByOwner({ pool, ownerUserId, id }) {
   return rows[0] || null;
 }
 
+// ------------------------------------------------------------
+// ADMIN soft delete (not owner-scoped — admin-only write path).
+// Same soft-delete semantics as softDeleteByOwner (deleted_at = NOW()),
+// no filesystem access — the ZIP/preview files stay on disk. This is
+// step 1 of a two-step trash flow: soft-deleted items land in
+// admin_list_trash below, where they can be restored or purged for
+// real (admin_hard_delete).
+// ------------------------------------------------------------
+async function adminSoftDelete({ pool, id }) {
+  if (!pool) throw new Error('DB_POOL_REQUIRED');
+  if (!id) throw new Error('ID_REQUIRED');
+
+  const q = `
+    UPDATE seller_templates
+    SET deleted_at = NOW(), updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING id, slug
+  `;
+
+  const { rows } = await pool.query(q, [id]);
+  return rows[0] || null;
+}
+
+async function adminListTrash({ pool, limit, offset }) {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      st.id, st.slug, st.title, st.deleted_at,
+      COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS owner_display
+    FROM seller_templates st
+    JOIN users u ON u.id = st.owner_user_id
+    LEFT JOIN user_profiles up ON up.user_id = u.id
+    WHERE st.deleted_at IS NOT NULL
+    ORDER BY st.deleted_at DESC, st.id DESC
+    LIMIT $1 OFFSET $2
+    `,
+    [limit, offset],
+  );
+  return rows;
+}
+
+async function adminCountTrash({ pool }) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM seller_templates WHERE deleted_at IS NOT NULL`,
+  );
+  return rows[0]?.n || 0;
+}
+
+async function adminRestore({ pool, id }) {
+  const { rows } = await pool.query(
+    `
+    UPDATE seller_templates
+    SET deleted_at = NULL, updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NOT NULL
+    RETURNING id, slug
+    `,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+// Hard delete — only allowed on rows already in trash (deleted_at IS
+// NOT NULL). "Delete forever" is deliberately step 2 of the trash
+// flow, not a shortcut around it. Returns zip_path/slug so the
+// caller (service layer) can best-effort clean up files on disk.
+async function adminHardDelete({ pool, id }) {
+  const { rows } = await pool.query(
+    `
+    DELETE FROM seller_templates
+    WHERE id = $1
+      AND deleted_at IS NOT NULL
+    RETURNING id, slug, zip_path
+    `,
+    [id],
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   insertSellerTemplate,
 
@@ -473,6 +553,11 @@ module.exports = {
 
   // admin-only (not owner-scoped)
   adminSetBlocked,
+  adminSoftDelete,
+  adminListTrash,
+  adminCountTrash,
+  adminRestore,
+  adminHardDelete,
 
   // utils
   normalizeSlug,
