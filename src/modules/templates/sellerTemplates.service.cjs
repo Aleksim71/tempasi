@@ -360,6 +360,24 @@ zipPath,
     // (UI will show preview placeholder in list)
   }
 
+  // TEMPASI_FULL_EXTRACT_ON_UPLOAD (2026-08-04)
+  // Extract the full ZIP (src/index.html, assets, etc.) to
+  // <TEMPLATE_UPLOAD_DIR>/<slug>/ so Live Demo and post-purchase
+  // download work immediately after upload — no separate manual
+  // ingest step anymore. Best-effort like the preview extraction
+  // above: if the ZIP doesn't meet the fuller structure requirement
+  // (e.g. no src/index.html), the listing itself still succeeds —
+  // Live Demo just won't have anything to show until re-uploaded.
+  try {
+    await zipTool.extractFullTemplateToUploadDir({
+      zipPath,
+      slug: created.slug || generatedSlug,
+      destRoot: getTemplateUploadRoot(),
+    });
+  } catch (e) {
+    // best-effort — see comment above
+  }
+
   return { created };
 }
 
@@ -546,8 +564,45 @@ async function updateSellerTemplate({ pool, user, id, body, file }) {
       err.details = e.details;
       throw err;
     }
+
+    // TEMPASI_FULL_EXTRACT_ON_UPLOAD (2026-08-04) — see addSellerTemplate
+    // for the full rationale. Best-effort: doesn't block the update.
+    try {
+      await zipTool.extractFullTemplateToUploadDir({
+        zipPath: newZipPath,
+        slug: updated.slug || generatedSlug || existing.slug,
+        destRoot: getTemplateUploadRoot(),
+      });
+    } catch (e) {
+      // best-effort — see comment above
+    }
   }
 
+  return { updated };
+}
+
+// ------------------------------------------------------------
+// ADMIN block/unblock (not owner-scoped). Callers (admin routes) are
+// responsible for writing the admin_audit_log entry — this function
+// only performs the actual mutation via the module's own repo.
+// ------------------------------------------------------------
+async function adminBlockTemplate({ pool, id }) {
+  const updated = await repo.adminSetBlocked({ pool, id, blocked: true });
+  if (!updated) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return { updated };
+}
+
+async function adminUnblockTemplate({ pool, id }) {
+  const updated = await repo.adminSetBlocked({ pool, id, blocked: false });
+  if (!updated) {
+    const err = new Error('NOT_FOUND');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
   return { updated };
 }
 

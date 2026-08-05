@@ -564,9 +564,18 @@ export function createTemplatesRouter() {
         currentUserId && Number(raw.ownerUserId || raw.owner_user_id) === Number(currentUserId),
       );
 
+      // TEMPASI_DEMO_FRAME_URL (2026-08-04)
+      // Points directly at src/index.html under
+      // TEMPLATE_UPLOAD_DIR/<slug>/ (served by the /t/:slug/* route
+      // in app.web.js). No more /demo/ segment and no more
+      // redirect-stub index.html — the old ingest pipeline used to
+      // generate a top-level index.html that just did
+      // location.replace('./src/'); the new upload-time extraction
+      // doesn't bother with that indirection, since nothing else
+      // depends on a bare /t/<slug>/index.html existing.
       const demoFrameUrl =
         template.demoUrl ||
-        `/t/${encodeURIComponent(String(template.slug || slug))}/demo/index.html`;
+        `/t/${encodeURIComponent(String(template.slug || slug))}/src/index.html`;
       const templateDetailsUrl = `/templates/${encodeURIComponent(String(template.slug || slug))}`;
       const demoBackUrl = normalizeDemoBackUrl(req.query?.back, templateDetailsUrl);
 

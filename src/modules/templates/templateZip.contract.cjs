@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawn } = require('child_process');
 
 function fileExists(p) {
@@ -200,10 +201,145 @@ async function extractPreviewPngToFile({ zipPath, outPath }) {
   return { outPath, entryUsed };
 }
 
+// ------------------------------------------------------------
+// TEMPASI_FULL_EXTRACT_TO_UPLOAD_DIR (2026-08-04)
+// Ported from the old ingest-template.js CLI script (now removed —
+// this used to be a manual "designer sends a ZIP, admin runs this by
+// hand" step; now it runs automatically as part of the seller's own
+// upload). Same unpack/normalize/validate rules as that script:
+//   - unzip into a temp dir
+//   - detect and unwrap a single top-level "<slug>/" wrapper folder
+//     if the ZIP has one (some ZIP tools add this automatically)
+//   - require src/index.html to exist
+//   - reject node_modules, symlinks, path traversal, files >10 MiB
+//   - copy the validated payload into destRoot/<slug>/
+// ------------------------------------------------------------
+
+const MAX_FULL_EXTRACT_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MiB
+
+function runFullUnzip(zipPath, destDir) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('unzip', ['-qq', zipPath, '-d', destDir], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let errOut = '';
+    child.stderr.on('data', (d) => (errOut += d.toString('utf8')));
+    child.on('error', (e) => reject(e));
+    child.on('close', (code) => {
+      if (code !== 0) {
+        const err = new Error('UNZIP_EXTRACT_ALL_FAILED');
+        err.code = 'UNZIP_EXTRACT_ALL_FAILED';
+        err.details = { zipPath, stderr: errOut };
+        return reject(err);
+      }
+      resolve();
+    });
+  });
+}
+
+function detectPayloadRoot(stagingDir) {
+  const entries = fs.readdirSync(stagingDir, { withFileTypes: true });
+  if (entries.length === 1 && entries[0].isDirectory()) {
+    // ZIP had a single top-level "<slug>/" wrapper folder — unwrap it.
+    return path.join(stagingDir, entries[0].name);
+  }
+  return stagingDir;
+}
+
+function validateExtractedTree(rootDir) {
+  const stack = [rootDir];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const rel = path.relative(rootDir, current) || '.';
+    const name = path.basename(current);
+
+    if (name === 'node_modules') {
+      const err = new Error('FORBIDDEN_FOLDER');
+      err.code = 'FORBIDDEN_FOLDER';
+      err.details = { rel };
+      throw err;
+    }
+
+    const stat = fs.lstatSync(current);
+
+    if (stat.isSymbolicLink()) {
+      const err = new Error('SYMLINK_NOT_ALLOWED');
+      err.code = 'SYMLINK_NOT_ALLOWED';
+      err.details = { rel };
+      throw err;
+    }
+
+    if (stat.isDirectory()) {
+      const children = fs.readdirSync(current);
+      for (const child of children) {
+        const childPath = path.join(current, child);
+        const relChild = path.relative(rootDir, childPath);
+        if (relChild.split(path.sep).includes('..')) {
+          const err = new Error('PATH_TRAVERSAL');
+          err.code = 'PATH_TRAVERSAL';
+          err.details = { relChild };
+          throw err;
+        }
+        stack.push(childPath);
+      }
+      continue;
+    }
+
+    if (stat.isFile() && stat.size > MAX_FULL_EXTRACT_FILE_SIZE_BYTES) {
+      const err = new Error('FILE_TOO_LARGE');
+      err.code = 'FILE_TOO_LARGE';
+      err.details = { rel, size: stat.size, max: MAX_FULL_EXTRACT_FILE_SIZE_BYTES };
+      throw err;
+    }
+  }
+}
+
+async function extractFullTemplateToUploadDir({ zipPath, slug, destRoot }) {
+  if (!zipPath) throw new Error('ZIP_PATH_REQUIRED');
+  if (!slug) throw new Error('SLUG_REQUIRED');
+  if (!destRoot) throw new Error('DEST_ROOT_REQUIRED');
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tempasi-upload-extract-'));
+
+  try {
+    await runFullUnzip(zipPath, tmpRoot);
+    const payloadRoot = detectPayloadRoot(tmpRoot);
+
+    const srcIndex = path.join(payloadRoot, 'src', 'index.html');
+    if (!fileExists(srcIndex)) {
+      const err = new Error('SRC_INDEX_MISSING');
+      err.code = 'SRC_INDEX_MISSING';
+      err.details = { hint: 'ZIP must contain src/index.html for Live Demo to work.' };
+      throw err;
+    }
+
+    validateExtractedTree(payloadRoot);
+
+    const targetDir = path.join(destRoot, slug);
+    ensureDirSync(targetDir);
+
+    const entries = fs.readdirSync(payloadRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      fs.cpSync(path.join(payloadRoot, entry.name), path.join(targetDir, entry.name), {
+        recursive: true,
+        force: true,
+      });
+    }
+
+    return { targetDir };
+  } finally {
+    try {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    } catch (_e) {
+      // ignore cleanup errors
+    }
+  }
+}
+
 module.exports = {
   // main APIs
   validateTemplateZipOrThrowAsync,
   extractPreviewPngToFile,
+  extractFullTemplateToUploadDir,
 
   // low-level (might be useful later)
   runUnzipList,

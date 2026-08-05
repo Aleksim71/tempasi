@@ -7,9 +7,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "start:templates-demo": "node src/templates-demo.server.js",
-    "dev:templates-demo": "nodemon src/templates-demo.server.js",
-    "ingest-template": "node ingest-template.js",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier . --write",
@@ -47,7 +44,6 @@
     "express": "^5.2.1",
     "express-handlebars": "^8.0.4",
     "hbs": "^4.2.0",
-    "http-proxy-middleware": "^3.0.5",
     "multer": "^2.0.2",
     "pg": "^8.16.3"
   }

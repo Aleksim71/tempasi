@@ -81,6 +81,74 @@ export function createWebApp({ db }) {
     return res.status(404).send('Not found');
   });
 
+  // TEMPASI_TEMPLATES_DEMO_STATIC_ROUTE (2026-08-04)
+  // Serves "Live Demo" content (src/index.html, assets/*.css,
+  // src/*.js, etc.) directly from TEMPLATE_UPLOAD_DIR/<slug>/ —
+  // the same directory the preview route above already reads from,
+  // and the same directory the seller upload flow now extracts the
+  // FULL zip contents into (see extractFullTemplateToUploadDir in
+  // templateZip.contract.cjs), not just the preview PNG.
+  //
+  // This REPLACES the previous design (a separate, isolated
+  // templates-demo.server.js process on its own port, proxied here
+  // via http-proxy-middleware). That process/proxy is gone —
+  // decided together with the user: template files are already
+  // isolated by living on a physically separate machine
+  // (TEMPLATE_UPLOAD_DIR is an sshfs-style mount to that machine),
+  // so a second local process added no real isolation, just extra
+  // moving parts (a port to remember to start, a proxy to keep in
+  // sync). The files are static HTML/CSS/JS — nothing here ever
+  // executes server-side, so serving them directly is not a
+  // code-execution risk the way running the process was framed to
+  // guard against.
+  //
+  // Path-traversal guarded the same way as the preview route: resolve
+  // and confirm the final path is still inside
+  // TEMPLATE_UPLOAD_DIR/<slug>/ before sending. The uploaded .zip
+  // itself is NEVER reachable through this route — it's stored as a
+  // flat, randomly-named file directly under TEMPLATE_UPLOAD_DIR
+  // (not inside any <slug>/ folder), so it can never match this
+  // route's /t/:slug/* shape.
+  app.get('/t/:slug/*rest', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    // Express 5 / path-to-regexp v7+: a named wildcard like *rest
+    // gives an ARRAY of path segments (e.g. ['src','assets',
+    // 'style.css']), not a single string — join it back into a path.
+    const restParam = req.params.rest;
+    const rest = (Array.isArray(restParam) ? restParam.join('/') : String(restParam || '')).trim();
+
+    if (!/^[a-z0-9][a-z0-9-]*$/i.test(slug)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!rest || rest.includes('..')) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.TEMPLATE_UPLOAD_DIR,
+      process.env.UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'templates'),
+      path.join(process.cwd(), 'public', 'uploads', 'templates'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const slugRoot = path.resolve(resolvedRoot, slug);
+      const candidate = path.resolve(slugRoot, rest);
+
+      if (!candidate.startsWith(slugRoot + path.sep) && candidate !== slugRoot) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
   // TEMPASI_USER_AVATAR_ROUTE (2026-08-04)
   // Serve uploaded profile avatars. Same pattern as the template
   // preview route above (dedicated route + path-traversal guard,

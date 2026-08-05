@@ -1,20 +1,22 @@
 # Tempasi
 
-## Static templates demo server
+## Template uploads and Live Demo
 
-- Run main app (catalog, SSR, API): `npm start` or `npm run dev`.
-- Run isolated demo server for HTML templates: `npm run start:templates-demo` (port `4001` by default).
-  - Mounts `/t` → `storage/templates/` and serves static files only (no SSR, no rewrites).
-
-## Template ingest pipeline
-
-- Ingest a designer ZIP into `storage/templates/<slug>/`:
-  - `node ingest-template.js storage/inbox/seed-011.zip`
-- Requirements:
-  - ZIP contains `metadata.json`, `src/index.html`, `preview/preview.png`.
-  - All asset paths in HTML are relative.
-  - No `node_modules`, symlinks, or files larger than 10 MiB.
-- On success:
-  - Template files are placed into `storage/templates/<slug>/`.
-  - `storage/templates/<slug>/index.html` is generated as a redirect to `./src/`.
-  - Demo URL on the demo server: `/t/<slug>/`.
+- Run the app: `npm start` or `npm run dev`.
+- Sellers upload a template ZIP directly through the site
+  (Cabinet → My Templates → Add). No separate ingest step needed.
+- On upload, the app:
+  - stores the ZIP itself (`TEMPLATE_UPLOAD_DIR`, a flat,
+    randomly-named file),
+  - extracts `preview/preview.png` for the catalog thumbnail,
+  - extracts the full ZIP contents (best-effort) into
+    `TEMPLATE_UPLOAD_DIR/<slug>/` for Live Demo — requires
+    `src/index.html` inside the ZIP.
+- Live Demo and catalog preview thumbnails are served directly by the
+  main app from `TEMPLATE_UPLOAD_DIR` (`GET /t/:slug/*`,
+  `GET /t/:slug/preview/preview.:ext`) — no separate process, no
+  proxy.
+- `TEMPLATE_UPLOAD_DIR` is expected to point at storage physically
+  separate from the app server (e.g. an sshfs mount) — that's the
+  isolation boundary for uploaded template content, not a second
+  local process.

@@ -153,8 +153,7 @@
           {{#if formErrors.title}}
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
-        </div>
-{{#if formErrors.slug}}
+          {{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
         </div>
@@ -162,23 +161,6 @@
         <div class="form__row">
           <label class="form__label" for="shortDescription">Short description</label>
           <textarea class="textarea" id="shortDescription" name="shortDescription" rows="3">{{form.shortDescription}}</textarea>
-        </div>
-
-        <div class="form__grid">
-          <div class="form__row">
-            <label class="form__label" for="category">Category *</label>
-            <select class="input" id="editCategory" name="category" required>
-              {{#each categoryOptions}}
-                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
-              {{/each}}
-            </select>
-          </div>
-
-          <div class="form__row">
-            <label class="form__label" for="tags">Tags</label>
-            <input class="input" id="editTags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
-            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
-          </div>
         </div>
 
         <div class="form__grid">
@@ -310,8 +292,7 @@
           {{#if formErrors.title}}
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
-        </div>
-{{#if formErrors.slug}}
+          {{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
         </div>

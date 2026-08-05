@@ -41,6 +41,25 @@
         title="{{template.title}} live demo"
         loading="eager"
         referrerpolicy="no-referrer"
+        {{!--
+          TEMPASI_DEMO_SANDBOX_KEEP_ALLOW_SAME_ORIGIN (2026-08-04)
+          DevTools warns that allow-scripts + allow-same-origin
+          together can let a sandboxed frame escape its sandbox.
+          Tried removing allow-same-origin — it broke the demo for
+          real: seed templates load main.js as an ES module
+          (<script type="module" src="./main.js">), and a sandboxed
+          frame WITHOUT allow-same-origin gets an opaque ('null')
+          origin, which makes the browser apply CORS to that module
+          script load — blocked, since the static file server sends
+          no CORS headers. The redirect stub some seed templates use
+          (location.replace('./src/')) also broke under the opaque
+          origin ("Domains, protocols and ports must match"). Both
+          failures were confirmed live, not theoretical. Reverted.
+          If this needs revisiting, the real fix is CORS headers on
+          the demo server's static responses (Access-Control-Allow-
+          Origin: null) plus testing every seed template — not just
+          dropping the flag.
+        --}}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       ></iframe>
     </div>
