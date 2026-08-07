@@ -1,0 +1,100 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+    <a href="/admin/settings/storage" class="admin-subnav__link{{#if (eq settingsTab 'storage')}} admin-subnav__link--active{{/if}}">Storage</a>
+  </nav>
+
+  <p class="admin-empty-state__hint">
+    Checks whether the template storage location (TEMPLATE_UPLOAD_DIR) is reachable right now
+    for uploading and reading templates &mdash; Live Demo, catalog preview thumbnails, and
+    post-purchase downloads all depend on it. Reload this page to re-check.
+  </p>
+
+  <section class="admin-card">
+    <div class="admin-card__row">
+      <span class="admin-card__label">Configured path</span>
+      <span class="admin-card__value">{{result.dir}}</span>
+    </div>
+    <div class="admin-card__row">
+      <span class="admin-card__label">Explicitly configured</span>
+      <span class="admin-card__value">{{#if result.configured}}Yes{{else}}No (using local fallback){{/if}}</span>
+    </div>
+
+    {{#if result.ok}}
+      <div class="admin-card__row">
+        <span class="admin-card__label">Real mount point</span>
+        <span class="admin-card__value">
+          {{#if result.isMounted}}
+            <span class="admin-badge admin-badge--ok">Yes</span>
+          {{else}}
+            <span class="admin-badge">N/A (local fallback)</span>
+          {{/if}}
+        </span>
+      </div>
+      <div class="admin-card__row">
+        <span class="admin-card__label">Read/write check</span>
+        <span class="admin-card__value"><span class="admin-badge admin-badge--ok">OK</span></span>
+      </div>
+      <div class="admin-card__row">
+        <span class="admin-card__label">Overall</span>
+        <span class="admin-card__value"><span class="admin-badge admin-badge--ok">PASS &mdash; reachable and working</span></span>
+      </div>
+    {{else}}
+      <div class="admin-card__row">
+        <span class="admin-card__label">Overall</span>
+        <span class="admin-card__value"><span class="admin-badge admin-badge--danger">FAIL</span></span>
+      </div>
+      {{#if failMessage}}
+        <div class="admin-form-error">{{failMessage}}</div>
+      {{/if}}
+    {{/if}}
+  </section>
+
+  {{#if result.ok}}
+    <section class="admin-table-card">
+      {{#if result.templates.length}}
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Slug</th>
+              <th>Live Demo</th>
+              <th>Catalog preview</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each result.templates}}
+              <tr>
+                <td>{{this.slug}}</td>
+                <td>
+                  {{#if this.hasDemo}}
+                    <span class="admin-badge admin-badge--ok">OK</span>
+                  {{else}}
+                    <span class="admin-badge">no src/index.html</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.hasPreview}}
+                    <span class="admin-badge admin-badge--ok">OK</span>
+                  {{else}}
+                    <span class="admin-badge">no preview.png</span>
+                  {{/if}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      {{else}}
+        <div class="admin-empty-state">
+          <h2>No template folders found</h2>
+          <p class="admin-empty-state__hint">{{result.dir}} is empty.</p>
+        </div>
+      {{/if}}
+    </section>
+  {{/if}}
+</div>

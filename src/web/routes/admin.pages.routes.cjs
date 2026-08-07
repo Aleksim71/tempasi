@@ -10,6 +10,7 @@ const path = require('path');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
+const { checkTemplateStorage } = require('../../modules/storage/templateStorageCheck.cjs');
 
 const ALLOWED_PERIOD_DAYS = new Set([1, 7, 28]);
 const DEFAULT_PERIOD_DAYS = 7;
@@ -1107,6 +1108,26 @@ function createAdminPagesRouter() {
       dirExists,
       dirError,
       files,
+    });
+  });
+
+  router.get('/settings/storage', (req, res) => {
+    const result = checkTemplateStorage();
+
+    return res.status(200).render('pages/admin/settings/storage', {
+      title: 'Admin \u00b7 Settings \u00b7 Storage',
+      bodyClass: 'admin',
+      isAdmin: true,
+      currentPage: 'settings',
+      settingsTab: 'storage',
+      result,
+      failMessage: {
+        DIR_NOT_FOUND: 'This path does not exist. If it should be a mount (e.g. sshfs) to the storage machine, mount it there first.',
+        STAT_FAILED: 'Could not read this path\u2019s filesystem info.',
+        NOT_A_MOUNT: 'This path exists but is not a distinct mounted filesystem \u2014 it looks like a plain local directory, not the storage machine. The mount either was never set up, or it dropped (storage machine off/asleep/network issue), and writes since then have been landing on this server\u2019s local disk instead. Turn on the storage machine and (re)mount TEMPLATE_UPLOAD_DIR, then reload this page.',
+        READ_WRITE_FAILED: 'A write/read check on this directory raised an error.',
+        READ_WRITE_MISMATCH: 'Wrote a marker file but could not read back the exact content.',
+      }[result.failReason] || null,
     });
   });
 
