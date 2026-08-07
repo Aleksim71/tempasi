@@ -20,6 +20,7 @@ import { createWebApp } from './app.web.js';
 import { requireAuthWeb } from './web/middleware/require-auth.web.js';
 import { requireAdminWeb } from './web/middleware/require-admin.web.js';
 import checkoutRouter from './web/routes/checkout.routes.js';
+import { createPreviewProxyRouter } from './web/routes/preview-proxy.routes.js';
 
 const require = createRequire(import.meta.url);
 
@@ -368,6 +369,15 @@ if (process.env.TEMPASI_SKIP_SSR) {
   webApp.use('/admin', requireAdminWeb({ loginPath: '/login' }), createAdminPagesRouter({ db }));
 
   webApp.use('/checkout', checkoutRouter);
+
+  // TEMPASI_PREVIEW_PROXY_PRIORITY (2026-08-05)
+  // Mounted on `app` (not `webApp`) and BEFORE `app.use(webApp)`
+  // below, so it gets first crack at any /t/* request — taking
+  // priority over webApp's own /t/:slug/preview/... and /t/:slug/*
+  // routes (which read from TEMPLATE_UPLOAD_DIR, the mount that
+  // turned out to have never actually been live). This is the real,
+  // working path: an nginx server on the separate storage machine.
+  app.use(createPreviewProxyRouter());
 
   app.use(webApp);
 }
