@@ -74,8 +74,56 @@ if (configuredUploadDir) {
 console.log('[UPLOAD] TEMPLATE_UPLOAD_DIR =', process.env.TEMPLATE_UPLOAD_DIR || '(not set)');
 console.log('[UPLOAD] Using UPLOAD_DIR =', UPLOAD_DIR);
 
+// TEMPASI_MOUNT_POINT_GUARD (2026-08-04)
+// fs.existsSync() only proves the directory exists — it says nothing
+// about WHETHER it's actually the mounted remote filesystem (e.g. an
+// sshfs mount to a physically separate "old laptop as server", used
+// deliberately as an isolation boundary for uploaded template
+// content) versus a plain local directory that happens to sit at the
+// same path because the real mount silently dropped (network blip,
+// the remote machine sleeping/rebooting, sshfs not set to
+// auto-remount). If that happens, uploads would keep "succeeding"
+// but land on the local disk instead — exactly the case this project
+// is trying to avoid, and the failure would be invisible unless
+// something actively checks for it.
+//
+// A mounted directory has a different device id (st_dev) than its
+// parent directory; a plain subdirectory shares the same device id
+// as its parent. This is the same check the `mountpoint` Unix
+// command uses under the hood. Checked at UPLOAD TIME (inside
+// multer's destination callback below), not just once at server
+// boot, since the mount can drop mid-session.
+function isMountPoint(dirPath) {
+  try {
+    const resolved = path.resolve(dirPath);
+    const parent = path.dirname(resolved);
+    const dirStat = fs.statSync(resolved);
+    const parentStat = fs.statSync(parent);
+    return dirStat.dev !== parentStat.dev;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Only enforce this for a configured (non-default) upload dir. The
+// fallback local uploads/templates/ dir (used when TEMPLATE_UPLOAD_DIR
+// isn't set at all) is *meant* to be local — nothing to guard there.
+// Only enforce this for a configured (non-default) upload dir, and
+// never in tests: integration tests deliberately point
+// TEMPLATE_UPLOAD_DIR at a plain local temp directory (see e.g.
+// tests/myTemplatesPublishedVisibleInCatalog.integration.test.cjs),
+// which is correct there and would otherwise be indistinguishable
+// from the exact "silently local" failure this guard exists to
+// catch. Jest sets NODE_ENV=test automatically when it isn't already
+// set (this project's npm test script doesn't set it explicitly).
+const ENFORCE_UPLOAD_DIR_MOUNT_CHECK =
+  Boolean(configuredUploadDir) && process.env.NODE_ENV !== 'test';
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    if (ENFORCE_UPLOAD_DIR_MOUNT_CHECK && !isMountPoint(UPLOAD_DIR)) {
+      return cb(new Error('TEMPLATE_UPLOAD_DIR_NOT_MOUNTED'));
+    }
     cb(null, UPLOAD_DIR);
   },
   filename: function (req, file, cb) {
@@ -368,7 +416,10 @@ function createCabinetPagesRouter() {
 
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
-      if (e && e.message === 'ONLY_ZIP_ALLOWED') {
+      if (e && e.message === 'TEMPLATE_UPLOAD_DIR_NOT_MOUNTED') {
+        formErrors.templateZip =
+          'Upload storage is not connected right now (the storage machine appears to be off or unreachable). Turn it on and try again.';
+      } else if (e && e.message === 'ONLY_ZIP_ALLOWED') {
         formErrors.templateZip = 'Only .zip files are allowed.';
       } else if (e && e.code === 'LIMIT_FILE_SIZE') {
         formErrors.templateZip = 'ZIP is too large (max 50MB).';
@@ -581,7 +632,10 @@ res.render('pages/cabinet', {
 
     return res.redirect('/cabinet/my-templates');
     } catch (e) {
-      if (e && e.message === 'ONLY_ZIP_ALLOWED') {
+      if (e && e.message === 'TEMPLATE_UPLOAD_DIR_NOT_MOUNTED') {
+        formErrors.templateZip =
+          'Upload storage is not connected right now (the storage machine appears to be off or unreachable). Turn it on and try again.';
+      } else if (e && e.message === 'ONLY_ZIP_ALLOWED') {
         formErrors.templateZip = 'Only .zip files are allowed.';
       } else if (e && e.code === 'LIMIT_FILE_SIZE') {
         formErrors.templateZip = 'ZIP is too large (max 50MB).';

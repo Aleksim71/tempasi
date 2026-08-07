@@ -298,6 +298,28 @@ async function extractFullTemplateToUploadDir({ zipPath, slug, destRoot }) {
   if (!slug) throw new Error('SLUG_REQUIRED');
   if (!destRoot) throw new Error('DEST_ROOT_REQUIRED');
 
+  // TEMPASI_MOUNT_POINT_GUARD (2026-08-04) — same check as the
+  // upload's multer destination callback (cabinet.pages.routes.cjs),
+  // repeated here in case the mount dropped in the narrow window
+  // between the raw ZIP being saved and this extraction step
+  // running. Only enforced when TEMPLATE_UPLOAD_DIR is explicitly
+  // configured — the local fallback dir is meant to be local.
+  if (process.env.TEMPLATE_UPLOAD_DIR && process.env.NODE_ENV !== 'test') {
+    const resolvedDest = path.resolve(destRoot);
+    const parentOfDest = path.dirname(resolvedDest);
+    let mounted = false;
+    try {
+      mounted = fs.statSync(resolvedDest).dev !== fs.statSync(parentOfDest).dev;
+    } catch (_e) {
+      mounted = false;
+    }
+    if (!mounted) {
+      const err = new Error('UPLOAD_DIR_NOT_MOUNTED');
+      err.code = 'UPLOAD_DIR_NOT_MOUNTED';
+      throw err;
+    }
+  }
+
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tempasi-upload-extract-'));
 
   try {
