@@ -185,6 +185,11 @@ export async function selectTemplatesForCatalog(db) {
       shortDescription: toStr(r.short_description || ''),
       fullDescription: toStr(r.description || ''),
       category: toStr(r.category_label || r.category || ''),
+      // TEMPASI_CATALOG_REACTIVE_FILTERS (2026-08-10): raw slug, needed
+      // separately from the human label above so client-side filtering
+      // can match against the same slug values used by the category
+      // checkboxes (which come from catalog_categories.slug).
+      categorySlug: toStr(r.category || ''),
       authorName: toStr(r.author_name || ''),
 
       // ✅ ALWAYS go through /t/<slug>/preview.png

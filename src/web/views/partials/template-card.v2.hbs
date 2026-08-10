@@ -11,7 +11,14 @@
     - Uses /preview/{{slug}} for Demo (matches current app)
 --}}
 
-<article class="tcard" data-template-slug="{{t.slug}}">
+<article
+  class="tcard"
+  data-template-card
+  data-template-slug="{{t.slug}}"
+  data-category="{{t.categorySlug}}"
+  data-price="{{t.price}}"
+  data-has-rent="{{#if t.prices.rent.amount}}1{{else}}0{{/if}}"
+>
   <div class="tcard__media">
     <a class="tcard__thumb" href="/templates/{{t.slug}}{{#if t.selectedCaseParam}}?{{t.selectedCaseParam}}{{/if}}" aria-label="Open template details">
       <div class="template-card__no-preview" style="display:none;">Preview not available</div>

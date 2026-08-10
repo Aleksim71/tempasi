@@ -285,6 +285,11 @@ function normalizeTemplate(raw, slugFromUrl) {
 
   // Other info
   const category = toStr(raw?.category || meta?.category).trim() || '';
+  // TEMPASI_CATALOG_REACTIVE_FILTERS (2026-08-10): pass through the raw
+  // category slug (distinct from the display label above) so the
+  // catalog page's client-side filter JS can match it against the
+  // category checkbox values.
+  const categorySlug = toStr(raw?.categorySlug || meta?.categorySlug).trim() || '';
   const license = toStr(raw?.license || meta?.license).trim() || '';
   const type = toStr(raw?.type || meta?.type).trim() || '';
   const version = toStr(raw?.version || meta?.version).trim() || '';
@@ -321,6 +326,7 @@ function normalizeTemplate(raw, slugFromUrl) {
     slug,
     title,
     category,
+    categorySlug,
     license,
     type,
     version,
