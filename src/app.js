@@ -331,6 +331,59 @@ app.use('/api/orders', ordersRouter);
 app.use('/downloads', downloadsRouter);
 app.use('/api/profile', profileApiRouter);
 
+// TEMPASI_API_JSON_ERROR_HANDLER (2026-08-11)
+// Previously /api/* routes had no error-handling middleware of their
+// own in this file (unlike app.api.js, which is a separate Express
+// app not actually mounted for the running server). An unhandled
+// error thrown by any /api/* route (e.g. a Postgres unique-constraint
+// violation) fell through to Express's built-in default handler,
+// which returns an HTML error page — not JSON. Client-side fetch()
+// callers doing `await response.json()` would then throw trying to
+// parse HTML as JSON, landing in their generic catch block and
+// showing a misleading "Network error." even though the real cause
+// was an ordinary validation failure (e.g. "nickname already taken").
+// Scoped to '/api' only, mounted before the SSR/webApp fallback, so
+// page rendering and its own error handling are untouched.
+app.use('/api', (err, req, res, next) => {
+  console.error('[api] error:', err?.stack || err);
+
+  const status = Number.isInteger(err?.status) ? err.status : 500;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Postgres errors carry: code, detail, hint, constraint, table, column
+  const pg =
+    err && typeof err === 'object'
+      ? {
+          code: err.code,
+          detail: err.detail,
+          hint: err.hint,
+          constraint: err.constraint,
+          table: err.table,
+          column: err.column,
+        }
+      : {};
+
+  if (!isProd) {
+    return res.status(status).json({
+      ok: false,
+      error: 'Internal Server Error',
+      message: String(err?.message || err || 'Error'),
+      status,
+      ...pg,
+    });
+  }
+
+  // In production, still surface the message for deliberate 4xx errors
+  // (e.g. "this nickname is already taken") — those are safe,
+  // user-facing validation text, not internal details. Only 500s stay
+  // generic, since those may originate from a raw unhandled exception.
+  return res.status(status).json({
+    ok: false,
+    error: status === 500 ? 'Internal Server Error' : String(err?.message || 'Error'),
+    ...(status !== 500 ? { message: String(err?.message || 'Error') } : {}),
+  });
+});
+
 // SSR (or stub) LAST
 if (process.env.TEMPASI_SKIP_SSR) {
   app.use(makeSsrStubRouter());

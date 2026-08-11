@@ -231,7 +231,19 @@ async function updateMyProfileJson(req, res) {
         updated_at
     `,
     [userId, fullName, nickname, about, publicEmail, publicProfile],
-  );
+  ).catch((err) => {
+    // TEMPASI_NICKNAME_TAKEN_MESSAGE (2026-08-11): user_profiles has a
+    // case-insensitive unique index on nickname (excluding null/empty).
+    // Surface this as a normal validation error instead of letting the
+    // raw Postgres unique-violation bubble up as an unhandled 500.
+    if (err && err.code === '23505' && err.constraint === 'user_profiles_nickname_unique_idx') {
+      const niceErr = new Error('This nickname is already taken. Please choose another.');
+      niceErr.status = 409;
+      niceErr.code = 'NICKNAME_TAKEN';
+      throw niceErr;
+    }
+    throw err;
+  });
 
   return res.json({
     ok: true,
