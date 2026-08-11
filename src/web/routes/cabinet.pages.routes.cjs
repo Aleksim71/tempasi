@@ -459,7 +459,7 @@ function createCabinetPagesRouter() {
     });
   });
 
-  router.post('/my-templates/:id/status', async (req, res) => {
+  router.post('/my-templates/:id/status', express.urlencoded({ extended: false }), async (req, res) => {
     const pool = getPool();
     try {
       const id = Number(req.params.id);
@@ -472,6 +472,27 @@ function createCabinetPagesRouter() {
       });
     } catch (e) {
       console.error('[cabinet] my-templates/:id/status error:', e);
+    }
+    return res.redirect('/cabinet/my-templates');
+  });
+
+  // TEMPASI_MY_TEMPLATES_DELETE_ROUTE (2026-08-11): the "Delete" button
+  // in space-my-templates.hbs has always posted to this exact path, and
+  // sellerTemplatesService.deleteMyTemplate() (soft-delete + zip/preview
+  // file cleanup) was already fully built — this route just wasn't
+  // wired up, so every delete attempt hit Express's default 404
+  // ("Cannot POST ...").
+  router.post('/my-templates/:id/delete', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    try {
+      const id = Number(req.params.id);
+      await sellerTemplatesService.deleteMyTemplate({
+        pool,
+        user: req.user,
+        id,
+      });
+    } catch (e) {
+      console.error('[cabinet] my-templates/:id/delete error:', e);
     }
     return res.redirect('/cabinet/my-templates');
   });
