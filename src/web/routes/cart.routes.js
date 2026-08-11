@@ -126,6 +126,16 @@ function pickNotice(req) {
   if (String(req.query?.removed || '').trim() === '1') {
     return 'Item removed from cart.';
   }
+  const demoCheckout = String(req.query?.demo_checkout || '').trim();
+  if (demoCheckout === 'done') {
+    return 'Demo checkout complete.';
+  }
+  if (demoCheckout === 'partial') {
+    return 'Demo checkout complete for available items. Unavailable items were skipped and are still in your cart.';
+  }
+  if (demoCheckout === 'blocked') {
+    return 'No items could be checked out — all templates in your cart are no longer available.';
+  }
   return '';
 }
 
@@ -140,7 +150,13 @@ async function loadCartItems(db, userId) {
         ci.created_at,
         COALESCE(st.title, ci.template_slug) AS template_title,
         st.price_buy_cents,
-        st.price_rent_cents
+        st.price_rent_cents,
+        (
+          st.slug IS NOT NULL
+          AND st.status = 'published'
+          AND st.deleted_at IS NULL
+          AND st.admin_blocked_at IS NULL
+        ) AS is_available
       FROM cart_items ci
       LEFT JOIN seller_templates st
         ON st.slug = ci.template_slug
@@ -169,6 +185,12 @@ async function loadCartItems(db, userId) {
       amountEur: formatMoneyEurFromCents(amountCents),
       durationLabel: dealType === 'RENT' ? formatRentDurationLabel(row.license) : '',
       detailsHref: `/templates/${encodeURIComponent(row.template_slug || '')}`,
+      // TEMPASI_POSTMODERATION_CART_AVAILABILITY (2026-08-10): a template
+      // can be blocked/unpublished/deleted after already being added to
+      // someone's cart. We keep the stale item visible (not silently
+      // removed) but flag it so the cart page can show it's no longer
+      // purchasable, and demo checkout can skip it.
+      isAvailable: Boolean(row.is_available),
     };
   });
 }
@@ -279,7 +301,13 @@ async function demoCompleteCartCheckout(db, userId) {
         ci.license,
         ${cartCaseIdsColumn ? `ci.${cartCaseIdsColumn}` : `NULL::jsonb`} AS case_ids,
         COALESCE(st.price_buy_cents, 0) AS price_buy_cents,
-        COALESCE(st.price_rent_cents, 0) AS price_rent_cents
+        COALESCE(st.price_rent_cents, 0) AS price_rent_cents,
+        (
+          st.slug IS NOT NULL
+          AND st.status = 'published'
+          AND st.deleted_at IS NULL
+          AND st.admin_blocked_at IS NULL
+        ) AS is_available
       FROM cart_items ci
       LEFT JOIN seller_templates st
         ON st.slug = ci.template_slug
@@ -297,9 +325,21 @@ async function demoCompleteCartCheckout(db, userId) {
   }
 
   const createdOrderIds = [];
+  const processedCartItemIds = [];
+  const skippedCartItemIds = [];
   const allCaseIds = [];
 
   for (const item of items) {
+    // TEMPASI_POSTMODERATION_CART_AVAILABILITY (2026-08-10): a template
+    // sitting in the cart may have been blocked/unpublished/deleted
+    // since it was added. Skip it — don't create an order for it, don't
+    // remove it from the cart either (per product decision: it stays
+    // visible with a "not available" badge, not silently dropped).
+    if (!item.is_available) {
+      skippedCartItemIds.push(item.id);
+      continue;
+    }
+
     const dealType = String(item.deal_type || 'BUY').toUpperCase();
     const caseIds = dealType === 'RENT' ? normalizeCaseIdsFromCart(item.case_ids) : [];
 
@@ -378,6 +418,7 @@ async function demoCompleteCartCheckout(db, userId) {
     }
 
     createdOrderIds.push(orderId);
+    processedCartItemIds.push(item.id);
 
     if (
       dealType === 'RENT' &&
@@ -448,20 +489,31 @@ async function demoCompleteCartCheckout(db, userId) {
     }
   }
 
-  await db.query(
-    `
-      DELETE FROM cart_items
-      WHERE user_id::text = $1::text
-    `,
-    [String(userId)],
-  );
+  // Only clear the cart items that actually turned into an order.
+  // Skipped (unavailable) items stay in the cart — see the
+  // TEMPASI_POSTMODERATION_CART_AVAILABILITY comment above.
+  if (processedCartItemIds.length) {
+    await db.query(
+      `
+        DELETE FROM cart_items
+        WHERE user_id::text = $1::text
+          AND id = ANY($2::bigint[])
+      `,
+      [String(userId), processedCartItemIds],
+    );
+  }
 
   return {
     orderIds: createdOrderIds,
+    skippedCount: skippedCartItemIds.length,
     caseIds: allCaseIds,
     redirectTo: allCaseIds[0]
       ? `/cabinet/cases/${encodeURIComponent(allCaseIds[0])}`
-      : '/cart?demo_checkout=done',
+      : createdOrderIds.length && skippedCartItemIds.length
+        ? '/cart?demo_checkout=partial'
+        : createdOrderIds.length
+          ? '/cart?demo_checkout=done'
+          : '/cart?demo_checkout=blocked',
   };
 }
 
@@ -481,7 +533,9 @@ export function createCartRouter() {
       }
 
       const items = await loadCartItems(db, userId);
-      const subtotalCents = items.reduce((sum, item) => sum + Number(item.amountCents || 0), 0);
+      const subtotalCents = items
+        .filter((item) => item.isAvailable)
+        .reduce((sum, item) => sum + Number(item.amountCents || 0), 0);
 
       return res.status(200).render('pages/cart', {
         title: 'Cart',
@@ -555,6 +609,7 @@ export function createCartRouter() {
           WHERE slug = $1
             AND status = 'published'
             AND deleted_at IS NULL
+            AND admin_blocked_at IS NULL
           LIMIT 1
         `,
         [templateSlug],

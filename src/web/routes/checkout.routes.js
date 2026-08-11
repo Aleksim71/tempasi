@@ -68,6 +68,7 @@ async function loadDirectBuyTemplate(db, slug) {
         AND status = 'published'
         AND deleted_at IS NULL
         AND owner_withdrawn_at IS NULL
+        AND admin_blocked_at IS NULL
       LIMIT 1
     `,
     [slug],

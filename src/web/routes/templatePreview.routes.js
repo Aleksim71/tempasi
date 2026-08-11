@@ -134,6 +134,7 @@ async function serveDemoAsset(req, res, next) {
       WHERE slug = $1
         AND status = 'published'
         AND deleted_at IS NULL
+        AND admin_blocked_at IS NULL
       LIMIT 1
     `;
     const { rows } = await db.query(q, [slug]);
@@ -189,6 +190,7 @@ export function createTemplatePreviewRouter() {
         WHERE slug = $1
           AND status = 'published'
           AND deleted_at IS NULL
+          AND admin_blocked_at IS NULL
         LIMIT 1
       `;
       const { rows } = await db.query(q, [slug]);

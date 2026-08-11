@@ -27,8 +27,13 @@
               </thead>
               <tbody>
                 {{#each cart.items}}
-                  <tr>
-                    <td>{{template_title}}</td>
+                  <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
+                    <td>
+                      {{template_title}}
+                      {{#unless isAvailable}}
+                        <div class="cart-badge cart-badge--warn">Not available</div>
+                      {{/unless}}
+                    </td>
                     <td>
                       {{deal_type}}
                       {{#if durationLabel}}
