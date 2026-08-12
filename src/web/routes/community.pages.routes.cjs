@@ -17,6 +17,41 @@ function formatEurOrDash(cents) {
   return (Number(cents) / 100).toFixed(2);
 }
 
+// TEMPASI_COMMUNITY_PREVIEW_FALLBACK_FIX (2026-08-12): mirrors
+// resolveStoredTemplatePreviewUrl() in src/server/catalog/templates.repo.js
+// (kept as a small local copy since that file is ESM and this route is
+// CJS). The public catalog/details pages never rely on
+// seller_templates.preview_image/preview_url being set directly — those
+// columns are frequently empty — they fall back to the working
+// /t/<slug>/preview/preview.png proxy route (backed by zip_path) instead.
+// This route previously used only the raw DB columns with no fallback,
+// so templates with empty preview_image/preview_url rendered no image
+// at all on a member's Community profile page, even though the exact
+// same templates showed a preview fine on /templates.
+function resolveCommunityTemplatePreviewUrl(row) {
+  const slug = String(row?.slug || '').trim();
+
+  const directPreview = String(row?.preview_url || row?.preview_image || '').trim();
+
+  if (directPreview) {
+    if (directPreview.startsWith('/')) return directPreview;
+
+    const previewFile = directPreview.match(/preview\.(png|jpg|jpeg|webp|svg)$/i);
+    if (slug && previewFile) {
+      return `/t/${encodeURIComponent(slug)}/preview/preview.${previewFile[1].toLowerCase()}`;
+    }
+
+    return `/${directPreview.replace(/^\/+/, '')}`;
+  }
+
+  const zipPath = String(row?.zip_path || '').trim();
+  if (slug && zipPath) {
+    return `/t/${encodeURIComponent(slug)}/preview/preview.png`;
+  }
+
+  return null;
+}
+
 function parsePage(raw) {
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
@@ -128,7 +163,7 @@ function createCommunityPagesRouter() {
 
       const templatesRes = await pool.query(
         `
-        SELECT slug, title, preview_image, preview_url, price_buy_cents, price_rent_cents
+        SELECT slug, title, preview_image, preview_url, zip_path, price_buy_cents, price_rent_cents
         FROM seller_templates
         WHERE owner_user_id = $1 AND status = 'published' AND deleted_at IS NULL
         ORDER BY created_at DESC
@@ -139,7 +174,7 @@ function createCommunityPagesRouter() {
       const templates = templatesRes.rows.map((t) => ({
         slug: t.slug,
         title: t.title,
-        previewSrc: t.preview_image || t.preview_url || null,
+        previewSrc: resolveCommunityTemplatePreviewUrl(t),
         priceBuyLabel: formatEurOrDash(t.price_buy_cents),
         priceRentLabel: formatEurOrDash(t.price_rent_cents),
       }));

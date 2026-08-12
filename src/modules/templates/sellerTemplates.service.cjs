@@ -302,6 +302,32 @@ async function addSellerTemplate({ pool, user, body, file }) {
   const v = validateAddOrEditTemplateForm(body);
   if (!v.ok) throwValidationFailed(v);
 
+  // TEMPASI_ADD_TEMPLATE_LIVE_CATEGORY_FIX (2026-08-12)
+  // normalizeTemplateCategory() (used above, inside
+  // validateAddOrEditTemplateForm) only recognizes the original 11
+  // hardcoded category slugs — documented known debt in PILGRIM.md.
+  // Any category added later via admin (e.g. saas-tech-startups,
+  // corporate-business, healthcare-wellness, ...) silently fell back
+  // to 'other' on create, even though edit already handles this
+  // correctly via its own live catalog_categories lookup. Deliberately
+  // NOT touching the hardcoded set/function itself (kept as a safety
+  // net for garbage input) — just re-checking the raw submitted value
+  // against the live table and using it when valid, same source of
+  // truth the edit path already trusts.
+  try {
+    const rawCategory = String(body?.category || '').trim().toLowerCase();
+    if (rawCategory && rawCategory !== v.data.category) {
+      const { rows } = await pool.query('SELECT slug FROM catalog_categories WHERE slug = $1 LIMIT 1', [
+        rawCategory,
+      ]);
+      if (rows[0]) {
+        v.data.category = rawCategory;
+      }
+    }
+  } catch (_e) {
+    // best-effort; fall back to whatever normalizeTemplateCategory already produced
+  }
+
   const zipPath = file && file.path ? String(file.path) : null;
   const zipOriginalName = file && file.originalname ? String(file.originalname) : null;
 
@@ -342,13 +368,11 @@ async function addSellerTemplate({ pool, user, body, file }) {
     shortDescription: v.data.shortDescription || null,
     category: v.data.category || 'other',
     tags: v.data.tags || '',
-    category: v.data.category || 'other',
-    tags: v.data.tags || '',
     priceBuy: v.data.priceBuy || null,
     priceRent: v.data.priceRent || null,
     status: v.data.status || 'draft',
     license: v.data.internalLicense,
-zipPath,
+    zipPath,
     zipOriginalName,
   });
 
