@@ -374,6 +374,8 @@ function createCabinetPagesRouter() {
   });
 
   router.post('/my-templates/add', upload.single('templateZip'), async (req, res) => {
+    const pool = getPool();
+
     const form = {
       title: String(req.body?.title || ''),
       shortDescription: String(req.body?.shortDescription || ''),
@@ -389,24 +391,12 @@ function createCabinetPagesRouter() {
     let formErrors = {};
 
     try {
-      const existingForForm = await sellerTemplatesService.getMyTemplateById({
-        pool,
-        user: req.user,
-        id,
-      });
-      form.currentZipName = displayZipName(existingForForm);
-    } catch (_e) {
-      form.currentZipName = form.currentZipName || 'No ZIP uploaded';
-    }
-
-    try {
       const file = req.file;
       if (!file) {
         formErrors.templateZip = 'ZIP file is required.';
         throw new Error('ZIP_REQUIRED');
       }
 
-      const pool = getPool();
       await sellerTemplatesService.addSellerTemplate({
         pool,
         user: req.user,
@@ -434,6 +424,14 @@ function createCabinetPagesRouter() {
     }
 
     const status = String(req.body?.status || 'draft');
+    // TEMPASI_ADD_TEMPLATE_CATEGORY_OPTIONS_FIX (2026-08-12): the GET
+    // handler above passes categoryOptions to populate the <select>,
+    // but this error-path re-render (e.g. "ZIP file is required")
+    // never did — {{#each categoryOptions}} rendered zero <option>
+    // elements, making the category dropdown look empty/reset even
+    // though form.category (and the view's `selected` logic) were
+    // both actually fine.
+    const categoryOptions = await getCatalogCategoryOptions(pool);
     return res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
@@ -444,6 +442,7 @@ function createCabinetPagesRouter() {
 
       workspaceData: { items: [] },
       workspaceError,
+      categoryOptions,
 
       form,
       formErrors,
