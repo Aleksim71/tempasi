@@ -10,4 +10,66 @@
   Do NOT duplicate .templates-chips here.
 */
 
-/* (reserved for future catalog-wide rules if needed) */
+/* TEMPASI_CATALOG_PAGINATION (2026-08-13) */
+
+.templates-pagesize {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--c-text, #e7eefc);
+  font-size: var(--fs-14, 14px);
+}
+
+.templates-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 16px;
+}
+
+.templates-pagination__page,
+.templates-pagination__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+
+  border-radius: 999px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--c-text, #e7eefc);
+
+  text-decoration: none;
+  font-size: var(--fs-14, 14px);
+
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.templates-pagination__page:hover,
+.templates-pagination__nav:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.templates-pagination__page--current {
+  border-color: rgba(255, 215, 120, 0.6);
+  background:
+    radial-gradient(120% 140% at 10% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
+    rgba(0, 0, 0, 0.22);
+  color: #ffe7ac;
+  font-weight: var(--fw-semibold, 600);
+}
+
+.templates-pagination__nav--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}

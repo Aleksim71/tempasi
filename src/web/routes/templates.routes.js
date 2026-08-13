@@ -115,6 +115,124 @@ function pickCatalogFnSafe() {
   }
 }
 
+// TEMPASI_CATALOG_PAGINATION (2026-08-13)
+function pickCatalogPageFnSafe() {
+  try {
+    if (isFn(repo.selectTemplatesForCatalogPage)) return repo.selectTemplatesForCatalogPage;
+    if (repo.default && isFn(repo.default.selectTemplatesForCatalogPage)) {
+      return repo.default.selectTemplatesForCatalogPage;
+    }
+
+    console.warn(
+      '[templates.routes] selectTemplatesForCatalogPage not found in templates.repo.js. ' +
+        'Falling back to empty catalog page.',
+    );
+
+    return async function getEmptyCatalogPage() {
+      return { rows: [], total: 0, page: 1, pageSize: 10, totalPages: 1 };
+    };
+  } catch (e) {
+    console.warn(
+      `[templates.routes] Failed to pick paginated catalog function: ${String(e?.message || e)}. ` +
+        `Falling back to empty catalog page.`,
+    );
+    return async function getEmptyCatalogPage() {
+      return { rows: [], total: 0, page: 1, pageSize: 10, totalPages: 1 };
+    };
+  }
+}
+
+const CATALOG_PAGE_SIZES = [10, 20, 30];
+const CATALOG_DEFAULT_PAGE_SIZE = 10;
+
+function normalizeCatalogPageSizeParam(input) {
+  const n = Number.parseInt(input, 10);
+  return CATALOG_PAGE_SIZES.includes(n) ? n : CATALOG_DEFAULT_PAGE_SIZE;
+}
+
+function normalizeCatalogPageParam(input) {
+  const n = Number.parseInt(input, 10);
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+function normalizeCatalogAccessParam(input) {
+  const v = toStr(input).trim();
+  return v === 'buy' || v === 'rent' ? v : '';
+}
+
+function toCatsArray(input) {
+  if (input === undefined || input === null || input === '') return [];
+  const arr = Array.isArray(input) ? input : [input];
+  return arr.map((c) => toStr(c).trim()).filter(Boolean);
+}
+
+/**
+ * Builds a /templates?... query string preserving the current filters
+ * (q, cat[], access, priceMax/priceActive, pageSize) while overriding
+ * `page`. Used both for the numbered pagination links and (later, if
+ * needed) for any other same-page navigation.
+ */
+function buildCatalogPageUrl(filters, pagination, targetPage) {
+  const params = new URLSearchParams();
+
+  if (filters.q) params.set('q', filters.q);
+  for (const c of filters.cats) params.append('cat', c);
+  if (filters.access) params.set('access', filters.access);
+  if (filters.priceActive && filters.priceMax !== null && filters.priceMax !== undefined) {
+    params.set('priceMax', String(filters.priceMax));
+    params.set('priceActive', '1');
+  }
+  if (pagination.pageSize !== CATALOG_DEFAULT_PAGE_SIZE) {
+    params.set('pageSize', String(pagination.pageSize));
+  }
+  if (targetPage && targetPage !== 1) {
+    params.set('page', String(targetPage));
+  }
+
+  const qs = params.toString();
+  return `/templates${qs ? `?${qs}` : ''}`;
+}
+
+function buildCatalogPagination(filters, result) {
+  const { page, pageSize, total, totalPages } = result;
+
+  const windowSize = 5;
+  let start = Math.max(1, page - Math.floor(windowSize / 2));
+  let end = Math.min(totalPages, start + windowSize - 1);
+  start = Math.max(1, Math.min(start, Math.max(1, end - windowSize + 1)));
+
+  const pages = [];
+  for (let p = start; p <= end; p += 1) {
+    pages.push({
+      page: p,
+      url: buildCatalogPageUrl(filters, { pageSize }, p),
+      isCurrent: p === page,
+    });
+  }
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(total, page * pageSize);
+
+  return {
+    page,
+    pageSize,
+    total,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    pages,
+    hasPrev: page > 1,
+    hasNext: page < totalPages,
+    prevUrl: page > 1 ? buildCatalogPageUrl(filters, { pageSize }, page - 1) : '',
+    nextUrl: page < totalPages ? buildCatalogPageUrl(filters, { pageSize }, page + 1) : '',
+    pageSizeOptions: CATALOG_PAGE_SIZES.map((size) => ({
+      value: size,
+      isCurrent: size === pageSize,
+      url: buildCatalogPageUrl(filters, { pageSize: size }, 1),
+    })),
+  };
+}
+
 function pickBySlugFnSafe() {
   try {
     // Named exports (preferred)
@@ -412,27 +530,60 @@ export function createTemplatesRouter() {
   router.use(urlencoded({ extended: false }));
 
   const selectCatalog = pickCatalogFnSafe();
+  const selectCatalogPage = pickCatalogPageFnSafe();
   const getBySlug = pickBySlugFnSafe();
 
-  // /templates — catalog
+  // /templates — catalog (server-side filtered + paginated)
   router.get('/', async (req, res, next) => {
+    const selectedCaseId = normalizeCaseIdParam(req.query?.caseId || req.query?.case_id);
+    const selectedCaseParam = selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '';
+    const listingUserId = getTemplateDetailsUserId(req);
+
+    // Sticky filter state, read straight from query params — also used
+    // to re-check the right chips/radio and to build pagination links
+    // that don't drop the active filters.
+    const filters = {
+      q: toStr(req.query?.q).trim(),
+      cats: toCatsArray(req.query?.cat),
+      access: normalizeCatalogAccessParam(req.query?.access),
+      // priceActive only becomes true once the user has actually
+      // touched the price slider/number field client-side (see
+      // templates.catalog-filters.js) — mirrors the old client-side
+      // filter's behavior of not treating the slider's default
+      // resting value as an implied filter.
+      priceActive: req.query?.priceActive === '1',
+      priceMax:
+        req.query?.priceMax !== undefined &&
+        req.query?.priceMax !== '' &&
+        !Number.isNaN(Number(req.query.priceMax))
+          ? Number(req.query.priceMax)
+          : null,
+    };
+
+    const requestedPage = normalizeCatalogPageParam(req.query?.page);
+    const requestedPageSize = normalizeCatalogPageSizeParam(req.query?.pageSize);
+
     try {
       const db = req.app.locals?.db;
 
-      // Some repo functions accept db; some don't.
-      const rawList = await (selectCatalog.length >= 1 ? selectCatalog(db) : selectCatalog());
+      const result = await selectCatalogPage(db, filters, {
+        page: requestedPage,
+        pageSize: requestedPageSize,
+      });
 
-      const selectedCaseId = normalizeCaseIdParam(req.query?.caseId || req.query?.case_id);
-
-      // ✅ normalize previewUrl + compat fields for cards
       const templates = appendCaseContextToTemplates(
-        normalizeTemplateListAvailability((rawList || []).map((t) => normalizeTemplate(t))),
+        normalizeTemplateListAvailability((result.rows || []).map((t) => normalizeTemplate(t))),
         selectedCaseId,
       );
 
-      const categoryOptions = await getCatalogCategoryChips(db);
-      const listingUserId = getTemplateDetailsUserId(req);
+      const categoryOptionsRaw = await getCatalogCategoryChips(db);
+      const categoryOptions = categoryOptionsRaw.map((opt) => ({
+        ...opt,
+        checked: filters.cats.includes(opt.slug),
+      }));
+
       const userCases = await loadUserCasesForTemplateDetails(db, listingUserId);
+      const pagination = buildCatalogPagination(filters, result);
 
       res.render('pages/templates/index', {
         title: 'Templates — Tempasi',
@@ -444,7 +595,9 @@ export function createTemplatesRouter() {
         isAuthenticated: Boolean(listingUserId),
         userCases,
         selectedCaseId,
-        selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
+        selectedCaseParam,
+        query: filters,
+        pagination,
       });
     } catch (err) {
       // ✅ Hard fail-safe: never 500 for catalog
@@ -452,15 +605,26 @@ export function createTemplatesRouter() {
         `[templates.routes] GET /templates failed: ${String(err?.message || err)}. Rendering empty catalog.`,
       );
       try {
+        const emptyResult = {
+          rows: [],
+          total: 0,
+          page: 1,
+          pageSize: requestedPageSize,
+          totalPages: 1,
+        };
         return res.status(200).render('pages/templates/index', {
           title: 'Templates — Tempasi',
           bodyClass: 'templates-page',
           activePage: 'templates',
           styles: ['/css/pages/catalog.css', '/css/pages/templates.css'],
           templates: [],
-          categoryOptions: FALLBACK_CATEGORY_CHIPS,
-          isAuthenticated: Boolean(getTemplateDetailsUserId(req)),
+          categoryOptions: FALLBACK_CATEGORY_CHIPS.map((opt) => ({ ...opt, checked: false })),
+          isAuthenticated: Boolean(listingUserId),
           userCases: [],
+          selectedCaseId,
+          selectedCaseParam,
+          query: filters,
+          pagination: buildCatalogPagination(filters, emptyResult),
         });
       } catch (e2) {
         return next(e2);
