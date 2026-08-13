@@ -327,7 +327,24 @@ export function createWebApp({ db }) {
   });
   hbs.registerHelper('not', (value) => !value);
 
-  // Header state middleware + cart counter
+  // Header state middleware + cart counter + avatar
+  const AVATAR_COLORS = ['#6aa7ff', '#2dd4bf', '#fbbf24', '#fb7185', '#a78bfa', '#34d399'];
+
+  function computeAvatarInitials(name) {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return '?';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+
+  function computeAvatarColor(seed) {
+    const n = Number(seed) || 0;
+    return AVATAR_COLORS[Math.abs(n) % AVATAR_COLORS.length];
+  }
+
   app.use((req, res, next) => {
     const user = req.user || (req.session && req.session.user) || null;
     res.locals.user = user;
@@ -341,6 +358,9 @@ export function createWebApp({ db }) {
       req?.user?.userId,
     );
     res.locals.cartCount = 0;
+    res.locals.headerAvatarUrl = '';
+    res.locals.headerAvatarInitials = '';
+    res.locals.headerAvatarColor = '';
 
     const rawUserId =
       req?.user?.id ??
@@ -354,19 +374,32 @@ export function createWebApp({ db }) {
     const userId = Number(rawUserId);
     if (!Number.isFinite(userId) || userId <= 0) return next();
 
+    // Fallback initials source if user_profiles has no nickname/full_name yet.
+    res.locals.headerAvatarInitials = computeAvatarInitials(req?.user?.email);
+    res.locals.headerAvatarColor = computeAvatarColor(userId);
+
     const db = app.locals?.db;
     if (!db || typeof db.query !== 'function') return next();
 
     db.query(
       `
-        SELECT COUNT(*)::int AS count
-        FROM cart_items
-        WHERE user_id = $1
+        SELECT
+          (SELECT COUNT(*)::int FROM cart_items WHERE user_id = $1) AS cart_count,
+          up.nickname,
+          up.full_name,
+          up.avatar_url
+        FROM (SELECT $1::int AS uid) base
+        LEFT JOIN user_profiles up ON up.user_id = base.uid
       `,
       [userId],
     )
       .then(({ rows }) => {
-        res.locals.cartCount = Number(rows?.[0]?.count || 0);
+        const row = rows?.[0] || {};
+        res.locals.cartCount = Number(row.cart_count || 0);
+        res.locals.headerAvatarUrl = row.avatar_url || '';
+        res.locals.headerAvatarInitials = computeAvatarInitials(
+          row.nickname || row.full_name || req?.user?.email,
+        );
         next();
       })
       .catch(() => {

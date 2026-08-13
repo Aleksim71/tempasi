@@ -79,6 +79,7 @@
 .site-header__actions {
   justify-self: end;
   display: flex;
+  align-items: center;
   gap: 10px;
   min-width: 120px; /* keeps balance when icons differ */
 }
@@ -113,6 +114,44 @@
 
 .header-icon--placeholder {
   visibility: hidden;
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+  transition: border-color 140ms ease;
+}
+
+.header-avatar:hover,
+.header-avatar:focus-visible {
+  border-color: rgba(255, 255, 255, 0.32);
+  outline: none;
+}
+
+.header-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-avatar__initials {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0b0b0b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 /* Responsive */

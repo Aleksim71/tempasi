@@ -39,6 +39,15 @@
             {{/if}}
           </a>
 
+          <!-- avatar -->
+          <a href="/cabinet/profile" class="header-avatar" aria-label="Your profile">
+            {{#if headerAvatarUrl}}
+              <img src="{{headerAvatarUrl}}" alt="" width="32" height="32" />
+            {{else}}
+              <span class="header-avatar__initials" style="background-color: {{headerAvatarColor}}">{{headerAvatarInitials}}</span>
+            {{/if}}
+          </a>
+
           <!-- logout -->
           <form method="post" action="/api/auth/logout" class="header-icon">
             <button type="submit" aria-label="Logout">
