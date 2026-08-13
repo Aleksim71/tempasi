@@ -1131,6 +1131,65 @@ function createAdminPagesRouter() {
     });
   });
 
+  router.get('/settings/danger', (req, res) => {
+    return res.status(200).render('pages/admin/settings/danger', {
+      title: 'Admin \u00b7 Settings \u00b7 Danger zone',
+      bodyClass: 'admin',
+      isAdmin: true,
+      currentPage: 'settings',
+      settingsTab: 'danger',
+      done: req.query.done === '1',
+      counts:
+        req.query.done === '1'
+          ? {
+              orders: req.query.orders || '0',
+              entitlements: req.query.entitlements || '0',
+              cartItems: req.query.cartItems || '0',
+              accountCredits: req.query.accountCredits || '0',
+              accountCreditUsages: req.query.accountCreditUsages || '0',
+              adminAuditLog: req.query.adminAuditLog || '0',
+            }
+          : null,
+      error: req.query.error || null,
+    });
+  });
+
+  router.post('/settings/danger/reset-test-data', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+
+    // Second gate, server-side: the typed "RESET" confirmation is
+    // enforced in the browser (see danger.hbs), but a POST is a POST —
+    // don't rely on client-side JS alone for something this
+    // destructive. The form includes the typed value as a hidden field
+    // set by that same JS right before submit.
+    if (String(req.body?.confirmText || '').trim() !== 'RESET') {
+      return res.redirect(
+        '/admin/settings/danger?error=' + encodeURIComponent('Confirmation text did not match "RESET". Nothing was deleted.'),
+      );
+    }
+
+    try {
+      const testDataResetService = require('../../modules/admin/testDataReset.service.cjs');
+      const { counts } = await testDataResetService.resetTestStatistics({
+        pool,
+        actorUserId: resolveActorUserId(req),
+      });
+
+      const qs = new URLSearchParams({
+        done: '1',
+        orders: String(counts.orders),
+        entitlements: String(counts.entitlements),
+        cartItems: String(counts.cartItems),
+        accountCredits: String(counts.accountCredits),
+        accountCreditUsages: String(counts.accountCreditUsages),
+        adminAuditLog: String(counts.adminAuditLog),
+      });
+      return res.redirect('/admin/settings/danger?' + qs.toString());
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.get('/security', (req, res) => {
     return res.status(200).render('pages/admin/security', {
       title: 'Admin \u00b7 Security',

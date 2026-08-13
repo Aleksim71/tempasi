@@ -1,0 +1,75 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+    <a href="/admin/settings/storage" class="admin-subnav__link{{#if (eq settingsTab 'storage')}} admin-subnav__link--active{{/if}}">Storage</a>
+    <a href="/admin/settings/danger" class="admin-subnav__link{{#if (eq settingsTab 'danger')}} admin-subnav__link--active{{/if}}">Danger zone</a>
+  </nav>
+
+  <p class="admin-empty-state__hint">
+    Everything on this page is destructive and irreversible. Meant for use while the catalog is still test data — back up the database first if there is anything here worth keeping.
+  </p>
+
+  {{#if error}}
+    <div class="admin-form-error">{{error}}</div>
+  {{/if}}
+
+  {{#if done}}
+    <div class="admin-form-success">
+      Reset complete. Deleted: {{counts.orders}} orders, {{counts.entitlements}} entitlements,
+      {{counts.cartItems}} cart items, {{counts.accountCredits}} account credits,
+      {{counts.accountCreditUsages}} credit usages, {{counts.adminAuditLog}} audit log entries.
+    </div>
+  {{/if}}
+
+  <section class="admin-table-card" style="padding: var(--s-16, 16px);">
+    <h2 style="margin: 0 0 8px;">Reset test statistics</h2>
+    <p class="admin-empty-state__hint" style="margin: 0 0 16px;">
+      Permanently deletes ALL orders, entitlements, cart holds (rent/buy exclusivity holds), the account-credit ledger,
+      and this audit log. Every template goes back to "available" (sold/rent-held status is computed from these tables,
+      not stored separately, so clearing them is enough). Templates themselves, categories, and user accounts are
+      <strong>not</strong> touched.
+    </p>
+
+    <form
+      class="admin-reset-test-data-form"
+      method="post"
+      action="/admin/settings/danger/reset-test-data"
+      data-confirm-word="RESET"
+    >
+      <input type="hidden" name="confirmText" value="" />
+      <button type="submit" class="c-btn c-btn--danger">Reset all test statistics</button>
+    </form>
+  </section>
+</div>
+
+<script>
+  (function () {
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || !form.classList || !form.classList.contains('admin-reset-test-data-form')) return;
+      if (form.dataset.confirmed === '1') return;
+
+      e.preventDefault();
+
+      var word = form.getAttribute('data-confirm-word') || 'RESET';
+      var typed = window.prompt(
+        'This permanently deletes ALL orders, entitlements, cart holds, account credits, and the audit log. ' +
+          'This cannot be undone. Type ' + word + ' to confirm:',
+      );
+
+      if (typed !== word) return;
+
+      var hidden = form.querySelector('input[name="confirmText"]');
+      if (hidden) hidden.value = typed;
+
+      form.dataset.confirmed = '1';
+      form.submit();
+    });
+  })();
+</script>
