@@ -418,6 +418,15 @@ function createCabinetPagesRouter() {
         formErrors = { ...formErrors, ...e.details.errors };
       } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
         formErrors.slug = 'This slug is already used. Choose another one.';
+      } else if (e && (e.code === 'SLUG_ALREADY_EXISTS' || e.message === 'SLUG_ALREADY_EXISTS')) {
+        // TEMPASI_SLUG_COLLISION_RETRY_FIX (2026-08-12): addSellerTemplate
+        // already retries a few times on this exact error internally —
+        // reaching here means every retry still collided, which should be
+        // rare. Give a clear, actionable message instead of falling
+        // through to the generic workspaceError banner.
+        workspaceError = new Error(
+          'A template with that name was just created a moment ago (likely a duplicate submission). Try Add again, or change the title slightly.',
+        );
       } else {
         workspaceError = e;
       }

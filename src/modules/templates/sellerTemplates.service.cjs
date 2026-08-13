@@ -360,21 +360,54 @@ async function addSellerTemplate({ pool, user, body, file }) {
     title: v.data.title,
   });
 
-  const created = await repo.insertSellerTemplate({
-    pool,
-    ownerUserId,
-    title: v.data.title,
-    slug: generatedSlug,
-    shortDescription: v.data.shortDescription || null,
-    category: v.data.category || 'other',
-    tags: v.data.tags || '',
-    priceBuy: v.data.priceBuy || null,
-    priceRent: v.data.priceRent || null,
-    status: v.data.status || 'draft',
-    license: v.data.internalLicense,
-    zipPath,
-    zipOriginalName,
-  });
+  // TEMPASI_SLUG_COLLISION_RETRY_FIX (2026-08-12)
+  // buildUniqueSellerTemplateSlug() checks for a free slug via a plain
+  // SELECT, then this INSERT commits it — two near-simultaneous
+  // submissions (e.g. an accidental double-click on Add, or a quick
+  // resubmit) can both pass that SELECT check before either INSERT
+  // commits, so the second genuinely collides on the DB's unique
+  // constraint and repo.insertSellerTemplate() throws
+  // SLUG_ALREADY_EXISTS. Previously this always fell through to a
+  // generic, unhelpful top-of-page error banner (the route's catch
+  // block only recognised the differently-named SLUG_TAKEN error that
+  // updateSellerTemplate/edit throws for the same kind of conflict).
+  // Since this is purely a timing race, not a real naming conflict the
+  // user needs to resolve, just regenerate a fresh slug and retry a
+  // few times — transparent to the user in the overwhelmingly common
+  // case, with a proper (not generic) error message as a fallback if
+  // every retry somehow still collides.
+  let created;
+  let lastSlugError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const slugForAttempt =
+      attempt === 0 ? generatedSlug : await buildUniqueSellerTemplateSlug({ pool, title: v.data.title });
+    try {
+      created = await repo.insertSellerTemplate({
+        pool,
+        ownerUserId,
+        title: v.data.title,
+        slug: slugForAttempt,
+        shortDescription: v.data.shortDescription || null,
+        category: v.data.category || 'other',
+        tags: v.data.tags || '',
+        priceBuy: v.data.priceBuy || null,
+        priceRent: v.data.priceRent || null,
+        status: v.data.status || 'draft',
+        license: v.data.internalLicense,
+        zipPath,
+        zipOriginalName,
+      });
+      lastSlugError = null;
+      break;
+    } catch (e) {
+      if (e && (e.code === 'SLUG_ALREADY_EXISTS' || e.message === 'SLUG_ALREADY_EXISTS')) {
+        lastSlugError = e;
+        continue;
+      }
+      throw e;
+    }
+  }
+  if (lastSlugError) throw lastSlugError;
 
   // Extract preview to canonical storage path: <TEMPLATE_UPLOAD_DIR>/<slug>/preview/preview.png
   try {

@@ -619,5 +619,53 @@
     </div>
   {{/if}}
 
+  <script>
+    (() => {
+      // TEMPASI_FORM_ERRORS_MODAL (2026-08-12)
+      // Server-rendered form errors (the top "Error: ..." banner and
+      // the small red text under individual fields) are easy to miss
+      // — reads whatever's already in the DOM and re-shows it
+      // prominently via the shared modal shell (core.js), instead of
+      // duplicating the error data/logic in a second place. Works for
+      // both the Add and Edit forms, since both use the same
+      // .badge--danger / .form__error markup.
+      const banner = document.querySelector('.cabinet-workspace > .badge--danger');
+      const fieldErrors = Array.from(document.querySelectorAll('.form__error'))
+        .map((el) => el.textContent.trim())
+        .filter(Boolean);
+
+      const messages = [];
+      if (banner && banner.textContent.trim()) messages.push(banner.textContent.trim());
+      messages.push(...fieldErrors);
+
+      if (!messages.length) return;
+
+      const html =
+        '<div style="padding:4px 4px 0;">' +
+        '<h3 style="margin:0 0 12px;font-size:18px;color:var(--c-danger, #fb7185);">' +
+        'Error!' +
+        '</h3>' +
+        '<ul style="margin:0 0 20px;padding-left:20px;display:grid;gap:8px;">' +
+        messages.map((m) => '<li>' + m.replace(/</g, '&lt;') + '</li>').join('') +
+        '</ul>' +
+        '<button type="button" id="tps-form-error-close" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#fff;cursor:pointer;">Close</button>' +
+        '</div>';
+
+      const show = () => {
+        if (window.TempasiModal && typeof window.TempasiModal.show === 'function') {
+          window.TempasiModal.show(html);
+          const closeBtn = document.getElementById('tps-form-error-close');
+          if (closeBtn) closeBtn.addEventListener('click', () => window.TempasiModal.hide());
+        }
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', show);
+      } else {
+        show();
+      }
+    })();
+  </script>
+
 </section>
 

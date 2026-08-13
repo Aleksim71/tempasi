@@ -119,6 +119,13 @@
     if (overlay) overlay.style.display = 'none';
   }
 
+  // TEMPASI_FORM_ERRORS_MODAL (2026-08-12): expose the existing modal
+  // shell so other pages (e.g. the Add/Edit Template forms) can reuse
+  // the exact same look and behaviour, instead of building a second
+  // modal implementation. showModal/hideModal themselves are
+  // unchanged — just no longer private to this file.
+  window.TempasiModal = { show: showModal, hide: hideModal };
+
   // =============================
   // Checkout flow (safe)
   // =============================
