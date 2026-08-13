@@ -182,62 +182,18 @@
 
 
         
-<style>
-  form:has(input[name="sellingOption"][value="buy_only"]:checked) [data-rent-price-row] {
-    display: none !important;
-  }
-</style>
-
-        <div class="form__row">
-          <span class="form__label">Selling option *</span>
-
-          <div class="form__choices">
-            <label class="form__choice">
-              <input
-                type="radio"
-                name="sellingOption"
-                value="buy_rent"
-                onchange="document.getElementById('rentPriceRow').style.display=''; document.getElementById('priceRent').disabled=false;"
-                data-selling-option-radio
-                {{#if formIsBuyOnly}}{{else}}checked{{/if}}
-                required
-              >
-              <span>Buy + Rent</span>
-            </label>
-
-            <label class="form__choice">
-              <input
-                type="radio"
-                name="sellingOption"
-                value="buy_only"
-                onchange="document.getElementById('rentPriceRow').style.display='none'; document.getElementById('priceRent').value=''; document.getElementById('priceRent').disabled=true;"
-                data-selling-option-radio
-                {{#if formIsBuyOnly}}checked{{/if}}
-                required
-              >
-              <span>Buy only</span>
-            </label>
-          </div>
-
-          <div class="form__hint">Choose whether this template is Buy only or Buy + Rent.</div>
-
-          {{#if formErrors.sellingOption}}
-            <div class="form__error">{{formErrors.sellingOption}}</div>
-          {{/if}}
-        </div>
-
-        <div class="form__grid form__grid--prices" data-selling-price-grid>
+        <div class="form__grid form__grid--prices">
           <div class="form__row">
-            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
-            <input class="input" id="editPriceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            <label class="form__label" for="priceBuy">Buy price (EUR) *</label>
+            <input class="input" id="editPriceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" required />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
-          <div class="form__row" id="rentPriceRow" data-rent-price-row>
-            <label class="form__label" for="priceRent">Rent price (EUR, Buy + Rent only)</label>
-            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+          <div class="form__row">
+            <label class="form__label" for="priceRent">Rent price (EUR) *</label>
+            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" required />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
             {{/if}}
@@ -321,56 +277,18 @@
 
 
         
-        <div class="form__row">
-          <span class="form__label">Selling option *</span>
-
-          <div class="form__choices">
-            <label class="form__choice">
-              <input
-                type="radio"
-                name="sellingOption"
-                value="buy_rent"
-                onchange="document.getElementById('editRentPriceRow').style.display=''; document.getElementById('editPriceRent').disabled=false;"
-                data-selling-option-radio
-                {{#if formIsBuyOnly}}{{else}}checked{{/if}}
-                required
-              >
-              <span>Buy + Rent</span>
-            </label>
-
-            <label class="form__choice">
-              <input
-                type="radio"
-                name="sellingOption"
-                value="buy_only"
-                onchange="document.getElementById('editRentPriceRow').style.display='none'; document.getElementById('editPriceRent').value=''; document.getElementById('editPriceRent').disabled=true;"
-                data-selling-option-radio
-                {{#if formIsBuyOnly}}checked{{/if}}
-                required
-              >
-              <span>Buy only</span>
-            </label>
-          </div>
-
-          <div class="form__hint">Choose whether this template is Buy only or Buy + Rent.</div>
-
-          {{#if formErrors.sellingOption}}
-            <div class="form__error">{{formErrors.sellingOption}}</div>
-          {{/if}}
-        </div>
-
-<div class="form__grid form__grid--prices" data-selling-price-grid>
+<div class="form__grid form__grid--prices">
           <div class="form__row">
-            <label class="form__label" for="editPriceBuy">Buy price (EUR)</label>
-            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            <label class="form__label" for="editPriceBuy">Buy price (EUR) *</label>
+            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" required />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
-          <div class="form__row" id="editRentPriceRow" data-rent-price-row {{#if formIsBuyOnly}}style="display:none;"{{/if}}>
-            <label class="form__label" for="editPriceRent">Rent price (EUR, Buy + Rent only)</label>
-            <input class="input" id="editPriceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" {{#if formIsBuyOnly}}disabled{{/if}} />
+          <div class="form__row">
+            <label class="form__label" for="editPriceRent">Rent price (EUR) *</label>
+            <input class="input" id="editPriceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" required />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
             {{/if}}

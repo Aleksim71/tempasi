@@ -141,43 +141,35 @@ function validateAddOrEditTemplateForm(body = {}) {
   const priceRent = String(body?.priceRent || '').trim();
   const status = String(body?.status || 'draft').trim();
 
-  // User-facing field. This is NOT a legal license.
-  // Internal legacy compatibility:
-  // - buy_only -> BUY
-  // - buy_rent -> BUY_RENT
-  const sellingOption = String(body?.sellingOption || body?.license || 'buy_rent').trim();
-
-  const allowedSellingOptions = new Set(['buy_only', 'buy_rent']);
-
   if (!title) errors.title = 'Title is required.';
-
-  if (!allowedSellingOptions.has(sellingOption)) {
-    errors.sellingOption = 'Choose a selling option.';
-  }
 
   const normalizedStatus = status === 'published' ? 'published' : 'draft';
 
   const buyCents = parseMoneyToCents(priceBuy);
   const rentCents = parseMoneyToCents(priceRent);
 
-  if (priceBuy && buyCents === null) {
+  // TEMPASI_REQUIRE_BOTH_PRICES (2026-08-13): Buy and Rent price are
+  // now both always required. Previously a seller could pick "Buy
+  // only" and skip Rent pricing entirely, or set a Rent price with no
+  // sanity check against Buy — e.g. renting for 1 day costing as much
+  // as buying outright, which quietly kills the point of renting that
+  // template. Requiring both up front doesn't fully prevent bad
+  // pricing, but removes the easiest way to end up with a template
+  // that has no real rent option at all.
+  if (!priceBuy) {
+    errors.priceBuy = 'Buy price is required.';
+  } else if (buyCents === null) {
     errors.priceBuy = 'Enter a valid buy price.';
+  } else if (buyCents <= 0) {
+    errors.priceBuy = 'Buy price must be greater than 0.';
   }
 
-  if (priceRent && rentCents === null) {
+  if (!priceRent) {
+    errors.priceRent = 'Rent price is required.';
+  } else if (rentCents === null) {
     errors.priceRent = 'Enter a valid rent price.';
-  }
-
-  if (sellingOption === 'buy_only' && priceRent) {
-    errors.priceRent = 'Rent price is only allowed for Buy + Rent templates.';
-  }
-
-  if (sellingOption === 'buy_rent' && !priceRent) {
-    errors.priceRent = 'Rent price is required for Buy + Rent templates.';
-  }
-
-  if (normalizedStatus === 'published' && !priceBuy) {
-    errors.priceBuy = 'Buy price is required before publishing.';
+  } else if (rentCents <= 0) {
+    errors.priceRent = 'Rent price must be greater than 0.';
   }
 
   return {
@@ -192,10 +184,8 @@ function validateAddOrEditTemplateForm(body = {}) {
       // Repository is the single place that converts EUR strings to cents.
       // Do NOT pass buyCents/rentCents here, otherwise prices are multiplied by 100 twice.
       priceBuy,
-      priceRent: sellingOption === 'buy_rent' ? priceRent : null,
+      priceRent,
       status: normalizedStatus,
-      sellingOption,
-      internalLicense: sellingOption === 'buy_rent' ? 'BUY_RENT' : 'BUY',
     },
   };
 }
@@ -211,7 +201,15 @@ function throwValidationFailed(details) {
 function validatePublishRequirements({ data, zipPath }) {
   // MVP rules for "published":
   // - ZIP is required
-  // - At least one of Buy/Rent price must be set AND > 0
+  // - Buy AND Rent price must both be set AND > 0 (TEMPASI_REQUIRE_BOTH_PRICES,
+  //   2026-08-13 — was "at least one of Buy/Rent"; matches the same
+  //   always-required rule now enforced in validateAddOrEditTemplateForm().
+  //   This function is the separate path used by the List view's
+  //   Publish toggle, which doesn't go through the Add/Edit form, so it
+  //   needs the same rule applied independently. Note: an existing
+  //   published legacy "Buy only" template that gets unpublished and
+  //   re-published will now be blocked until a Rent price is added —
+  //   intended consequence of the rule, not a bug.)
   const errors = {};
 
   const hasZip = Boolean(zipPath);
@@ -226,10 +224,12 @@ function validatePublishRequirements({ data, zipPath }) {
     errors.templateZip = 'ZIP file is required to publish.';
   }
 
-  if (!hasBuy && !hasRent) {
-    const msg = 'To publish, set Buy and/or Rent price (must be > 0).';
-    errors.priceBuy = msg;
-    errors.priceRent = msg;
+  if (!hasBuy) {
+    errors.priceBuy = 'Buy price is required to publish (must be > 0).';
+  }
+
+  if (!hasRent) {
+    errors.priceRent = 'Rent price is required to publish (must be > 0).';
   }
 
   return { ok: Object.keys(errors).length === 0, errors };
@@ -393,7 +393,6 @@ async function addSellerTemplate({ pool, user, body, file }) {
         priceBuy: v.data.priceBuy || null,
         priceRent: v.data.priceRent || null,
         status: v.data.status || 'draft',
-        license: v.data.internalLicense,
         zipPath,
         zipOriginalName,
       });

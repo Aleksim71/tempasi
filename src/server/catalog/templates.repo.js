@@ -150,7 +150,6 @@ function normalizeCatalogPage(input) {
  * filters:
  *   q          - free-text search over title/slug
  *   cats       - array of category slugs (OR'ed together)
- *   access     - '' | 'buy' (rent NOT offered) | 'rent' (rent offered)
  *   priceMax   - number (EUR); only applied when priceActive is true
  *   priceActive- whether the price cap should be applied at all
  *
@@ -165,7 +164,6 @@ export async function selectTemplatesForCatalogPage(db, filters = {}, pagination
   const cats = Array.isArray(filters.cats)
     ? filters.cats.map((c) => toStr(c).trim()).filter(Boolean)
     : [];
-  const access = toStr(filters.access).trim();
   const priceActive =
     Boolean(filters.priceActive) &&
     filters.priceMax !== null &&
@@ -191,11 +189,13 @@ export async function selectTemplatesForCatalogPage(db, filters = {}, pagination
     extraWhere.push(`st.category = ANY($${idx}::text[])`);
   }
 
-  if (access === 'buy') {
-    extraWhere.push('st.price_rent_cents IS NULL');
-  } else if (access === 'rent') {
-    extraWhere.push('st.price_rent_cents IS NOT NULL');
-  }
+  // TEMPASI_REQUIRE_BOTH_PRICES (2026-08-13): the Access filter
+  // (Buy+Rent vs Buy only) was removed from the catalog sidebar —
+  // every new template now always has both a buy and a rent price
+  // (see sellerTemplates.service.cjs), so the filter no longer
+  // distinguishes anything meaningful going forward. Existing legacy
+  // "Buy only" rows (price_rent_cents IS NULL) still show up fine,
+  // they just won't have a Rent price on their card.
 
   if (priceActive) {
     params.push(priceMaxCents);

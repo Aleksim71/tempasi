@@ -23,25 +23,6 @@
           />
         </div>
 
-        {{!-- Access: rent / buy --}}
-        <div class="templates-side__section">
-          <div class="templates-side__title">Access</div>
-
-          <div class="templates-chips templates-chips--wide">
-            <label class="chip chip--toggle chip--access-radio">
-              <input class="chip-input chip-input--access-radio" type="radio" name="access" value="rent" {{#if (eq query.access "rent")}}checked{{/if}} />
-              <span class="chip-radio-dot" aria-hidden="true"></span>
-              <span class="chip-label">Buy + Rent</span>
-            </label>
-
-            <label class="chip chip--toggle chip--access-radio">
-              <input class="chip-input chip-input--access-radio" type="radio" name="access" value="buy" {{#if (eq query.access "buy")}}checked{{/if}} />
-              <span class="chip-radio-dot" aria-hidden="true"></span>
-              <span class="chip-label">Buy only</span>
-            </label>
-          </div>
-        </div>
-
         {{!-- Categories --}}
         <div class="templates-side__section">
           <div class="templates-side__title">Categories</div>

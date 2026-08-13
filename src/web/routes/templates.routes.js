@@ -155,11 +155,6 @@ function normalizeCatalogPageParam(input) {
   return Number.isFinite(n) && n >= 1 ? n : 1;
 }
 
-function normalizeCatalogAccessParam(input) {
-  const v = toStr(input).trim();
-  return v === 'buy' || v === 'rent' ? v : '';
-}
-
 function toCatsArray(input) {
   if (input === undefined || input === null || input === '') return [];
   const arr = Array.isArray(input) ? input : [input];
@@ -168,16 +163,15 @@ function toCatsArray(input) {
 
 /**
  * Builds a /templates?... query string preserving the current filters
- * (q, cat[], access, priceMax/priceActive, pageSize) while overriding
- * `page`. Used both for the numbered pagination links and (later, if
- * needed) for any other same-page navigation.
+ * (q, cat[], priceMax/priceActive, pageSize) while overriding `page`.
+ * Used both for the numbered pagination links and (later, if needed)
+ * for any other same-page navigation.
  */
 function buildCatalogPageUrl(filters, pagination, targetPage) {
   const params = new URLSearchParams();
 
   if (filters.q) params.set('q', filters.q);
   for (const c of filters.cats) params.append('cat', c);
-  if (filters.access) params.set('access', filters.access);
   if (filters.priceActive && filters.priceMax !== null && filters.priceMax !== undefined) {
     params.set('priceMax', String(filters.priceMax));
     params.set('priceActive', '1');
@@ -545,7 +539,6 @@ export function createTemplatesRouter() {
     const filters = {
       q: toStr(req.query?.q).trim(),
       cats: toCatsArray(req.query?.cat),
-      access: normalizeCatalogAccessParam(req.query?.access),
       // priceActive only becomes true once the user has actually
       // touched the price slider/number field client-side (see
       // templates.catalog-filters.js) — mirrors the old client-side

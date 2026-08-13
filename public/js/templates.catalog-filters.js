@@ -64,10 +64,10 @@
       box.addEventListener('change', submitForm);
     }
 
-    // Access radios — auto-submit, discrete action.
-    for (const radio of qsa(form, 'input[name="access"]')) {
-      radio.addEventListener('change', submitForm);
-    }
+    // Access radios — removed 2026-08-13 (TEMPASI_REQUIRE_BOTH_PRICES):
+    // every template now always has both Buy and Rent prices, so the
+    // Buy+Rent / Buy only Access filter no longer distinguishes
+    // anything meaningful.
 
     // Per-page select — auto-submit. Deliberately no `page` field in
     // this form, so changing page size always lands back on page 1.
