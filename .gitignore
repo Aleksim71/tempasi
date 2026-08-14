@@ -16,6 +16,9 @@ uploads/
 .env.*
 !.env.example
 
+# runtime flag: Admin > Settings > Backup automatic-backup toggle
+.backup-automatic-disabled
+
 
 # ==========================
 # Builds / Coverage

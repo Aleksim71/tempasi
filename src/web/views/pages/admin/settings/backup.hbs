@@ -12,8 +12,48 @@
   </nav>
 
   <p class="admin-empty-state__hint">
-    Read-only. Backups themselves are produced by a cron job outside this application — this page only lists what is currently on disk.
+    Automatic backup runs daily via cron: templates sync + DB dump, paired
+    by a small manifest (no site downtime, no duplicated files — the
+    templates history already lives in the backup drive's own git log).
   </p>
+
+  {{#if error}}
+    <div class="admin-form-error">{{error}}</div>
+  {{/if}}
+
+  {{#if toggled}}
+    <div class="admin-form-success">Automatic backup setting updated.</div>
+  {{/if}}
+
+  {{#if ranNow}}
+    <div class="admin-form-success">Backup completed — see the file list below.</div>
+  {{/if}}
+
+  <section class="admin-table-card" style="padding: var(--s-16, 16px); margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <strong>Automatic backup:</strong>
+        {{#if automaticEnabled}}
+          <span style="color: var(--c-success, #2dd4bf);">Enabled</span> — runs daily via cron.
+        {{else}}
+          <span style="color: var(--c-danger, #fb7185);">Disabled</span> — the cron job checks this and skips itself.
+        {{/if}}
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <form method="post" action="/admin/settings/backup/toggle">
+          <input type="hidden" name="enable" value="{{#if automaticEnabled}}0{{else}}1{{/if}}" />
+          <button type="submit" class="c-btn">
+            {{#if automaticEnabled}}Disable automatic backup{{else}}Enable automatic backup{{/if}}
+          </button>
+        </form>
+
+        <form method="post" action="/admin/settings/backup/run-now">
+          <button type="submit" class="c-btn c-btn--primary">Run backup now</button>
+        </form>
+      </div>
+    </div>
+  </section>
 
   {{#unless backupDirConfigured}}
     <div class="admin-empty-state">

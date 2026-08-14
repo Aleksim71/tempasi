@@ -7,6 +7,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
@@ -1064,8 +1065,14 @@ function createAdminPagesRouter() {
     return res.redirect('/admin/settings/commission?saved=1');
   });
 
-  // ---- Settings > Backup (read-only: an external cron performs the
-  // actual backup; this page only lists what is on disk) ----
+  // ---- Settings > Backup ----
+  // TEMPASI_FULL_BACKUP (2026-08-14): the automatic (cron) backup can
+  // be toggled on/off here (a flag file backup-full.sh checks before
+  // running), and "Run backup now" runs the same combined backup
+  // (templates + DB dump + manifest) synchronously, no downtime.
+  const PROJECT_ROOT = path.resolve(__dirname, '../../..');
+  const BACKUP_DISABLED_FLAG = path.join(PROJECT_ROOT, '.backup-automatic-disabled');
+
   router.get('/settings/backup', (req, res) => {
     const configuredDir = process.env.BACKUP_DIR;
     const backupDir = configuredDir ? path.resolve(configuredDir) : null;
@@ -1108,7 +1115,42 @@ function createAdminPagesRouter() {
       dirExists,
       dirError,
       files,
+      automaticEnabled: !fs.existsSync(BACKUP_DISABLED_FLAG),
+      toggled: req.query.toggled === '1',
+      ranNow: req.query.ranNow === '1',
+      error: req.query.error || null,
     });
+  });
+
+  router.post('/settings/backup/toggle', express.urlencoded({ extended: false }), (req, res) => {
+    const enable = req.body?.enable === '1';
+    try {
+      if (enable) {
+        if (fs.existsSync(BACKUP_DISABLED_FLAG)) fs.unlinkSync(BACKUP_DISABLED_FLAG);
+      } else {
+        fs.writeFileSync(BACKUP_DISABLED_FLAG, `disabled at ${new Date().toISOString()}\n`);
+      }
+    } catch (e) {
+      return res.redirect(
+        '/admin/settings/backup?error=' + encodeURIComponent(`Could not update the toggle: ${e.message}`),
+      );
+    }
+    return res.redirect('/admin/settings/backup?toggled=1');
+  });
+
+  router.post('/settings/backup/run-now', (req, res) => {
+    try {
+      execFileSync('bash', [path.join(PROJECT_ROOT, 'scripts/backup-full.sh'), '--force'], {
+        cwd: PROJECT_ROOT,
+        encoding: 'utf8',
+        timeout: 120000,
+      });
+      return res.redirect('/admin/settings/backup?ranNow=1');
+    } catch (e) {
+      const raw = String(e.stdout || e.message || e);
+      const msg = raw.length > 500 ? `${raw.slice(0, 500)}\u2026` : raw;
+      return res.redirect('/admin/settings/backup?error=' + encodeURIComponent(`Backup run failed: ${msg}`));
+    }
   });
 
   router.get('/settings/storage', (req, res) => {
