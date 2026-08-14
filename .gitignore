@@ -19,6 +19,10 @@ uploads/
 # runtime flag: Admin > Settings > Backup automatic-backup toggle
 .backup-automatic-disabled
 
+# runtime: written by src/server.js on startup, used by
+# scripts/restore-full.sh to find and stop the running server
+.server.pid
+
 
 # ==========================
 # Builds / Coverage

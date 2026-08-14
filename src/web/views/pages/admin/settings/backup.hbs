@@ -100,4 +100,75 @@
       {{/unless}}
     {{/if}}
   {{/unless}}
+
+  {{#if restorablePairs.length}}
+    <section class="admin-table-card" style="padding: var(--s-16, 16px); margin-top: 16px;">
+      <h2 style="margin: 0 0 8px;">Restore</h2>
+      <p class="admin-empty-state__hint" style="margin: 0 0 16px;">
+        Restores the database AND templates together to a specific snapshot (paired by that snapshot's manifest —
+        never one without the other). Stops the site for about a minute while it restores and restarts itself.
+        "additive" template mode only adds/updates files on старичок; "exact" also deletes anything not in the
+        snapshot — use that if старичок's files themselves might be compromised.
+      </p>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Snapshot</th>
+            <th>Mode</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each restorablePairs}}
+            <tr>
+              <td>{{this.name}} <span class="admin-empty-state__hint">({{this.modifiedLabel}})</span></td>
+              <td colspan="2">
+                <form method="post" action="/admin/settings/backup/restore" class="admin-restore-form" data-dump-name="{{this.name}}" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="hidden" name="dumpFile" value="{{this.name}}" />
+                  <input type="hidden" name="confirmFile" value="" />
+                  <select name="mode">
+                    <option value="additive">additive</option>
+                    <option value="exact">exact (delete extra)</option>
+                  </select>
+                  <button type="submit" class="c-btn c-btn--danger">Restore</button>
+                </form>
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </section>
+  {{/if}}
 </div>
+
+<script>
+  (function () {
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || !form.classList || !form.classList.contains('admin-restore-form')) return;
+      if (form.dataset.confirmed === '1') return;
+
+      e.preventDefault();
+
+      var dumpName = form.getAttribute('data-dump-name');
+      var modeSelect = form.querySelector('select[name="mode"]');
+      var mode = modeSelect ? modeSelect.value : 'additive';
+
+      var typed = window.prompt(
+        'This stops the site, wipes and reloads the database, and restores templates (' +
+          mode +
+          ' mode). This cannot be undone once started.\n\nType the exact dump filename to confirm:\n\n' +
+          dumpName,
+      );
+
+      if (typed !== dumpName) return;
+
+      var confirmInput = form.querySelector('input[name="confirmFile"]');
+      if (confirmInput) confirmInput.value = typed;
+
+      form.dataset.confirmed = '1';
+      form.submit();
+    });
+  })();
+</script>

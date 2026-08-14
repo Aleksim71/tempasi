@@ -7,7 +7,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawn } = require('child_process');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
@@ -1072,6 +1072,12 @@ function createAdminPagesRouter() {
   // (templates + DB dump + manifest) synchronously, no downtime.
   const PROJECT_ROOT = path.resolve(__dirname, '../../..');
   const BACKUP_DISABLED_FLAG = path.join(PROJECT_ROOT, '.backup-automatic-disabled');
+  // TEMPASI_RESTORE_PROTOCOL (2026-08-14): only files matching this
+  // exact naming pattern (as written by backup-db.sh) are ever passed
+  // to restore-full.sh — blocks path traversal / arbitrary shell args
+  // even though spawn() with an argv array already avoids shell
+  // interpolation on its own. Defense in depth.
+  const DUMP_NAME_PATTERN = /^tempasi_\d{8}_\d{6}\.sql\.gz$/;
 
   router.get('/settings/backup', (req, res) => {
     const configuredDir = process.env.BACKUP_DIR;
@@ -1080,14 +1086,15 @@ function createAdminPagesRouter() {
     let files = [];
     let dirExists = false;
     let dirError = null;
+    let restorablePairs = [];
 
     if (backupDir) {
       try {
         dirExists = fs.existsSync(backupDir);
         if (dirExists) {
-          files = fs
-            .readdirSync(backupDir)
-            .filter((name) => !name.startsWith('.'))
+          const rawNames = fs.readdirSync(backupDir).filter((name) => !name.startsWith('.'));
+
+          files = rawNames
             .map((name) => {
               const stat = fs.statSync(path.join(backupDir, name));
               return {
@@ -1096,6 +1103,21 @@ function createAdminPagesRouter() {
                 modifiedLabel: formatDateYMD(stat.mtime),
                 modifiedTs: stat.mtime.getTime(),
               };
+            })
+            .sort((a, b) => b.modifiedTs - a.modifiedTs);
+
+          // A dump is only offered for restore if it has a matching
+          // manifest \u2014 see backup-full.sh / restore-full.sh: the
+          // manifest is what pairs a DB dump with the exact templates
+          // snapshot taken alongside it, and restore-full.sh itself
+          // refuses to run without one.
+          const nameSet = new Set(rawNames);
+          restorablePairs = rawNames
+            .filter((name) => DUMP_NAME_PATTERN.test(name))
+            .filter((name) => nameSet.has(`${name.slice(0, -'.sql.gz'.length)}.manifest.json`))
+            .map((name) => {
+              const stat = fs.statSync(path.join(backupDir, name));
+              return { name, modifiedLabel: formatDateYMD(stat.mtime), modifiedTs: stat.mtime.getTime() };
             })
             .sort((a, b) => b.modifiedTs - a.modifiedTs);
         }
@@ -1115,6 +1137,7 @@ function createAdminPagesRouter() {
       dirExists,
       dirError,
       files,
+      restorablePairs,
       automaticEnabled: !fs.existsSync(BACKUP_DISABLED_FLAG),
       toggled: req.query.toggled === '1',
       ranNow: req.query.ranNow === '1',
@@ -1151,6 +1174,74 @@ function createAdminPagesRouter() {
       const msg = raw.length > 500 ? `${raw.slice(0, 500)}\u2026` : raw;
       return res.redirect('/admin/settings/backup?error=' + encodeURIComponent(`Backup run failed: ${msg}`));
     }
+  });
+
+  // TEMPASI_RESTORE_PROTOCOL (2026-08-14): this is the single most
+  // destructive action in the whole admin panel \u2014 it wipes and
+  // reloads the live database, and can delete files on старичок in
+  // --exact mode. The typed-exact-filename confirmation happens
+  // client-side (backup.hbs) AND is re-checked here server-side
+  // (never trust the client alone for something this destructive).
+  // restore-full.sh is spawned fully detached: it stops this very
+  // server process partway through its own run, so the request
+  // handler cannot wait for it to finish \u2014 it responds immediately
+  // and the script continues independently, logging to its own file.
+  router.post('/settings/backup/restore', express.urlencoded({ extended: false }), (req, res) => {
+    const dumpFile = String(req.body?.dumpFile || '').trim();
+    const confirmFile = String(req.body?.confirmFile || '').trim();
+    const mode = req.body?.mode === 'exact' ? 'exact' : 'additive';
+
+    if (!DUMP_NAME_PATTERN.test(dumpFile)) {
+      return res.redirect(
+        '/admin/settings/backup?error=' + encodeURIComponent('Invalid dump filename. Nothing was restored.'),
+      );
+    }
+
+    if (confirmFile !== dumpFile) {
+      return res.redirect(
+        '/admin/settings/backup?error=' +
+          encodeURIComponent('Confirmation text did not match the dump filename exactly. Nothing was restored.'),
+      );
+    }
+
+    const configuredDir = process.env.BACKUP_DIR;
+    const backupDir = configuredDir ? path.resolve(configuredDir) : null;
+    const manifestName = `${dumpFile.slice(0, -'.sql.gz'.length)}.manifest.json`;
+
+    if (!backupDir || !fs.existsSync(path.join(backupDir, dumpFile)) || !fs.existsSync(path.join(backupDir, manifestName))) {
+      return res.redirect(
+        '/admin/settings/backup?error=' +
+          encodeURIComponent('Dump or its manifest not found on disk. Nothing was restored.'),
+      );
+    }
+
+    const args = [path.join(PROJECT_ROOT, 'scripts/restore-full.sh'), dumpFile];
+    if (mode === 'exact') args.push('--exact');
+
+    try {
+      const child = spawn('bash', args, {
+        cwd: PROJECT_ROOT,
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+    } catch (e) {
+      return res.redirect(
+        '/admin/settings/backup?error=' + encodeURIComponent(`Could not start restore: ${e.message}`),
+      );
+    }
+
+    return res.status(200).send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Restore started</title></head>
+<body style="background:#0b0f14;color:#e7eefc;font-family:sans-serif;max-width:640px;margin:60px auto;padding:0 20px;">
+  <h1>Restore started</h1>
+  <p>Dump: <code>${dumpFile}</code></p>
+  <p>Templates mode: <code>${mode}</code></p>
+  <p>The site will stop in a few seconds, restore, and come back up on its own \u2014 usually under a minute.
+     This page will not auto-reload. Reload <a href="/admin/settings/backup" style="color:#6aa7ff;">Settings &gt; Backup</a>
+     yourself once the site is responding again.</p>
+  <p>Full log: <code>logs/restore_*.log</code> on the server.</p>
+</body></html>`);
   });
 
   router.get('/settings/storage', (req, res) => {
