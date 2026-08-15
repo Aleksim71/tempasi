@@ -50,7 +50,7 @@
 
 <script>
   (function () {
-    document.addEventListener('submit', function (e) {
+    document.addEventListener('submit', async function (e) {
       var form = e.target;
       if (!form || !form.classList || !form.classList.contains('admin-reset-test-data-form')) return;
       if (form.dataset.confirmed === '1') return;
@@ -58,10 +58,17 @@
       e.preventDefault();
 
       var word = form.getAttribute('data-confirm-word') || 'RESET';
-      var typed = window.prompt(
-        'This permanently deletes ALL orders, entitlements, cart holds, account credits, and the audit log. ' +
-          'This cannot be undone. Type ' + word + ' to confirm:',
-      );
+      var typed = await window.tempasiPrompt({
+        title: 'Reset test data?',
+        message:
+          'This permanently deletes ALL orders, entitlements, cart holds, account credits, and the audit log. ' +
+          'This cannot be undone. Type ' +
+          word +
+          ' to confirm:',
+        inputPlaceholder: word,
+        confirmLabel: 'Reset',
+        danger: true,
+      });
 
       if (typed !== word) return;
 

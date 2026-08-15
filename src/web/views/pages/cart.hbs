@@ -101,15 +101,17 @@
     var form = document.getElementById('cartCheckoutAllForm');
     if (!form) return;
 
-    form.addEventListener('submit', function (e) {
+    form.addEventListener('submit', async function (e) {
       if (form.dataset.confirmed === '1') return;
       e.preventDefault();
 
       var itemCount = {{cart.itemCount}};
       var subtotal = '{{cart.subtotalEur}}';
-      var ok = window.confirm(
-        'Buy ' + itemCount + ' item(s) for €' + subtotal + '? This completes payment immediately — there is no undo.',
-      );
+      var ok = await window.tempasiConfirm({
+        title: 'Checkout?',
+        message: 'Buy ' + itemCount + ' item(s) for €' + subtotal + '? This completes payment immediately — there is no undo.',
+        confirmLabel: 'Checkout',
+      });
 
       if (!ok) return;
 

@@ -234,16 +234,22 @@
   // interpolating it into an inline onsubmit string, since an
   // apostrophe in the title would otherwise break out of that string
   // after the browser's HTML-entity decoding runs.
-  document.addEventListener('submit', function (e) {
+  document.addEventListener('submit', async function (e) {
     var form = e.target;
     if (!form || !form.classList || !form.classList.contains('admin-delete-form')) return;
+    if (form.dataset.confirmed === '1') return;
+    e.preventDefault();
 
     var title = form.getAttribute('data-confirm-title') || 'this template';
-    var ok = window.confirm(
-      'Delete "' + title + '"? It will move to Trash, where you can restore it or delete it forever.',
-    );
+    var ok = await window.tempasiConfirm({
+      title: 'Delete template?',
+      message: 'Delete "' + title + '"? It will move to Trash, where you can restore it or delete it forever.',
+      confirmLabel: 'Delete',
+    });
 
-    if (!ok) e.preventDefault();
+    if (!ok) return;
+    form.dataset.confirmed = '1';
+    form.submit();
   });
 })();
 </script>

@@ -72,16 +72,24 @@
   // Same apostrophe-safe confirm pattern as the Templates page's
   // Delete button — read from a data attribute, never interpolate
   // the title into an inline onsubmit string.
-  document.addEventListener('submit', function (e) {
+  document.addEventListener('submit', async function (e) {
     var form = e.target;
     if (!form || !form.classList || !form.classList.contains('admin-purge-form')) return;
+    if (form.dataset.confirmed === '1') return;
+    e.preventDefault();
 
     var title = form.getAttribute('data-confirm-title') || 'this template';
-    var ok = window.confirm(
-      'Permanently delete "' + title + '"? This removes the database record and its files on disk. This CANNOT be undone.',
-    );
+    var ok = await window.tempasiConfirm({
+      title: 'Delete forever?',
+      message:
+        'Permanently delete "' + title + '"? This removes the database record and its files on disk. This CANNOT be undone.',
+      confirmLabel: 'Delete forever',
+      danger: true,
+    });
 
-    if (!ok) e.preventDefault();
+    if (!ok) return;
+    form.dataset.confirmed = '1';
+    form.submit();
   });
 })();
 </script>

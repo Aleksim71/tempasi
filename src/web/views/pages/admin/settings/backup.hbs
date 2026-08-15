@@ -144,7 +144,7 @@
 
 <script>
   (function () {
-    document.addEventListener('submit', function (e) {
+    document.addEventListener('submit', async function (e) {
       var form = e.target;
       if (!form || !form.classList || !form.classList.contains('admin-restore-form')) return;
       if (form.dataset.confirmed === '1') return;
@@ -155,12 +155,16 @@
       var modeSelect = form.querySelector('select[name="mode"]');
       var mode = modeSelect ? modeSelect.value : 'additive';
 
-      var typed = window.prompt(
-        'This stops the site, wipes and reloads the database, and restores templates (' +
+      var typed = await window.tempasiPrompt({
+        title: 'Restore from backup?',
+        message:
+          'This stops the site, wipes and reloads the database, and restores templates (' +
           mode +
-          ' mode). This cannot be undone once started.\n\nType the exact dump filename to confirm:\n\n' +
-          dumpName,
-      );
+          ' mode). This cannot be undone once started.\n\nType the exact dump filename to confirm:',
+        inputPlaceholder: dumpName,
+        confirmLabel: 'Restore',
+        danger: true,
+      });
 
       if (typed !== dumpName) return;
 
