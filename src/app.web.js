@@ -243,7 +243,7 @@ export function createWebApp({ db }) {
 
   const cabinetProfileSecurity = readFirstExisting([
     path.join(partialsRoot, 'cabinet', 'space-profile-security.hbs'),
-    // если у тебя пока нет отдельного файла — fallback не сработает, но мы хотя бы не сломаем cases/finance/etc.
+    // if you don't have a separate file yet, this fallback won't fire, but at least we won't break cases/finance/etc.
     path.join(partialsRoot, 'space-profile-security.hbs'),
   ]);
 

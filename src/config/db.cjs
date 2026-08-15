@@ -8,15 +8,15 @@ const { Pool } = pg;
 /**
  * Tempasi — CommonJS db config.
  *
- * Важно:
- * - проект "type":"module", но B12-модули на .cjs → им нужен CJS db
- * - если подключаться без host, pg может уйти в unix-socket:
+ * Important:
+ * - the project is "type":"module", but B12 modules are .cjs → they need a CJS db
+ * - connecting without a host can make pg fall back to a unix socket:
  *   /var/run/postgresql/.s.PGSQL.5432 → ENOENT
  *
- * Правило приоритета:
- * 1) Если есть явные PG* переменные (PGHOST/PGUSER/PGDATABASE/PGPORT/PGPASSWORD) — используем TCP-конфиг.
- * 2) Иначе, если есть DATABASE_URL — используем connectionString.
- * 3) Иначе fallback на 127.0.0.1 + дефолты.
+ * Priority rule:
+ * 1) If explicit PG* vars are set (PGHOST/PGUSER/PGDATABASE/PGPORT/PGPASSWORD) — use TCP config.
+ * 2) Otherwise, if DATABASE_URL is set — use connectionString.
+ * 3) Otherwise fall back to 127.0.0.1 + defaults.
  */
 
 function hasPgEnv() {
@@ -45,7 +45,7 @@ function makeConfig() {
     };
   }
 
-  // 2) DATABASE_URL → только если PG* не задан
+  // 2) DATABASE_URL → only if PG* isn't set
   if (databaseUrl) {
     return {
       __mode: 'DATABASE_URL',

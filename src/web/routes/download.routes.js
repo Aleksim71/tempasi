@@ -17,7 +17,7 @@ function legacyPublicDownloadEnabled() {
 }
 
 async function findZipForSlug(zipsDir, slug) {
-  // поддержка:
+  // supports:
   // - seed-001.zip
   // - seed-001_v1.0.0.zip
   // - seed-001-v1.0.0.zip
@@ -25,7 +25,7 @@ async function findZipForSlug(zipsDir, slug) {
   const matches = items
     .filter((f) => f.toLowerCase().endsWith('.zip'))
     .filter((f) => f === `${slug}.zip` || f.startsWith(`${slug}_`) || f.startsWith(`${slug}-`))
-    // стабильно выбираем "самый свежий" по mtime
+    // consistently pick the "most recent" one by mtime
     .map((name) => ({ name, abs: path.join(zipsDir, name) }));
 
   if (matches.length === 0) return null;
@@ -47,7 +47,7 @@ async function findZipForSlug(zipsDir, slug) {
 
 /**
  * createDownloadRoutes({ zipsDir })
- * - GET /download/:slug  -> отдаёт zip из storage/zips
+ * - GET /download/:slug  -> serves the zip from storage/zips
  */
 export function createDownloadRoutes(options = {}) {
   const router = express.Router();
@@ -70,10 +70,10 @@ export function createDownloadRoutes(options = {}) {
       const found = await findZipForSlug(zipsDir, slug);
       if (!found) return res.status(404).type('text/plain').send('Not found');
 
-      // нормальное имя в диалоге скачивания
+      // proper filename in the download dialog
       const downloadName = found.name;
 
-      // res.download сам выставит заголовки и отправит файл
+      // res.download sets the headers and sends the file itself
       return res.download(found.abs, downloadName);
     } catch (e) {
       return next(e);

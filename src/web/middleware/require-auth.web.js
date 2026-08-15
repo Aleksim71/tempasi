@@ -51,7 +51,7 @@ export function requireAuthWeb(options = {}) {
         ok: false,
         error: {
           code: 'AUTH_REQUIRED',
-          message: 'Нужна авторизация.',
+          message: 'Authorization required.',
           field: null,
           meta: {},
         },

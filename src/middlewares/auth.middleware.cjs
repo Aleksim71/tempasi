@@ -196,7 +196,7 @@ function requireAuth(req, res, next) {
     ok: false,
     error: {
       code: 'AUTH_REQUIRED',
-      message: 'Нужна авторизация.',
+      message: 'Authorization required.',
       field: null,
       meta: {},
     },

@@ -6,18 +6,18 @@
       <section class="panel">
         <h2>Billing</h2>
         <p class="hint">
-          Демо-форма для настройки платёжного метода. В продакшене её заменим на Stripe/PayPal
-          виджеты для пользователя
+          Demo form for setting up a payment method. In production this will be replaced with
+          Stripe/PayPal widgets for user
           <strong>{{user.username}}</strong>
           ({{user.email}}).
         </p>
         <form class="account-billing-form">
           <label>
-            <div class="caption">Имя держателя</div>
-            <input type="text" placeholder="Имя Фамилия" />
+            <div class="caption">Cardholder name</div>
+            <input type="text" placeholder="Full name" />
           </label>
           <label>
-            <div class="caption">Номер карты</div>
+            <div class="caption">Card number</div>
             <input type="text" placeholder="4242 4242 4242 4242" inputmode="numeric" />
           </label>
           <div class="row two">
@@ -30,13 +30,13 @@
               <input type="text" placeholder="CVC" inputmode="numeric" />
             </label>
           </div>
-          <button type="button" class="btn primary">Сохранить метод оплаты</button>
+          <button type="button" class="btn primary">Save payment method</button>
         </form>
       </section>
 
       {{#if billingItems}}
         <section class="panel billing-history">
-          <h2>История платежей</h2>
+          <h2>Payment history</h2>
           <div class="billing-table">
             {{#each billingItems}}
               <div class="billing-row">
@@ -54,8 +54,8 @@
         </section>
       {{else}}
         <section class="panel billing-history">
-          <h2>История платежей</h2>
-          <p class="hint">Пока нет покупок.</p>
+          <h2>Payment history</h2>
+          <p class="hint">No purchases yet.</p>
         </section>
       {{/if}}
     </div>

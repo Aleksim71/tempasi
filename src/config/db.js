@@ -6,11 +6,11 @@ const { Pool } = pg;
 /**
  * Tempasi — ESM db config.
  *
- * Важно:
- * - проект "type":"module" → этот файл используется ESM-кодом
- * - если не задать host, pg попробует unix-socket:
+ * Important:
+ * - the project is "type":"module" → this file is used by ESM code
+ * - if no host is set, pg will try a unix socket:
  *   /var/run/postgresql/.s.PGSQL.5432 → ENOENT
- * Поэтому по умолчанию используем TCP: 127.0.0.1:5432
+ * So by default we use TCP: 127.0.0.1:5432
  */
 
 const DATABASE_URL = process.env.DATABASE_URL || '';

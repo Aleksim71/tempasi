@@ -109,7 +109,7 @@ function createCommunityPagesRouter() {
       }));
 
       return res.status(200).render('pages/community/index', {
-        title: 'Community \u2014 Tempasi',
+        title: 'Community — Tempasi',
         bodyClass: 'community-page',
         activePage: 'community',
         styles: ['/css/pages/community.css'],
@@ -164,8 +164,21 @@ function createCommunityPagesRouter() {
       const templatesRes = await pool.query(
         `
         SELECT slug, title, preview_image, preview_url, zip_path, price_buy_cents, price_rent_cents
-        FROM seller_templates
-        WHERE owner_user_id = $1 AND status = 'published' AND deleted_at IS NULL
+        FROM seller_templates st
+        WHERE owner_user_id = $1
+          AND status = 'published'
+          AND deleted_at IS NULL
+          AND owner_withdrawn_at IS NULL
+          AND admin_blocked_at IS NULL
+          AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
+          -- Once sold, the details page 404s for everyone except the
+          -- buyer (see templates.repo.js's getTemplateBySlug) — don't
+          -- list something here that would be a dead link even for
+          -- the seller who owns this profile.
+          AND NOT EXISTS (
+            SELECT 1 FROM orders o
+            WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+          )
         ORDER BY created_at DESC
         `,
         [userId],
@@ -182,7 +195,7 @@ function createCommunityPagesRouter() {
       const displayName = profileRow.nickname || profileRow.full_name || 'Tempasi member';
 
       return res.status(200).render('pages/community/user', {
-        title: `${displayName} \u2014 Tempasi Community`,
+        title: `${displayName} — Tempasi Community`,
         bodyClass: 'community-page',
         activePage: 'community',
         styles: ['/css/pages/community.css'],

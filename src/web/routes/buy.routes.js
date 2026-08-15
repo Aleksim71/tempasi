@@ -41,7 +41,7 @@ export function createBuyRoutes() {
 
     const zipReady = await isZipReady(slug);
     if (!zipReady) {
-      // мягко возвращаем в каталог (без 500/404)
+      // gracefully redirect back to the catalog (no 500/404)
       const back = from === 'templates' ? '/templates' : '/templates';
       return res.redirect(302, `${back}?buy=zip_not_ready&slug=${encodeURIComponent(slug)}`);
     }

@@ -23,8 +23,8 @@ export async function listTemplates() {
 
   const { rows } = await pool.query(sql);
 
-  // Dev-mapping: пока в БД нет license / is_free / zip_ready,
-  // добавляем их здесь, чтобы UI и фильтры работали.
+  // Dev-mapping: the DB doesn't have license / is_free / zip_ready
+  // yet, so we add them here to make the UI and filters work.
   return rows.map((t) => {
     let license = 'pu';
     if (t.slug === 'seed-minimal-landing') license = 'free';
@@ -45,7 +45,7 @@ export async function listTemplates() {
       demo_url: t.demo_url,
       preview_image: t.preview_image,
 
-      // поля, которые ждёт HBS
+      // fields the HBS template expects
       license,
       is_free,
       zip_ready,

@@ -6,7 +6,7 @@ const { PAYMENTS_PROVIDER } = require('../../config/payments.cjs');
 function pickProvider(name) {
   const n = String(name || '').toLowerCase();
 
-  // Расширим потом: stripe, paypal и т.п.
+  // We'll extend this later: stripe, paypal, etc.
   if (n === 'fake') return require('./providers/fake.provider.cjs');
 
   const err = new Error('UNKNOWN_PAYMENTS_PROVIDER');
@@ -45,7 +45,7 @@ async function createCheckoutSession(req, { order }) {
 async function handleWebhook(req) {
   const provider = pickProvider(PAYMENTS_PROVIDER);
 
-  // fake-provider у тебя пока не делает webhook (у нас есть только createCheckoutSession)
+  // The fake provider doesn't implement a webhook yet (we only have createCheckoutSession)
   if (typeof provider.handleWebhook !== 'function') {
     const err = new Error('WEBHOOK_NOT_SUPPORTED_FOR_PROVIDER');
     err.status = 400;

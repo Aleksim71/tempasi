@@ -27,7 +27,7 @@ function formatEurFromCents(cents) {
   return (n / 100).toFixed(2);
 }
 
-// Формат: "+12", "\u221203" (unicode minus), "0"
+// Format: "+12", "\u221203" (unicode minus), "0"
 function formatSignedCount(delta) {
   const n = Math.trunc(Number(delta || 0));
   if (n > 0) return `+${n}`;
@@ -88,8 +88,9 @@ function parsePage(raw) {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
-// Сумма paid-заказов заданного deal_type за последние periodDays дней,
-// плюс сумма за предыдущий период такой же длины (для дельты в деньгах).
+// Sum of paid orders of the given deal_type over the last periodDays
+// days, plus the sum for the previous period of the same length (for
+// the money delta).
 async function getRevenueWindow(pool, dealType, periodDays) {
   const { rows } = await pool.query(
     `
@@ -147,16 +148,16 @@ async function getDashboardKpis(periodDays) {
           WHERE created_at >= NOW() - make_interval(days => $1::int)`,
         [periodDays],
       ),
-      // "Общее количество шаблонов" = только published (видные в каталоге).
+      // "Total templates" = published only (visible in the catalog).
       pool.query(
         `SELECT COUNT(*)::int AS n FROM seller_templates
           WHERE status = 'published' AND deleted_at IS NULL`,
       ),
-      // Netto-изменение за период: вновь опубликованные минус удалённые.
-      // Ограничение: смена статуса published -> draft без удаления записи
-      // здесь не отражается — в схеме нет истории статусов. Как только
-      // Этап 2 начнёт писать такие переходы в admin_audit_log, дельту
-      // можно будет считать точнее.
+      // Net change over the period: newly published minus deleted.
+      // Limitation: a published -> draft status change without
+      // deleting the row isn't reflected here — the schema has no
+      // status history. Once Stage 2 starts writing such transitions
+      // to admin_audit_log, this delta can be computed more precisely.
       pool.query(
         `
         SELECT
@@ -1179,7 +1180,7 @@ function createAdminPagesRouter() {
 
   // TEMPASI_RESTORE_PROTOCOL (2026-08-14): this is the single most
   // destructive action in the whole admin panel — it wipes and
-  // reloads the live database, and can delete files on старичок in
+  // reloads the live database, and can delete files on the storage machine in
   // --exact mode. The typed-exact-filename confirmation happens
   // client-side (backup.hbs) AND is re-checked here server-side
   // (never trust the client alone for something this destructive).

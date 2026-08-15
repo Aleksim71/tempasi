@@ -5,11 +5,11 @@ import path from 'path';
 const app = express();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
-// Папка с демо
+// Folder with the demo
 const demoDir = path.join(__dirname, '..', 'demo');
 console.log('DEMO DIR TEST =', demoDir);
 
-// Раздаём только демо
+// Only serve the demo
 app.use('/demo', express.static(demoDir));
 
 app.use((req, res) => {

@@ -38,7 +38,7 @@ export function requireAdminWeb(options = {}) {
     if (ADMIN_ROLES.has(role)) return next();
 
     return res.status(403).render('pages/errors/403', {
-      title: 'Доступ запрещён',
+      title: 'Access denied',
       bodyClass: 'admin',
     });
   };
