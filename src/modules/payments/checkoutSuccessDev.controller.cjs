@@ -2,6 +2,7 @@
 'use strict';
 
 const paymentCompletion = require('./paymentCompletion.service.cjs');
+const { renderStandalonePage } = require('../../web/helpers/renderStandalonePage.cjs');
 
 function toStr(v) {
   if (v === null || v === undefined) return '';
@@ -76,28 +77,19 @@ async function handleCheckoutSuccessDev(req, res) {
     });
     const completedOrder = completed?.order || order;
 
-    // 3) success HTML + CTA
+    // 3) success page (rendered inside the normal site layout)
     const slug = encodeURIComponent(completedOrder.template_slug);
     const downloadUrl = `/downloads/${slug}`;
 
-    return res.type('html').send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Payment successful — Tempasi</title>
-  <link rel="stylesheet" href="/css/core.css"/>
-  <link rel="stylesheet" href="/css/custom.css"/>
-</head>
-<body>
-  <main class="page">
-    <h1>✅ Payment successful</h1>
-    <p>Order #${escapeHtml(completedOrder.id)} — template <b>${escapeHtml(completedOrder.template_slug)}</b> activated.</p>
-    <p><a class="btn primary" href="${downloadUrl}">Download ZIP</a></p>
-    <p style="opacity:.7;font-size:12px">session_id: ${escapeHtml(sessionId || completedOrder.provider_session_id || '')}</p>
-  </main>
-</body>
-</html>`);
+    return renderStandalonePage(req, res, {
+      title: 'Payment successful — Tempasi',
+      bodyHtml: `
+        <h1>✅ Payment successful</h1>
+        <p>Order #${escapeHtml(completedOrder.id)} — template <b>${escapeHtml(completedOrder.template_slug)}</b> activated.</p>
+        <p><a class="c-btn c-btn--primary" href="${downloadUrl}">Download ZIP</a></p>
+        <p style="opacity:.7;font-size:12px">session_id: ${escapeHtml(sessionId || completedOrder.provider_session_id || '')}</p>
+      `,
+    });
   } catch (e) {
     try {
       await client.query('ROLLBACK');

@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const OrdersService = require('../../modules/orders/orders.service.cjs');
 const PaymentCompletion = require('../../modules/payments/paymentCompletion.service.cjs');
+const { renderStandalonePage } = require('../helpers/renderStandalonePage.cjs');
 
 function escapeHtml(input) {
   return String(input == null ? '' : input)
@@ -212,7 +213,13 @@ async function checkoutAllCartItems(req, db, userId) {
         await PaymentCompletion.completePaidOrder({
           orderId: result.orderId,
           providerSessionId: result.sessionId,
-          providerPaymentIntentId: 'pi_dev_bulk',
+          // TEMPASI_UNIQUE_PAYMENT_INTENT_FIX (2026-08-15): this used
+          // to be the literal string 'pi_dev_bulk' for every order in
+          // the loop, colliding with orders.provider_payment_intent_id's
+          // unique constraint the moment a second BUY item was checked
+          // out in the same batch. Suffixing with the order's own id
+          // guarantees uniqueness per order.
+          providerPaymentIntentId: 'pi_dev_bulk_' + result.orderId,
         });
       }
 
@@ -910,7 +917,7 @@ export function createCartRouter() {
         ? `<ul>${purchased
             .map(
               (p) =>
-                `<li><strong>${escapeHtml(p.title)}</strong> — <a class="btn primary" href="/downloads/${encodeURIComponent(p.slug)}">Download ZIP</a></li>`,
+                `<li><strong>${escapeHtml(p.title)}</strong> — <a class="c-btn c-btn--primary" href="/downloads/${encodeURIComponent(p.slug)}">Download ZIP</a></li>`,
             )
             .join('')}</ul>`
         : '<p>No items were purchased.</p>';
@@ -929,27 +936,18 @@ export function createCartRouter() {
           )}</p>`
         : '';
 
-      return res.type('html').send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Checkout complete — Tempasi</title>
-  <link rel="stylesheet" href="/css/core.css"/>
-  <link rel="stylesheet" href="/css/custom.css"/>
-</head>
-<body>
-  <main class="page">
-    <h1>✅ Checkout complete</h1>
-    <p>${purchased.length} item(s) purchased.</p>
-    ${purchasedHtml}
-    ${alreadySoldHtml}
-    ${skippedRentHtml}
-    ${failedHtml}
-    <p><a href="/cart">Back to cart</a> · <a href="/templates">Back to catalog</a></p>
-  </main>
-</body>
-</html>`);
+      return renderStandalonePage(req, res, {
+        title: 'Checkout complete — Tempasi',
+        bodyHtml: `
+          <h1>✅ Checkout complete</h1>
+          <p>${purchased.length} item(s) purchased.</p>
+          ${purchasedHtml}
+          ${alreadySoldHtml}
+          ${skippedRentHtml}
+          ${failedHtml}
+          <p><a class="c-btn" href="/cart">Back to cart</a> <a class="c-btn c-btn--primary" href="/templates">Back to catalog</a></p>
+        `,
+      });
     } catch (err) {
       return next(err);
     }

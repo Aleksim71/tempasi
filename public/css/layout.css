@@ -39,3 +39,59 @@ body {
   padding-right: 24px;
   box-sizing: border-box;
 }
+
+/* =========================================================
+   STANDALONE MESSAGE PAGES (pages/standalone-message.hbs)
+   Small one-off confirmation/status pages (payment success,
+   checkout summary, restore-started, 404, etc.) rendered through
+   the normal site layout instead of a bare HTML string.
+   ========================================================= */
+
+.standalone-page {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.standalone-page__panel {
+  width: 100%;
+  max-width: 640px;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-surface, #0f141b);
+}
+
+.standalone-page__panel h1 {
+  margin: 0 0 16px;
+  font-size: 24px;
+}
+
+.standalone-page__panel p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+  color: var(--c-muted, rgba(255, 255, 255, 0.78));
+}
+
+.standalone-page__panel code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+}
+
+.standalone-page__panel ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.standalone-page__panel li {
+  margin-bottom: 8px;
+  color: var(--c-muted, rgba(255, 255, 255, 0.78));
+}
+
+.standalone-page__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

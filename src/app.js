@@ -23,6 +23,16 @@ import checkoutRouter from './web/routes/checkout.routes.js';
 import { createPreviewProxyRouter } from './web/routes/preview-proxy.routes.js';
 
 const require = createRequire(import.meta.url);
+const { renderStandalonePage } = require('./web/helpers/renderStandalonePage.cjs');
+
+function escapeHtmlForNotFound(value) {
+  return String(value == null ? '' : value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 // --------------------
 // paths
@@ -422,6 +432,30 @@ if (process.env.TEMPASI_SKIP_SSR) {
   webApp.use('/admin', requireAdminWeb({ loginPath: '/login' }), createAdminPagesRouter({ db }));
 
   webApp.use('/checkout', checkoutRouter);
+
+  // TEMPASI_404_PAGE (2026-08-15)
+  // Must be webApp.use(), not app.use() — webApp is a full Express
+  // app with its own 'view engine'/'views' settings (set inside
+  // createWebApp()), and Express only swaps req.app to point at the
+  // currently-executing mounted sub-app while its OWN middleware
+  // runs. A catch-all registered on the OUTER app instead would have
+  // req.app pointing at that outer app, which never had the view
+  // engine configured — res.render() inside it fails with "No
+  // default engine was specified" (confirmed by hitting this exact
+  // error before moving it here). Must also be the LAST webApp.use()
+  // call — registered after every other route webApp gets, so it
+  // only catches requests nothing earlier matched.
+  webApp.use((req, res) => {
+    return renderStandalonePage(req, res, {
+      statusCode: 404,
+      title: 'Page not found — Tempasi',
+      bodyHtml: `
+        <h1>404 — Page not found</h1>
+        <p>The page <code>${escapeHtmlForNotFound(req.originalUrl)}</code> doesn't exist.</p>
+        <p><a class="c-btn c-btn--primary" href="/templates">Back to catalog</a></p>
+      `,
+    });
+  });
 
   // TEMPASI_PREVIEW_PROXY_PRIORITY (2026-08-05)
   // Mounted on `app` (not `webApp`) and BEFORE `app.use(webApp)`

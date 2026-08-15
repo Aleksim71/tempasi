@@ -8,6 +8,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync, spawn } = require('child_process');
+const { renderStandalonePage } = require('../helpers/renderStandalonePage.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
@@ -57,7 +58,7 @@ function formatDateYMD(value) {
 }
 
 function formatBytesForBackup(bytes) {
-  if (!Number.isFinite(bytes)) return '\u2014';
+  if (!Number.isFinite(bytes)) return '—';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let n = bytes;
   let i = 0;
@@ -69,8 +70,8 @@ function formatBytesForBackup(bytes) {
 }
 
 function formatEurOrDash(cents) {
-  if (cents === null || cents === undefined) return '\u2014';
-  return `\u20ac${formatEurFromCents(cents)}`;
+  if (cents === null || cents === undefined) return '—';
+  return `€${formatEurFromCents(cents)}`;
 }
 
 // Accepts 'YYYY-MM-DD' from a <input type="date">; returns null if absent/invalid.
@@ -1107,7 +1108,7 @@ function createAdminPagesRouter() {
             .sort((a, b) => b.modifiedTs - a.modifiedTs);
 
           // A dump is only offered for restore if it has a matching
-          // manifest \u2014 see backup-full.sh / restore-full.sh: the
+          // manifest — see backup-full.sh / restore-full.sh: the
           // manifest is what pairs a DB dump with the exact templates
           // snapshot taken alongside it, and restore-full.sh itself
           // refuses to run without one.
@@ -1177,14 +1178,14 @@ function createAdminPagesRouter() {
   });
 
   // TEMPASI_RESTORE_PROTOCOL (2026-08-14): this is the single most
-  // destructive action in the whole admin panel \u2014 it wipes and
+  // destructive action in the whole admin panel — it wipes and
   // reloads the live database, and can delete files on старичок in
   // --exact mode. The typed-exact-filename confirmation happens
   // client-side (backup.hbs) AND is re-checked here server-side
   // (never trust the client alone for something this destructive).
   // restore-full.sh is spawned fully detached: it stops this very
   // server process partway through its own run, so the request
-  // handler cannot wait for it to finish \u2014 it responds immediately
+  // handler cannot wait for it to finish — it responds immediately
   // and the script continues independently, logging to its own file.
   router.post('/settings/backup/restore', express.urlencoded({ extended: false }), (req, res) => {
     const dumpFile = String(req.body?.dumpFile || '').trim();
@@ -1231,17 +1232,19 @@ function createAdminPagesRouter() {
       );
     }
 
-    return res.status(200).send(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Restore started</title></head>
-<body style="background:#0b0f14;color:#e7eefc;font-family:sans-serif;max-width:640px;margin:60px auto;padding:0 20px;">
-  <h1>Restore started</h1>
-  <p>Dump: <code>${dumpFile}</code></p>
-  <p>Templates mode: <code>${mode}</code></p>
-  <p>The site will stop in a few seconds, restore, and come back up on its own \u2014 usually under a minute.
-     This page will not auto-reload. Reload <a href="/admin/settings/backup" style="color:#6aa7ff;">Settings &gt; Backup</a>
-     yourself once the site is responding again.</p>
-  <p>Full log: <code>logs/restore_*.log</code> on the server.</p>
-</body></html>`);
+    return renderStandalonePage(req, res, {
+      title: 'Restore started — Tempasi',
+      isAdmin: true,
+      bodyHtml: `
+        <h1>Restore started</h1>
+        <p>Dump: <code>${dumpFile}</code></p>
+        <p>Templates mode: <code>${mode}</code></p>
+        <p>The site will stop in a few seconds, restore, and come back up on its own — usually under a minute.
+           This page will not auto-reload. Reload <a href="/admin/settings/backup">Settings &gt; Backup</a>
+           yourself once the site is responding again.</p>
+        <p>Full log: <code>logs/restore_*.log</code> on the server.</p>
+      `,
+    });
   });
 
   router.get('/settings/storage', (req, res) => {
@@ -1256,8 +1259,8 @@ function createAdminPagesRouter() {
       result,
       failMessage: {
         DIR_NOT_FOUND: 'This path does not exist. If it should be a mount (e.g. sshfs) to the storage machine, mount it there first.',
-        STAT_FAILED: 'Could not read this path\u2019s filesystem info.',
-        NOT_A_MOUNT: 'This path exists but is not a distinct mounted filesystem \u2014 it looks like a plain local directory, not the storage machine. The mount either was never set up, or it dropped (storage machine off/asleep/network issue), and writes since then have been landing on this server\u2019s local disk instead. Turn on the storage machine and (re)mount TEMPLATE_UPLOAD_DIR, then reload this page.',
+        STAT_FAILED: 'Could not read this path’s filesystem info.',
+        NOT_A_MOUNT: 'This path exists but is not a distinct mounted filesystem — it looks like a plain local directory, not the storage machine. The mount either was never set up, or it dropped (storage machine off/asleep/network issue), and writes since then have been landing on this server’s local disk instead. Turn on the storage machine and (re)mount TEMPLATE_UPLOAD_DIR, then reload this page.',
         READ_WRITE_FAILED: 'A write/read check on this directory raised an error.',
         READ_WRITE_MISMATCH: 'Wrote a marker file but could not read back the exact content.',
       }[result.failReason] || null,

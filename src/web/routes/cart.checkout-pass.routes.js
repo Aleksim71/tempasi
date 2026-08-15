@@ -1,9 +1,13 @@
 // path: src/web/routes/cart.checkout-pass.routes.js
 import express from 'express';
+import { createRequire } from 'node:module';
 import {
   checkoutCartPass,
   removeSoldItemsFromCart,
 } from '../services/cart.checkout-pass.service.js';
+
+const require = createRequire(import.meta.url);
+const { renderStandalonePage } = require('../helpers/renderStandalonePage.cjs');
 
 const router = express.Router();
 router.use(express.urlencoded({ extended: true }));
@@ -146,36 +150,22 @@ router.get('/checkout/pass/result', (req, res) => {
   const rent = Number.parseInt(String(req.query.rent || '0'), 10) || 0;
   const orderIds = String(req.query.order_ids || '');
 
-  return res.status(200).send(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Checkout Pass Result</title>
-    <style>
-      body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; line-height: 1.5; }
-      .card { border: 1px solid #ddd; border-radius: 12px; padding: 20px; }
-      h1 { margin-top: 0; }
-      .links a { display: inline-block; margin-right: 12px; margin-top: 10px; }
-      code { background: #f5f5f5; padding: 2px 6px; border-radius: 6px; }
-    </style>
-  </head>
-  <body>
-    <div class="card">
+  return renderStandalonePage(req, res, {
+    title: 'Checkout Pass Result — Tempasi',
+    bodyHtml: `
       <h1>Checkout pass completed</h1>
       <p><strong>Processed items:</strong> ${count}</p>
       <p><strong>BUY:</strong> ${buy} &nbsp; <strong>RENT:</strong> ${rent}</p>
       ${orderIds ? `<p><strong>Order IDs:</strong> <code>${orderIds}</code></p>` : ''}
-      <div class="links">
-        <a href="/cabinet/finance">Finance</a>
-        <a href="/cabinet/profile">Profile</a>
-        <a href="/downloads">Downloads</a>
-        <a href="/cabinet/downloads">Cabinet Downloads</a>
-        <a href="/cart">Back to cart</a>
-      </div>
-    </div>
-  </body>
-</html>`);
+      <p class="standalone-page__links">
+        <a class="c-btn" href="/cabinet/finance">Finance</a>
+        <a class="c-btn" href="/cabinet/profile">Profile</a>
+        <a class="c-btn" href="/downloads">Downloads</a>
+        <a class="c-btn" href="/cabinet/downloads">Cabinet Downloads</a>
+        <a class="c-btn c-btn--primary" href="/cart">Back to cart</a>
+      </p>
+    `,
+  });
 });
 
 export default router;

@@ -3,6 +3,11 @@
 <!-- DEBUG: TPL index.hbs ACTIVE -->
 
 <section class="templates-page">
+
+  {{#if cartErrorMessage}}
+    <div class="templates-cart-notice">{{cartErrorMessage}}</div>
+  {{/if}}
+
   <div class="templates-layout">
 
     {{!-- SIDEBAR (ORIGINAL, DO NOT CHANGE CONTENT) --}}

@@ -2,6 +2,7 @@
 const db = require("../../config/db.cjs");
 const OrdersRepo = require("../orders/orders.repo.cjs");
 const CheckoutCreditsService = require("./checkoutCredits.service.cjs");
+const { renderStandalonePage } = require("../../web/helpers/renderStandalonePage.cjs");
 
 function getQueryableDbAdapter(candidate) {
   if (candidate && typeof candidate.query === "function") {
@@ -94,59 +95,16 @@ async function releaseReservedCreditByProviderSessionId(providerSessionId) {
   };
 }
 
-function renderCancelPage({ sessionId, result }) {
-  const title = "Checkout cancelled";
+function renderCancelBodyHtml({ sessionId, result }) {
   const reason = result && result.reason ? result.reason : "unknown";
 
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>${title}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f7f7f8;
-      color: #171717;
-    }
-    main {
-      max-width: 720px;
-      margin: 64px auto;
-      padding: 32px;
-      background: #fff;
-      border: 1px solid #e5e5e5;
-      border-radius: 20px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.06);
-    }
-    h1 { margin-top: 0; }
-    p { line-height: 1.55; }
-    code {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 8px;
-      background: #f0f0f0;
-      font-size: 12px;
-    }
-    a {
-      display: inline-block;
-      margin-top: 16px;
-      color: #111827;
-      font-weight: 700;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>${title}</h1>
+  return `
+    <h1>Checkout cancelled</h1>
     <p>Your checkout was cancelled. If Tempasi credit was reserved for this checkout, it has been released back to your account.</p>
     <p>Status: <code>${escapeHtml(reason)}</code></p>
     <p>Session: <code>${escapeHtml(sessionId || "")}</code></p>
-    <a href="/templates">Back to templates</a>
-  </main>
-</body>
-</html>`;
+    <p><a class="c-btn c-btn--primary" href="/templates">Back to templates</a></p>
+  `;
 }
 
 async function handleCheckoutCancel(req, res, next) {
@@ -154,10 +112,10 @@ async function handleCheckoutCancel(req, res, next) {
     const sessionId = req.query.session_id || req.query.sessionId || "";
     const result = await releaseReservedCreditByProviderSessionId(sessionId);
 
-    return res
-      .status(200)
-      .type("html")
-      .send(renderCancelPage({ sessionId, result }));
+    return renderStandalonePage(req, res, {
+      title: "Checkout cancelled — Tempasi",
+      bodyHtml: renderCancelBodyHtml({ sessionId, result }),
+    });
   } catch (error) {
     if (typeof next === "function") {
       return next(error);

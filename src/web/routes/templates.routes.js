@@ -13,6 +13,33 @@ function getTemplateDetailsUserId(req) {
   return req.userId || req.user?.id || req.session?.userId || req.session?.user?.id || null;
 }
 
+// TEMPASI_CART_ERROR_MESSAGES (2026-08-15)
+// /cart/add (cart.routes.js) redirects back here with ?cart=CODE on
+// every rejection (owner's own template, already sold, license
+// mismatch, etc.) — previously none of these codes were ever rendered
+// into a visible message, so the redirect just looked like the page
+// silently reloading ("flashes") with no explanation. This maps every
+// code cart.routes.js can send to a human-readable message.
+const CART_ERROR_MESSAGES = {
+  unsupported: 'Unsupported purchase type.',
+  bad_license: 'Invalid license selection.',
+  rent_days_required: 'Choose how many days you want to rent for.',
+  case_required: 'Select a client case to rent this template for.',
+  owner_template: "You can't buy or rent your own template.",
+  not_buyable: 'This template is not available to buy.',
+  not_rentable: 'This template is not available to rent.',
+  sold: 'This template has already been sold and is no longer available.',
+  reserved: 'This template is currently reserved for another active rental.',
+  case_not_owned: "That case doesn't belong to you.",
+  owned: 'You already own this template.',
+  buy_already_in_cart: 'This template is already in your cart.',
+};
+
+function pickCartErrorMessage(req) {
+  const code = String(req.query?.cart || '').trim();
+  return CART_ERROR_MESSAGES[code] || null;
+}
+
 // TEMPASI_CATALOG_CATEGORIES_FROM_DB (2026-07-21, corrected 2026-07-22)
 // Was a hardcoded 10-item list duplicated here; categories are now
 // admin-managed (Settings > Catalog, catalog_categories table).
@@ -591,6 +618,7 @@ export function createTemplatesRouter() {
         selectedCaseParam,
         query: filters,
         pagination,
+        cartErrorMessage: pickCartErrorMessage(req),
       });
     } catch (err) {
       // ✅ Hard fail-safe: never 500 for catalog
@@ -618,6 +646,7 @@ export function createTemplatesRouter() {
           selectedCaseParam,
           query: filters,
           pagination: buildCatalogPagination(filters, emptyResult),
+          cartErrorMessage: pickCartErrorMessage(req),
         });
       } catch (e2) {
         return next(e2);
@@ -818,6 +847,7 @@ export function createTemplatesRouter() {
         selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
         isAuthenticated: Boolean(templateDetailsUserId),
         isOwner: Boolean(template.isOwner),
+        cartErrorMessage: pickCartErrorMessage(req),
       });
     } catch (err) {
       return next(err);

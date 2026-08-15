@@ -4,6 +4,21 @@
   width: 100%;
 }
 
+/* TEMPASI_CART_ERROR_MESSAGES (2026-08-15): same rule as
+   pages/templates.css .templates-cart-notice, duplicated here since
+   this page doesn't load that stylesheet. Small, self-contained,
+   intentionally not shared to avoid pulling in the rest of
+   templates.css. */
+.templates-cart-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.08);
+  color: #ffb4bd;
+  font-size: 14px;
+}
+
 .template-details-shell {
   max-width: 1180px;
   margin: 0 auto;

@@ -4,6 +4,11 @@
 {{!-- Legacy owner contract marker: {{#if isOwner}} --}}
 
 <section class="template-details-page template-product-page">
+
+  {{#if cartErrorMessage}}
+    <div class="templates-cart-notice">{{cartErrorMessage}}</div>
+  {{/if}}
+
   <div class="template-details-shell">
 
     <main class="template-details-main">
