@@ -1,5 +1,19 @@
 // src/web/routes/cart.routes.js
 import express from 'express';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const OrdersService = require('../../modules/orders/orders.service.cjs');
+const PaymentCompletion = require('../../modules/payments/paymentCompletion.service.cjs');
+
+function escapeHtml(input) {
+  return String(input == null ? '' : input)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 function getUserId(req) {
   const raw =
@@ -116,6 +130,110 @@ function formatDateYMD(value) {
   return d.toISOString().slice(0, 10);
 }
 
+// TEMPASI_REAL_MULTI_ITEM_CHECKOUT (2026-08-14)
+//
+// Processes ALL cart items in one confirmed action, reusing the exact
+// same real pipeline as a single-item purchase for each one — no
+// parallel/simplified logic, unlike the older demo-checkout below:
+//   - ordersService.createOrderCheckout() per item: BUY exclusivity
+//     check, credit reservation, order creation, fake payment session
+//     (or the zero-pay-via-credit shortcut it already has built in).
+//   - PaymentCompletion.completePaidOrder() per item (skipped if
+//     createOrderCheckout already completed it via zero-pay) — same
+//     function the real webhook and dev checkout-success page call.
+//
+// BUY items only for now — RENT items are left in the cart untouched
+// with a note, since cart_items has no rent_days column yet (rent
+// duration isn't captured anywhere in the current cart model) and
+// today's testing focus has been BUY exclusivity specifically. A BUY
+// item that turns out to already be sold (lost the race to someone
+// else) is treated the same way as the single-item checkout path:
+// removed from the cart, reported as "already sold", not a hard
+// failure for the rest of the batch.
+async function checkoutAllCartItems(req, db, userId) {
+  const { rows: items } = await db.query(
+    `
+      SELECT ci.id, ci.template_slug, ci.deal_type, ci.license
+      FROM cart_items ci
+      WHERE ci.user_id = $1
+      ORDER BY ci.created_at ASC, ci.id ASC
+    `,
+    [userId],
+  );
+
+  const purchased = [];
+  const alreadySold = [];
+  const skippedRent = [];
+  const failed = [];
+
+  for (const item of items) {
+    if (String(item.deal_type || '').toUpperCase() !== 'BUY') {
+      skippedRent.push(item.template_slug);
+      continue;
+    }
+
+    try {
+      const { rows: tplRows } = await db.query(
+        `SELECT title, price_buy_cents FROM seller_templates WHERE slug = $1 AND status = 'published' LIMIT 1`,
+        [item.template_slug],
+      );
+      const tpl = tplRows[0];
+      if (!tpl) {
+        failed.push({ slug: item.template_slug, reason: 'Template no longer available.' });
+        continue;
+      }
+
+      const result = await OrdersService.createOrderCheckout(req, {
+        userId,
+        templateSlug: item.template_slug,
+        payload: {
+          dealType: 'BUY',
+          deal_type: 'BUY',
+          // TEMPASI_LICENSE_FIX (2026-08-14): cart_items.license for a
+          // BUY item currently holds 'BUY' (from the catalog's Buy
+          // button hidden field — a pre-existing mismatch, that value
+          // is a deal type, not a license tier). orders.service.cjs's
+          // normalizeBuyPayload() validates against a real tier list
+          // (PU/CU/EL/ML/EX) and rejects 'BUY' with INVALID_LICENSE.
+          // The older raw-SQL checkoutCartPass() path tolerated this by
+          // never validating it at all. There's no license-tier picker
+          // anywhere in the UI, so 'PU' (Personal Use) — the same
+          // value the working /checkout/direct/buy/:slug/pay path
+          // already hardcodes — is the correct one to use here too,
+          // regardless of whatever is actually stored in
+          // cart_items.license.
+          license: 'PU',
+          currency: 'EUR',
+          amountCents: Number(tpl.price_buy_cents || 0),
+        },
+      });
+
+      if (!result.zeroPay) {
+        await PaymentCompletion.completePaidOrder({
+          orderId: result.orderId,
+          providerSessionId: result.sessionId,
+          providerPaymentIntentId: 'pi_dev_bulk',
+        });
+      }
+
+      purchased.push({ slug: item.template_slug, title: tpl.title || item.template_slug });
+      await db.query('DELETE FROM cart_items WHERE id = $1 AND user_id = $2', [item.id, userId]);
+    } catch (err) {
+      if (err && (err.code === 'TEMPLATE_ALREADY_SOLD' || err.status === 409)) {
+        alreadySold.push(item.template_slug);
+        await db.query('DELETE FROM cart_items WHERE id = $1 AND user_id = $2', [item.id, userId]);
+      } else {
+        // Keep the item in the cart so the user can retry — this is an
+        // unexpected failure, not a "someone else already bought it"
+        // outcome.
+        failed.push({ slug: item.template_slug, reason: err?.message || 'Checkout failed.' });
+      }
+    }
+  }
+
+  return { purchased, alreadySold, skippedRent, failed };
+}
+
 function pickNotice(req) {
   if (String(req.query?.added || '').trim()) {
     return 'Item added to cart.';
@@ -125,6 +243,18 @@ function pickNotice(req) {
   }
   if (String(req.query?.removed || '').trim() === '1') {
     return 'Item removed from cart.';
+  }
+  // TEMPASI_ALREADY_SOLD_UX (2026-08-14): set by cart.checkout-pass.routes.js
+  // when checkout hits the BUY_ALREADY_SOLD race — someone else bought it
+  // first. The item has already been removed from the cart by that route.
+  if (String(req.query?.error || '').trim() === 'already_sold') {
+    const slugs = String(req.query?.slugs || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return slugs.length > 0
+      ? `Sorry — ${slugs.join(', ')} was just purchased by another buyer and has been removed from your cart.`
+      : 'Sorry — that template was just purchased by another buyer and has been removed from your cart.';
   }
   const demoCheckout = String(req.query?.demo_checkout || '').trim();
   if (demoCheckout === 'done') {
@@ -758,6 +888,68 @@ export function createCartRouter() {
       }
 
       return res.redirect(302, `/cart?added=${encodeURIComponent(templateSlug)}`);
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/checkout-all', async (req, res, next) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return redirectToLogin(res, '/cart');
+
+      const db = req.app.locals?.db;
+      if (!db || typeof db.query !== 'function') {
+        throw new Error('DB_NOT_CONFIGURED');
+      }
+
+      const result = await checkoutAllCartItems(req, db, userId);
+      const { purchased, alreadySold, skippedRent, failed } = result;
+
+      const purchasedHtml = purchased.length
+        ? `<ul>${purchased
+            .map(
+              (p) =>
+                `<li><strong>${escapeHtml(p.title)}</strong> — <a class="btn primary" href="/downloads/${encodeURIComponent(p.slug)}">Download ZIP</a></li>`,
+            )
+            .join('')}</ul>`
+        : '<p>No items were purchased.</p>';
+
+      const alreadySoldHtml = alreadySold.length
+        ? `<p>Already sold by someone else (removed from your cart): ${escapeHtml(alreadySold.join(', '))}</p>`
+        : '';
+
+      const skippedRentHtml = skippedRent.length
+        ? `<p>RENT items are not yet supported by bulk checkout — still in your cart, check out individually: ${escapeHtml(skippedRent.join(', '))}</p>`
+        : '';
+
+      const failedHtml = failed.length
+        ? `<p>Could not process (still in your cart, you can retry): ${escapeHtml(
+            failed.map((f) => `${f.slug} (${f.reason})`).join(', '),
+          )}</p>`
+        : '';
+
+      return res.type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Checkout complete — Tempasi</title>
+  <link rel="stylesheet" href="/css/core.css"/>
+  <link rel="stylesheet" href="/css/custom.css"/>
+</head>
+<body>
+  <main class="page">
+    <h1>✅ Checkout complete</h1>
+    <p>${purchased.length} item(s) purchased.</p>
+    ${purchasedHtml}
+    ${alreadySoldHtml}
+    ${skippedRentHtml}
+    ${failedHtml}
+    <p><a href="/cart">Back to cart</a> · <a href="/templates">Back to catalog</a></p>
+  </main>
+</body>
+</html>`);
     } catch (err) {
       return next(err);
     }
