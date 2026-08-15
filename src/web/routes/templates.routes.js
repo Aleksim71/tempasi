@@ -486,6 +486,12 @@ function normalizeTemplate(raw, slugFromUrl) {
     hasZip,
     isSold,
     soldAt,
+    // TEMPASI_CATALOG_OWNER_AWARE_CARDS (2026-08-15): needed by the
+    // catalog route's per-template isOwner computation. Wasn't
+    // carried through before — the details route worked around this
+    // by reading raw.ownerUserId directly (before normalization)
+    // instead of from this returned object.
+    ownerUserId: raw?.ownerUserId ?? raw?.owner_user_id ?? null,
   };
 }
 
@@ -594,7 +600,20 @@ export function createTemplatesRouter() {
       const templates = appendCaseContextToTemplates(
         normalizeTemplateListAvailability((result.rows || []).map((t) => normalizeTemplate(t))),
         selectedCaseId,
-      );
+      ).map((t) => {
+        // TEMPASI_CATALOG_OWNER_AWARE_CARDS (2026-08-15): same isOwner
+        // computation the details route already does for a single
+        // template (see below in this file) — applied per-row here so
+        // template-card.v2.hbs can hide Buy/Rent and show "Your
+        // template" instead, matching what the details page already
+        // does. Previously the catalog grid showed Buy/Rent on every
+        // card regardless of ownership, so an owner could open the
+        // Rent modal, fill it in, and only find out it was rejected
+        // after submitting — the modal is correct, but this is a
+        // clearer fix: don't offer the action at all.
+        t.isOwner = Boolean(listingUserId && Number(t.ownerUserId) === Number(listingUserId));
+        return t;
+      });
 
       const categoryOptionsRaw = await getCatalogCategoryChips(db);
       const categoryOptions = categoryOptionsRaw.map((opt) => ({

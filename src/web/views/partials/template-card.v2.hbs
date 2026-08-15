@@ -78,31 +78,41 @@
     {{/if}}
 
     <div class="tcard__cart" aria-label="Add to cart">
-      {{#if t.price}}
-        {{#if isAuthenticated}}
-          <form method="post" action="/cart/add" class="tcard__cart-form">
-            <input type="hidden" name="template_slug" value="{{t.slug}}">
-            <input type="hidden" name="deal_type" value="BUY">
-            <input type="hidden" name="license" value="BUY">
-            <input type="hidden" name="next" value="/templates">
-            <button class="tbtn tbtn--primary" type="submit">Buy {{t.price}}€</button>
-          </form>
-        {{else}}
-          <a class="tbtn tbtn--primary" href="/login">Buy {{t.price}}€</a>
+      {{#if t.isOwner}}
+        {{!-- TEMPASI_CATALOG_OWNER_AWARE_CARDS (2026-08-15): don't
+             offer Buy/Rent on your own template — matches the details
+             page, which already hides these for the owner. Previously
+             the catalog showed Buy/Rent on every card regardless of
+             ownership, so an owner could open the Rent modal, fill it
+             in, and only be told "no" after submitting. --}}
+        <span class="tbadge" title="You own this template.">Your template</span>
+      {{else}}
+        {{#if t.price}}
+          {{#if isAuthenticated}}
+            <form method="post" action="/cart/add" class="tcard__cart-form">
+              <input type="hidden" name="template_slug" value="{{t.slug}}">
+              <input type="hidden" name="deal_type" value="BUY">
+              <input type="hidden" name="license" value="BUY">
+              <input type="hidden" name="next" value="/templates">
+              <button class="tbtn tbtn--primary" type="submit">Buy {{t.price}}€</button>
+            </form>
+          {{else}}
+            <a class="tbtn tbtn--primary" href="/login">Buy {{t.price}}€</a>
+          {{/if}}
         {{/if}}
-      {{/if}}
 
-      {{#if t.prices.rent.amount}}
-        {{#if isAuthenticated}}
-          <button
-            type="button"
-            class="tbtn"
-            data-rent-modal-trigger
-            data-slug="{{t.slug}}"
-            data-price="{{t.prices.rent.amount}}"
-          >Rent {{t.prices.rent.amount}}€</button>
-        {{else}}
-          <a class="tbtn" href="/login">Rent {{t.prices.rent.amount}}€</a>
+        {{#if t.prices.rent.amount}}
+          {{#if isAuthenticated}}
+            <button
+              type="button"
+              class="tbtn"
+              data-rent-modal-trigger
+              data-slug="{{t.slug}}"
+              data-price="{{t.prices.rent.amount}}"
+            >Rent {{t.prices.rent.amount}}€</button>
+          {{else}}
+            <a class="tbtn" href="/login">Rent {{t.prices.rent.amount}}€</a>
+          {{/if}}
         {{/if}}
       {{/if}}
     </div>
