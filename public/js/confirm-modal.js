@@ -8,11 +8,18 @@
  * backdrop). Loaded globally (src/web/views/layouts/main.hbs), so
  * it's available on every page without per-page opt-in.
  *
- * Exposes two globals:
+ * Exposes three globals:
  *   window.tempasiConfirm({ title, message, confirmLabel, danger })
  *     -> Promise<boolean>
  *   window.tempasiPrompt({ title, message, inputPlaceholder, confirmLabel, danger })
  *     -> Promise<string|null>
+ *   window.tempasiAlert({ title, message, confirmLabel, danger })
+ *     -> Promise<void>
+ *     One-button "OK" dialog for plain informational/error messages —
+ *     no Cancel, no input. Added 2026-08-15 so server-rendered "?cart=
+ *     CODE" style banners (e.g. "You can't buy or rent your own
+ *     template") can use the same modal pattern as everything else on
+ *     the site instead of an inline page banner.
  *
  * tempasiPrompt() resolves with the typed string on confirm, or null
  * on cancel/Escape — the same contract as window.prompt(), so
@@ -48,6 +55,7 @@
 
   function open(opts) {
     var withInput = Boolean(opts.withInput);
+    var hideCancel = Boolean(opts.hideCancel);
 
     return new Promise(function (resolve) {
       var el = ensureModal();
@@ -61,8 +69,9 @@
 
       titleEl.textContent = opts.title || '';
       messageEl.textContent = opts.message || '';
-      confirmBtn.textContent = opts.confirmLabel || 'Confirm';
+      confirmBtn.textContent = opts.confirmLabel || (hideCancel ? 'OK' : 'Confirm');
       confirmBtn.className = 'c-btn ' + (opts.danger ? 'c-btn--danger' : 'c-btn--primary');
+      cancelBtn.hidden = hideCancel;
 
       if (withInput) {
         inputWrap.hidden = false;
@@ -118,5 +127,9 @@
 
   window.tempasiPrompt = function (opts) {
     return open(Object.assign({}, opts || {}, { withInput: true }));
+  };
+
+  window.tempasiAlert = function (opts) {
+    return open(Object.assign({}, opts || {}, { withInput: false, hideCancel: true }));
   };
 })();

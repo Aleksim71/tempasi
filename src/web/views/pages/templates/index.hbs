@@ -5,7 +5,15 @@
 <section class="templates-page">
 
   {{#if cartErrorMessage}}
-    <div class="templates-cart-notice">{{cartErrorMessage}}</div>
+    <div id="tcmAutoAlertMessage" hidden>{{cartErrorMessage}}</div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('tcmAutoAlertMessage');
+        if (el && window.tempasiAlert) {
+          window.tempasiAlert({ title: 'Heads up', message: el.textContent, danger: true });
+        }
+      });
+    </script>
   {{/if}}
 
   <div class="templates-layout">
