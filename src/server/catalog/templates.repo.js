@@ -235,17 +235,14 @@ export async function selectTemplatesForCatalogPage(db, filters = {}, pagination
           AND e.closed_at IS NULL
           AND (e.ends_at IS NULL OR e.ends_at > now())
       )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM cart_items ci_public_cart_hold
-        WHERE ci_public_cart_hold.template_slug = st.slug
-          AND (
-            ci_public_cart_hold.license = 'BUY'
-            OR ci_public_cart_hold.license = 'RENT'
-            OR ci_public_cart_hold.license = 'PU'
-            OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
-          )
-      )
+      -- TEMPASI_NO_CART_HOLD (2026-08-14): adding to cart no longer
+      -- hides a template from the catalog. Exclusivity is enforced
+      -- only by an actual paid BUY (the NOT EXISTS on orders above)
+      -- and the DB-level partial unique index
+      -- (orders_unique_paid_buy_per_template) that makes a second
+      -- concurrent paid BUY impossible. A user who loses that race
+      -- gets a clear "already sold" message and the item is removed
+      -- from their cart — see cart.checkout-pass.service.js.
       ${extraSql}
   `;
 
@@ -365,17 +362,9 @@ export async function selectTemplatesForCatalog(db) {
           AND (e.ends_at IS NULL OR e.ends_at > now())
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
       )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM cart_items ci_public_cart_hold
-      WHERE ci_public_cart_hold.template_slug = st.slug
-        AND (
-          ci_public_cart_hold.license = 'BUY'
-          OR ci_public_cart_hold.license = 'RENT'
-          OR ci_public_cart_hold.license = 'PU'
-          OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
-        )
-    )
+      -- TEMPASI_NO_CART_HOLD (2026-08-14): see selectTemplatesForCatalogPage
+      -- above for the full rationale — adding to cart no longer hides
+      -- a template here either.
 
     ORDER BY st.created_at DESC, st.id DESC
     LIMIT 200
@@ -459,18 +448,9 @@ export async function getTemplateBySlug(db, slug, options = {}) {
           AND (e.ends_at IS NULL OR e.ends_at > NOW())
           AND ($2::text = '' OR e.user_id::text <> $2::text)
       )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM cart_items ci_public_cart_hold
-      WHERE ci_public_cart_hold.template_slug = seller_templates.slug
-        AND (
-          ci_public_cart_hold.license = 'BUY'
-          OR ci_public_cart_hold.license = 'RENT'
-          OR ci_public_cart_hold.license = 'PU'
-          OR ci_public_cart_hold.license ~ '^PU:[1-9][0-9]*d$'
-        )
-        AND ($2::text = '' OR ci_public_cart_hold.user_id::text <> $2::text)
-    )
+      -- TEMPASI_NO_CART_HOLD (2026-08-14): see selectTemplatesForCatalogPage
+      -- above for the full rationale — a template someone else has in
+      -- their cart is still directly viewable here.
 
     LIMIT 1
   `;
