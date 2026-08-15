@@ -195,9 +195,11 @@ async function assertBuyExclusivity(client, orderColumns, items) {
   );
 
   if (rows.length > 0) {
-    const sold = rows.map((row) => row.template_slug).join(', ');
-    const error = new Error(`BUY already sold for: ${sold}`);
+    const soldSlugs = rows.map((row) => row.template_slug);
+    const error = new Error(`BUY already sold for: ${soldSlugs.join(', ')}`);
     error.statusCode = 409;
+    error.code = 'BUY_ALREADY_SOLD';
+    error.soldSlugs = soldSlugs;
     throw error;
   }
 }
@@ -219,6 +221,34 @@ async function updateUserStatus(client, userId) {
   if (next !== current) {
     await client.query('UPDATE users SET status = $2 WHERE id = $1', [userId, next]);
   }
+}
+
+// TEMPASI_ALREADY_SOLD_UX (2026-08-14): called by the route when
+// assertBuyExclusivity() throws BUY_ALREADY_SOLD — the item can never
+// become available again, so instead of leaving a permanently-dead
+// entry sitting in the user's cart, remove it and let them know why.
+export async function removeSoldItemsFromCart({ userId, slugs }) {
+  if (!userId || !Array.isArray(slugs) || slugs.length === 0) return;
+
+  const pool = await getPool();
+  const cartColumns = await getColumns(pool, 'cart_items');
+  const cartUserIdColumn = pickFirst(cartColumns, ['user_id']);
+  const cartSlugColumn = pickFirst(cartColumns, ['template_slug']);
+  const cartDealTypeColumn = pickFirst(cartColumns, ['deal_type']);
+
+  if (!cartUserIdColumn || !cartSlugColumn) return;
+
+  const dealTypeClause = cartDealTypeColumn ? `AND UPPER(${cartDealTypeColumn}) = 'BUY'` : '';
+
+  await pool.query(
+    `
+      DELETE FROM cart_items
+      WHERE ${cartUserIdColumn} = $1
+        AND ${cartSlugColumn} = ANY($2::text[])
+        ${dealTypeClause}
+    `,
+    [userId, slugs],
+  );
 }
 
 export async function checkoutCartPass({ req = null, userId, selectedItemIds = [] }) {

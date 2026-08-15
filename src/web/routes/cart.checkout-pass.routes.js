@@ -1,6 +1,9 @@
 // path: src/web/routes/cart.checkout-pass.routes.js
 import express from 'express';
-import { checkoutCartPass } from '../services/cart.checkout-pass.service.js';
+import {
+  checkoutCartPass,
+  removeSoldItemsFromCart,
+} from '../services/cart.checkout-pass.service.js';
 
 const router = express.Router();
 router.use(express.urlencoded({ extended: true }));
@@ -111,6 +114,25 @@ router.post(['/cart/checkout', '/cart/checkout-pass', '/checkout/pass'], async (
 
     return res.redirect(`/checkout/pass/result?${params.toString()}`);
   } catch (error) {
+    if (error && error.code === 'BUY_ALREADY_SOLD' && Array.isArray(error.soldSlugs)) {
+      // TEMPASI_ALREADY_SOLD_UX (2026-08-14): this item can never
+      // become available again — clean it out of the cart and send
+      // the user back with a clear reason instead of a raw 409.
+      // getCurrentUserId(req) is re-derived here since `userId` from
+      // the try block above is out of scope in this catch.
+      const currentUserId = getCurrentUserId(req);
+      if (currentUserId) {
+        try {
+          await removeSoldItemsFromCart({ userId: currentUserId, slugs: error.soldSlugs });
+        } catch (_) {
+          // best-effort cleanup — the friendly redirect below still
+          // happens even if this fails, just with a stale cart item.
+        }
+      }
+      const qs = new URLSearchParams({ error: 'already_sold', slugs: error.soldSlugs.join(',') });
+      return res.redirect(303, `/cart?${qs.toString()}`);
+    }
+
     if (error && error.statusCode) {
       return res.status(error.statusCode).send(error.message);
     }
