@@ -807,6 +807,38 @@ res.render('pages/cabinet', {
         };
         analyticsPayload.platformStats = platformStats;
       }
+
+      // TEMPASI_ADVANCED_REALIZED_AVG_PRICES (2026-08-16): same
+      // layout as Overview (All / Active counts unchanged, reused
+      // as-is from getMyTemplatesKpis()), but the two "Avg." cards
+      // switch basis from "currently listed price" to "price of
+      // templates that actually sold / were actually rented" — both
+      // for this seller (My templates) and platform-wide (Market).
+      // Reuses the SAME analyticsPayload.kpis/platformStats field
+      // names as Overview — safe since only one tab's branch ever
+      // runs per request, so there's no risk of the two tabs'
+      // numbers colliding in the same response.
+      if (tab === 'advanced') {
+        const [kpis, realizedAvgPrices, platformStats, platformRealizedAvgPrices] = await Promise.all([
+          analyticsService.getMyTemplatesKpis({ ownerUserId }),
+          analyticsService.getMyTemplatesRealizedAvgPrices({ ownerUserId }),
+          analyticsService.getPlatformStats(),
+          analyticsService.getPlatformRealizedAvgPrices(),
+        ]);
+
+        analyticsPayload.kpis = {
+          myTemplatesCount: analytics.summary?.templatesCount ?? 0,
+          activeTemplates: kpis.activeTemplates,
+          avgTemplatePriceEur: realizedAvgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: realizedAvgPrices.avgRentPricePerDayEur,
+        };
+        analyticsPayload.platformStats = {
+          totalUsers: platformStats.totalUsers,
+          totalTemplates: platformStats.totalTemplates,
+          avgTemplatePriceEur: platformRealizedAvgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: platformRealizedAvgPrices.avgRentPricePerDayEur,
+        };
+      }
     } catch (e) {
       workspaceError = e;
     }

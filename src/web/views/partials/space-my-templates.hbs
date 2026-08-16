@@ -458,23 +458,54 @@
         </div>
       {{/if}}
 
-      {{!-- ADVANCED TAB (MVP placeholder) --}}
+      {{!-- ADVANCED TAB: same layout as Overview, but the two "Avg."
+           cards (both My templates and Market) are based on prices of
+           templates that ACTUALLY sold / were actually rented, not
+           what's currently listed. All/Active counts are the same
+           numbers as Overview — only the price basis differs. --}}
       {{#if (eq workspaceData.analytics.tab "advanced")}}
         <div data-analytics-tab="advanced">
-          <section class="mt-advanced-placeholder">
-            <div class="mt-advanced-placeholder__eyebrow">MVP</div>
-            <h3 class="mt-advanced-placeholder__title">Advanced analytics</h3>
-            <p class="mt-advanced-placeholder__text">
-              This section is reserved for deeper seller insights. For MVP, the tab is active and ready for the next iteration.
-            </p>
 
-            <ul class="mt-advanced-placeholder__list">
-              <li>Conversion from rent to buy</li>
-              <li>Best-performing templates over time</li>
-              <li>Revenue trends by period</li>
-              <li>Archived vs active template performance</li>
-            </ul>
-          </section>
+          <div class="mt-kpis__section-title">My templates (sold / rented)</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">All</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.myTemplatesCount}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Active</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. sold price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rented price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
+          <div class="mt-kpis__section-title">Market (sold / rented)</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total users</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalUsers}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. sold price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rented price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
         </div>
       {{/if}}
 

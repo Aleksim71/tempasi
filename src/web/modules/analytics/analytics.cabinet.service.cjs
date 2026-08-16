@@ -204,6 +204,92 @@ async function getMyTemplatesAvgPrices({ ownerUserId }) {
   };
 }
 
+// TEMPASI_ADVANCED_REALIZED_AVG_PRICES (2026-08-16)
+//
+// Advanced tab's counterpart to Overview's "currently listed" price
+// averages: instead of averaging the LIST price of templates that are
+// still live, this averages the LIST price of templates that
+// actually SOLD (for buy) or were actually RENTED at least once (for
+// rent) — "what did buyers really pay for, on average", not "what's
+// currently on offer". Uses the template's own price_buy_cents /
+// price_rent_cents (not the order's amount_cents), matching how
+// getMyTemplatesAvgPrices() already reads prices — this sidesteps
+// having to normalize a RENT order's total amount_cents (price ×
+// however many days were rented) back down to a per-day rate; the
+// per-day rate already lives on the template itself.
+//
+// Deliberately no LEFT JOIN to orders (only EXISTS subqueries, which
+// don't multiply rows) — same fan-out-avoidance reasoning as
+// getMyTemplatesAvgPrices().
+async function getMyTemplatesRealizedAvgPrices({ ownerUserId }) {
+  if (!ownerUserId) {
+    throw new Error('OWNER_USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+
+  const sql = `
+    SELECT
+      AVG(st.price_buy_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders o
+          WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+        )
+      ) AS avg_sold_cents,
+      AVG(st.price_rent_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders o2
+          WHERE o2.template_slug = st.slug AND o2.deal_type = 'RENT' AND o2.status = 'paid'
+        )
+      ) AS avg_rented_cents
+    FROM seller_templates st
+    WHERE st.owner_user_id = $1
+  `;
+
+  const { rows } = await pool.query(sql, [ownerUserId]);
+  const r = rows?.[0] || {};
+  const avgSoldCents = Math.round(Number(r.avg_sold_cents || 0));
+  const avgRentedCents = Math.round(Number(r.avg_rented_cents || 0));
+
+  return {
+    avgTemplatePriceEur: formatMoneyEurFromCents(avgSoldCents),
+    avgRentPricePerDayEur: formatMoneyEurFromCents(avgRentedCents),
+  };
+}
+
+// Same as getMyTemplatesRealizedAvgPrices() above, platform-wide
+// instead of scoped to one seller — the Advanced tab's Market row.
+async function getPlatformRealizedAvgPrices() {
+  const pool = getPool();
+
+  const sql = `
+    SELECT
+      AVG(st.price_buy_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders o
+          WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+        )
+      ) AS avg_sold_cents,
+      AVG(st.price_rent_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders o2
+          WHERE o2.template_slug = st.slug AND o2.deal_type = 'RENT' AND o2.status = 'paid'
+        )
+      ) AS avg_rented_cents
+    FROM seller_templates st
+  `;
+
+  const { rows } = await pool.query(sql);
+  const r = rows?.[0] || {};
+  const avgSoldCents = Math.round(Number(r.avg_sold_cents || 0));
+  const avgRentedCents = Math.round(Number(r.avg_rented_cents || 0));
+
+  return {
+    avgTemplatePriceEur: formatMoneyEurFromCents(avgSoldCents),
+    avgRentPricePerDayEur: formatMoneyEurFromCents(avgRentedCents),
+  };
+}
+
 async function getMyTemplatesRevenueSeries30d({ ownerUserId }) {
   if (!ownerUserId) {
     throw new Error('OWNER_USER_ID_REQUIRED');
@@ -411,6 +497,8 @@ module.exports = {
   getMyTemplatesAnalytics,
   getMyTemplatesKpis,
   getMyTemplatesAvgPrices,
+  getMyTemplatesRealizedAvgPrices,
   getMyTemplatesRevenueSeries30d,
   getPlatformStats,
+  getPlatformRealizedAvgPrices,
 };
