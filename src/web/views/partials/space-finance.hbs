@@ -3,7 +3,7 @@
   <nav class="finance-tabs" aria-label="Finance sections">
     {{#each workspaceData.finance.tabs}}
       <a
-        class="finance-tab {{#if isActive}}is-active{{/if}}"
+        class="tp-control tp-tab tp-tab--main {{#if isActive}}is-active{{/if}}"
         href="{{href}}"
         {{#if isActive}}aria-current="page"{{/if}}
       >

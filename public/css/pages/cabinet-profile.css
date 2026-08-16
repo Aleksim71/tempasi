@@ -11,22 +11,6 @@
   flex-wrap: wrap;
 }
 
-.profile-tab {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 14px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.profile-tab.is-active {
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .profile-panel {
   padding: 16px;
   border-radius: 14px;
