@@ -405,50 +405,40 @@
         </div>
       {{/if}}
 
-      {{!-- TABLE TAB --}}
+      {{!-- TABLE TAB: platform-wide, per-category breakdown (confirmed
+           with Alex: fully replaces the old per-template sortable
+           table, and is platform-wide like Market/Advanced, not
+           scoped to this seller). --}}
       {{#if (eq workspaceData.analytics.tab "table")}}
         <div data-analytics-tab="table">
           <div class="mt-analytics-wrap">
             <table class="mt-analytics">
               <thead>
                 <tr>
-                  {{#each workspaceData.analytics.columns}}
-                    <th class="{{#if isActive}}is-active{{/if}}">
-                      {{#if sortable}}
-                        <a
-                          href="{{href}}"
-                          class="mt-analytics__sortLink {{#if isActive}}is-active{{/if}}"
-                        >
-                          {{label}}{{#if arrow}}<span class="mt-analytics__arrow">{{arrow}}</span>{{/if}}
-                        </a>
-                      {{else}}
-                        {{label}}
-                      {{/if}}
-                    </th>
-                  {{/each}}
+                  <th>Category</th>
+                  <th>Templates</th>
+                  <th>Avg. sale price</th>
+                  <th>Avg. rent price</th>
+                  <th>Avg. sale price (sold)</th>
+                  <th>Avg. rent price (rented)</th>
                 </tr>
               </thead>
               <tbody>
-                {{#if workspaceData.analytics.items.length}}
-                  {{#each workspaceData.analytics.items}}
+                {{#if workspaceData.analytics.categoryStats.length}}
+                  {{#each workspaceData.analytics.categoryStats}}
                     <tr>
-                      <td>
-                        <div class="mt-analytics__templateTitle">{{title}}</div>
-                        <div class="mt-analytics__templateSlug">{{slug}}</div>
-                      </td>
-                      <td>{{#if created_at_str}}{{created_at_str}}{{else}}—{{/if}}</td>
-                      <td>{{#if deleted_at_str}}{{deleted_at_str}}{{else}}—{{/if}}</td>
-                      <td>{{#if first_order_at_str}}{{first_order_at_str}}{{else}}—{{/if}}</td>
-                      <td>{{#if sold_at_str}}{{sold_at_str}}{{else}}—{{/if}}</td>
-                      <td>{{rent_count}}</td>
-                      <td>€{{rent_revenue_eur}}</td>
-                      <td>€{{buy_revenue_eur}}</td>
-                      <td>€{{total_revenue_eur}}</td>
+                      <td>{{category}}</td>
+                      <td>{{templateCount}}</td>
+                      <td>€{{avgListBuyEur}}</td>
+                      <td>€{{avgListRentEur}}</td>
+                      <td>€{{avgSoldEur}}</td>
+                      <td>€{{avgRentedEur}}</td>
                     </tr>
                   {{/each}}
                 {{else}}
                   <tr class="mt-analytics__emptyRow">
-                    <td colspan="9" class="mt-analytics__empty">
+                    <td colspan="6" class="mt-analytics__empty">
+                      No templates in the catalog yet.
                     </td>
                   </tr>
                 {{/if}}
@@ -457,6 +447,7 @@
           </div>
         </div>
       {{/if}}
+
 
       {{!-- ADVANCED TAB: same layout as Overview, but the two "Avg."
            cards (both My templates and Market) are based on prices of

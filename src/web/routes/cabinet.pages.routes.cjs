@@ -740,19 +740,7 @@ res.render('pages/cabinet', {
           revenueRentEur: '0.00',
           revenueTotalEur: '0.00',
         },
-        topTemplates: [],
-        monthlyRevenue: [],
-        columns: [
-          { key: 'title', label: 'Template', sortable: false },
-          { key: 'created_at', label: 'Created', sortable: true },
-          { key: 'first_order_at', label: 'First order', sortable: true },
-          { key: 'last_order_at', label: 'Last order', sortable: true },
-          { key: 'rent_count', label: 'Rents', sortable: true },
-          { key: 'rent_revenue', label: 'Rent revenue', sortable: true },
-          { key: 'buy_revenue', label: 'Buy revenue', sortable: true },
-          { key: 'sold_at', label: 'Sold at', sortable: true },
-          { key: 'total_revenue', label: 'Total revenue', sortable: true },
-        ],
+        categoryStats: [],
       },
     };
 
@@ -773,9 +761,7 @@ res.render('pages/cabinet', {
         kpis: empty.analytics.kpis,
         platformStats: empty.analytics.platformStats,
         summary: analytics.summary || empty.analytics.summary,
-        topTemplates: analytics.topTemplates || [],
-        monthlyRevenue: analytics.monthlyRevenue || [],
-        columns: empty.analytics.columns,
+        categoryStats: empty.analytics.categoryStats,
       };
 
       // TEMPASI_ANALYTICS_OVERVIEW_KPIS (2026-08-16): the Overview tab
@@ -838,6 +824,15 @@ res.render('pages/cabinet', {
           avgTemplatePriceEur: platformRealizedAvgPrices.avgTemplatePriceEur,
           avgRentPricePerDayEur: platformRealizedAvgPrices.avgRentPricePerDayEur,
         };
+      }
+
+      // TEMPASI_CATEGORY_TABLE (2026-08-16): the Table tab now shows a
+      // platform-wide, per-category breakdown instead of a
+      // per-template sortable list — confirmed with Alex: fully
+      // replaces the old table, and is platform-wide like
+      // Market/Advanced, not scoped to this seller.
+      if (tab === 'table') {
+        analyticsPayload.categoryStats = await analyticsService.getPlatformStatsByCategory();
       }
     } catch (e) {
       workspaceError = e;

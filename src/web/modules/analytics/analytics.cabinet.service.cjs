@@ -353,6 +353,103 @@ async function getMyTemplatesRevenueSeries30d({ ownerUserId }) {
 // count are all scoped to that same set on purpose — a sold or
 // withdrawn template isn't something a new seller is actually
 // competing against right now.
+// TEMPASI_CATEGORY_TABLE (2026-08-16)
+//
+// Replaces the old per-template sortable Table tab with a
+// per-category, platform-wide breakdown (confirmed with Alex: fully
+// replaces the old table, and is platform-wide like Market/Advanced,
+// not scoped to one seller).
+//
+// A category row appears if it has at least one seller_templates row
+// EVER (not just currently-live ones) — this lets a category with
+// zero live listings right now still show its realized sold/rented
+// prices, rather than disappearing entirely. template_count and the
+// two "listed price" averages ARE scoped to currently-live templates
+// (same visibility rule as getPlatformStats()); the two "realized
+// price" averages are scoped to templates that actually sold/were
+// actually rented (same EXISTS pattern as
+// getPlatformRealizedAvgPrices()), independent of current live
+// status.
+//
+// No LEFT JOIN to orders (only EXISTS subqueries) — same fan-out
+// avoidance as every other averaging query added this session. The
+// LEFT JOINs to users and catalog_categories are both 1:1 (a
+// template has exactly one owner, a category slug matches at most
+// one catalog_categories row), so neither of those can multiply
+// rows either.
+async function getPlatformStatsByCategory() {
+  const pool = getPool();
+
+  const sql = `
+    SELECT
+      COALESCE(cc.label, st.category, 'Other') AS category_label,
+      COUNT(*) FILTER (
+        WHERE st.status = 'published'
+          AND st.deleted_at IS NULL
+          AND st.owner_withdrawn_at IS NULL
+          AND st.admin_blocked_at IS NULL
+          AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+          AND u.self_deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM orders ob
+            WHERE ob.template_slug = st.slug AND ob.deal_type = 'BUY' AND ob.status = 'paid'
+          )
+      )::int AS template_count,
+      AVG(st.price_buy_cents) FILTER (
+        WHERE st.status = 'published'
+          AND st.deleted_at IS NULL
+          AND st.owner_withdrawn_at IS NULL
+          AND st.admin_blocked_at IS NULL
+          AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+          AND u.self_deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM orders ob2
+            WHERE ob2.template_slug = st.slug AND ob2.deal_type = 'BUY' AND ob2.status = 'paid'
+          )
+      ) AS avg_list_buy_cents,
+      AVG(st.price_rent_cents) FILTER (
+        WHERE st.status = 'published'
+          AND st.deleted_at IS NULL
+          AND st.owner_withdrawn_at IS NULL
+          AND st.admin_blocked_at IS NULL
+          AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+          AND u.self_deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM orders ob3
+            WHERE ob3.template_slug = st.slug AND ob3.deal_type = 'BUY' AND ob3.status = 'paid'
+          )
+      ) AS avg_list_rent_cents,
+      AVG(st.price_buy_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders os
+          WHERE os.template_slug = st.slug AND os.deal_type = 'BUY' AND os.status = 'paid'
+        )
+      ) AS avg_sold_cents,
+      AVG(st.price_rent_cents) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM orders ordr
+          WHERE ordr.template_slug = st.slug AND ordr.deal_type = 'RENT' AND ordr.status = 'paid'
+        )
+      ) AS avg_rented_cents
+    FROM seller_templates st
+    LEFT JOIN users u ON u.id = st.owner_user_id
+    LEFT JOIN catalog_categories cc ON cc.slug = st.category
+    GROUP BY COALESCE(cc.label, st.category, 'Other')
+    ORDER BY COALESCE(cc.label, st.category, 'Other') ASC
+  `;
+
+  const { rows } = await pool.query(sql);
+
+  return (rows || []).map((r) => ({
+    category: r.category_label,
+    templateCount: Number(r.template_count || 0),
+    avgListBuyEur: formatMoneyEurFromCents(Math.round(Number(r.avg_list_buy_cents || 0))),
+    avgListRentEur: formatMoneyEurFromCents(Math.round(Number(r.avg_list_rent_cents || 0))),
+    avgSoldEur: formatMoneyEurFromCents(Math.round(Number(r.avg_sold_cents || 0))),
+    avgRentedEur: formatMoneyEurFromCents(Math.round(Number(r.avg_rented_cents || 0))),
+  }));
+}
+
 async function getPlatformStats() {
   const pool = getPool();
 
@@ -500,5 +597,6 @@ module.exports = {
   getMyTemplatesRealizedAvgPrices,
   getMyTemplatesRevenueSeries30d,
   getPlatformStats,
+  getPlatformStatsByCategory,
   getPlatformRealizedAvgPrices,
 };
