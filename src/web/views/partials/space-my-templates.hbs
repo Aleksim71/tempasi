@@ -329,7 +329,7 @@
       {{!-- MVP view switch: 3 subtabs --}}
       <nav class="mt-view-switch" aria-label="Analytics view">
         <a
-          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "overview")}}is-active{{/if}}"
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "overview")}}is-active{{/if}}"
           href="/cabinet/my-templates/analytics?tab=overview"
           {{#if (eq workspaceData.analytics.tab "overview")}}aria-current="page"{{/if}}
         >
@@ -337,7 +337,7 @@
         </a>
 
         <a
-          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "table")}}is-active{{/if}}"
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "table")}}is-active{{/if}}"
           href="/cabinet/my-templates/analytics?tab=table"
           {{#if (eq workspaceData.analytics.tab "table")}}aria-current="page"{{/if}}
         >
@@ -345,7 +345,7 @@
         </a>
 
         <a
-          class="mt-view-btn {{#if (eq workspaceData.analytics.tab "advanced")}}is-active{{/if}}"
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "advanced")}}is-active{{/if}}"
           href="/cabinet/my-templates/analytics?tab=advanced"
           {{#if (eq workspaceData.analytics.tab "advanced")}}aria-current="page"{{/if}}
         >

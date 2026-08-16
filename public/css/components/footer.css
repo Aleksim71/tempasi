@@ -6,11 +6,11 @@
   background: transparent;
 }
 
-/* Теперь footer выравнивается контейнером (.l-container),
-   поэтому у inner НЕТ max-width / padding. */
+/* The footer is now aligned via the container (.l-container),
+   so inner has NO max-width / padding. */
 .site-footer-inner {
   display: grid;
-  grid-template-columns: 1fr auto; /* бренд слева, нав вправо */
+  grid-template-columns: 1fr auto; /* brand on the left, nav on the right */
   gap: 56px;
   align-items: start;
 }
@@ -37,7 +37,7 @@
 
 /* RIGHT (nav columns) */
 .site-footer-nav {
-  justify-self: end; /* важно: прижим к правому краю контейнера */
+  justify-self: end; /* important: pinned to the right edge of the container */
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
@@ -79,7 +79,7 @@
 .site-footer-bottom-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* левый/центр/правый якоря */
+  justify-content: space-between; /* left/center/right anchors */
   gap: 16px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.55);

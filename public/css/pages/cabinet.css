@@ -90,7 +90,7 @@
 
 /* =========================
    Analytics: view switch (Overview / Table / Advanced)
-   “слегка вытянутый по горизонтали чекбоксик”
+   "slightly horizontally stretched checkbox"
 ========================= */
 .mt-view-switch {
   display: inline-flex;
@@ -103,39 +103,10 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.mt-view-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 14px;
-  min-width: 92px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: inherit;
-  opacity: 0.82;
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-
-.mt-view-btn:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.mt-view-btn.is-active {
-  opacity: 1;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
-}
-
 @media (max-width: 520px) {
   .mt-view-switch {
     width: 100%;
     justify-content: space-between;
-  }
-  .mt-view-btn {
-    min-width: 0;
-    flex: 1;
   }
 }
 

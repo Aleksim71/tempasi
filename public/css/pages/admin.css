@@ -1,8 +1,8 @@
 /* public/css/pages/admin.css
-   Стили только для /admin/*. Переиспользует токены core.css
+   Styles only for /admin/*. Reuses tokens from core.css
    (--c-surface, --c-border, --c-success, --c-danger, --s-*, --r-*),
-   header/footer/шрифты берутся общие с публичным сайтом (см. решение
-   в PILGRIM.md: визуал админки полностью как в магазине). */
+   header/footer/fonts are shared with the public site (see the
+   decision in PILGRIM.md: admin visuals fully match the storefront). */
 
 .admin-header__left {
   display: inline-flex;

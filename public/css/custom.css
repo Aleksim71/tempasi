@@ -1,5 +1,5 @@
 /* =========================================================
-   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И БАЗА
+   GLOBAL VARIABLES AND BASE
 ========================================================= */
 :root {
   --text: #ffffff;
@@ -36,7 +36,7 @@ body {
   color: var(--text);
 }
 
-/* ссылки */
+/* links */
 a {
   color: inherit;
   text-decoration: none;
@@ -46,7 +46,7 @@ a:hover {
   text-decoration: none;
 }
 
-/* заголовки */
+/* headings */
 h1,
 h2,
 h3,
@@ -55,13 +55,13 @@ h4 {
   font-weight: 600;
 }
 
-/* базовый muted текст */
+/* base muted text */
 .muted {
   color: var(--text-muted);
   font-size: 14px;
 }
 
-/* кнопки */
+/* buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -96,7 +96,7 @@ h4 {
 }
 
 /* =========================================================
-   ОБЩАЯ СЕТКА СТРАНИЦЫ
+   PAGE-WIDE GRID
 ========================================================= */
 
 .page {
@@ -120,13 +120,13 @@ h4 {
   color: var(--text-muted);
 }
 
-/* шапка и футер в layout main.hbs */
+/* header and footer in layout main.hbs */
 main.page {
   padding-top: 32px;
 }
 
 /* =========================================================
-   ШАПКА TEMPASI
+   TEMPASI HEADER
 ========================================================= */
 
 .site-header {
@@ -228,7 +228,7 @@ main.page {
 }
 
 /* =========================================================
-   ШАБЛОНЫ: СЕТКА + ФИЛЬТРЫ
+   TEMPLATES: GRID + FILTERS
 ========================================================= */
 
 .templates-layout {
@@ -238,7 +238,7 @@ main.page {
   align-items: flex-start;
 }
 
-/* левая колонка фильтров */
+/* left filters column */
 .sidebar {
   position: sticky;
   top: 24px;
@@ -307,7 +307,7 @@ main.page {
     0 16px 40px rgba(30, 64, 175, 0.9);
 }
 
-/* ползунок цены */
+/* price slider */
 .sidebar-range {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -316,7 +316,7 @@ main.page {
   font-size: 13px;
 }
 
-/* правая колонка — карточки шаблонов */
+/* right column — template cards */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -400,7 +400,7 @@ main.page {
   margin-top: 24px;
 }
 
-/* меню профиля слева */
+/* left profile menu */
 .profile-nav {
   display: flex;
   flex-direction: column;
@@ -435,7 +435,7 @@ main.page {
   color: #ffffff;
 }
 
-/* карточки и формы справа */
+/* cards and forms on the right */
 .profile-main {
   max-width: 840px;
 }
@@ -604,7 +604,7 @@ main.page {
 }
 
 /* =========================================================
-   АДАПТИВ
+   RESPONSIVE
 ========================================================= */
 
 @media (max-width: 1100px) {
@@ -692,7 +692,7 @@ main.page {
   border-color: transparent;
 }
 
-/* Правая колонка профиля */
+/* Right profile column */
 
 .profile-main {
   display: flex;
@@ -754,14 +754,14 @@ main.page {
   resize: vertical;
 }
 
-/* Кнопка "Отменить" в стиле вторичной */
+/* "Cancel" button, styled as secondary */
 
 .btn.ghost {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.6);
   color: var(--text-muted);
 }
-/* Profile: убрать старый заголовок и подзаголовок под шапкой (если где-то остались) */
+/* Profile: remove the old heading and subheading under the header (if any remain anywhere) */
 .profile-hero,
 .profile-intro,
 .page-intro.profile,
