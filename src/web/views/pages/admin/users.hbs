@@ -1,6 +1,10 @@
 <div class="admin-users">
   <div class="admin-dashboard__header">
     <h1 class="admin-dashboard__title">Users</h1>
+
+    <div class="admin-view-toggle" aria-label="Users trash">
+      <a href="/admin/users/trash" class="c-btn c-btn--sm">Trash</a>
+    </div>
   </div>
 
   <form class="admin-filters" method="get" action="/admin/users">
@@ -50,6 +54,7 @@
             <th>Sold &middot; rent</th>
             <th>Bought &middot; buy</th>
             <th>Bought &middot; rent</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -64,6 +69,13 @@
               <td>{{this.soldRentCount}}</td>
               <td>{{this.boughtBuyCount}}</td>
               <td>{{this.boughtRentCount}}</td>
+              <td>
+                {{#if (eq this.status "active")}}
+                  <form method="post" action="/admin/users/{{this.id}}/delete" class="admin-delete-user-form" data-confirm-email="{{this.email}}">
+                    <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete</button>
+                  </form>
+                {{/if}}
+              </td>
             </tr>
           {{/each}}
         </tbody>
@@ -88,3 +100,27 @@
     {{/if}}
   </section>
 </div>
+
+<script>
+  (function () {
+    document.addEventListener('submit', async function (e) {
+      var form = e.target;
+      if (!form || !form.classList || !form.classList.contains('admin-delete-user-form')) return;
+      if (form.dataset.confirmed === '1') return;
+      e.preventDefault();
+
+      var email = form.getAttribute('data-confirm-email') || 'this account';
+      var ok = await window.tempasiConfirm({
+        title: 'Delete account?',
+        message:
+          'Delete "' + email + '"? Same as self-deletion — nothing is physically removed, but the account is logged out everywhere, can\'t log back in, and its templates stop showing up publicly. Restore it from Users › Trash if needed.',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+
+      if (!ok) return;
+      form.dataset.confirmed = '1';
+      form.submit();
+    });
+  })();
+</script>

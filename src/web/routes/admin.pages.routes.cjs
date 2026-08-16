@@ -540,6 +540,17 @@ function createAdminPagesRouter() {
     return typeof raw === 'string' && raw.startsWith('/admin/templates') ? raw : '/admin/templates';
   }
 
+  // TEMPASI_ADMIN_USER_DELETE (2026-08-16): same intent as
+  // safeReturnTo() above (only allow redirect targets within this
+  // admin section, to avoid an open-redirect), but scoped to
+  // /admin/users instead — safeReturnTo() itself is hardcoded to
+  // /admin/templates and always falls back there for anything else,
+  // so reusing it here would silently send users-page actions back to
+  // the templates page instead.
+  function safeUsersReturnTo(raw) {
+    return typeof raw === 'string' && raw.startsWith('/admin/users') ? raw : '/admin/users';
+  }
+
   function resolveActorUserId(req) {
     return (
       req?.user?.id ??
@@ -739,6 +750,122 @@ function createAdminPagesRouter() {
         hasNext: filters.page < totalPages,
         prevHref: hrefForPage(Math.max(1, filters.page - 1)),
         nextHref: hrefForPage(Math.min(totalPages, filters.page + 1)),
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // TEMPASI_ACCOUNT_SELF_DELETE (2026-08-16): reverses a self-delete
+  // (or, in principle, any status !== 'active') — clears both
+  // status and self_deleted_at. Doesn't touch seller_templates at
+  // all, since self-delete never wrote to those rows in the first
+  // place; the account's listings simply become visible again the
+  // moment self_deleted_at is cleared (unless individually withdrawn
+  // or admin-blocked, which are separate, untouched flags).
+  router.post('/users/:id/restore', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeUsersReturnTo(req.body?.returnTo);
+    try {
+      if (!Number.isFinite(id) || id <= 0) return res.redirect(302, returnTo);
+
+      await pool.query(
+        `UPDATE users SET status = 'active', self_deleted_at = NULL, updated_at = NOW() WHERE id = $1::bigint`,
+        [id],
+      );
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'user_restore', 'user', $2, '{}'::jsonb)`,
+        [resolveActorUserId(req), String(id)],
+      );
+
+      return res.redirect(302, returnTo);
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // TEMPASI_ADMIN_USER_DELETE (2026-08-16)
+  //
+  // Same soft-delete an account triggers on itself (Cabinet > Profile
+  // & Security > Delete account) — status='deleted' +
+  // self_deleted_at=NOW(), no physical deletion of the user row or
+  // anything referencing it. Also revokes every session for this
+  // user, same as self-delete, so an admin deleting someone actually
+  // logs them out immediately rather than leaving an already-open
+  // session valid until it naturally expires.
+  router.post('/users/:id/delete', express.urlencoded({ extended: false }), async (req, res, next) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const returnTo = safeUsersReturnTo(req.body?.returnTo);
+    try {
+      if (!Number.isFinite(id) || id <= 0) return res.redirect(302, returnTo);
+
+      await pool.query(
+        `UPDATE users SET status = 'deleted', self_deleted_at = NOW(), updated_at = NOW() WHERE id = $1::bigint`,
+        [id],
+      );
+      await pool.query(`DELETE FROM sessions WHERE user_id = $1::bigint`, [id]);
+      await pool.query(
+        `INSERT INTO admin_audit_log (actor_user_id, action, target_type, target_id, meta)
+         VALUES ($1, 'user_delete', 'user', $2, '{}'::jsonb)`,
+        [resolveActorUserId(req), String(id)],
+      );
+
+      return res.redirect(302, returnTo);
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // ---- Users trash (self-deleted or admin-deleted accounts) ----
+  router.get('/users/trash', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const page = parsePage(req.query.page);
+      const pageSize = 25;
+      const offset = (page - 1) * pageSize;
+
+      const countRes = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM users WHERE status = 'deleted'`,
+      );
+      const total = countRes.rows[0]?.n || 0;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+      const { rows } = await pool.query(
+        `
+        SELECT id, email, self_deleted_at
+        FROM users
+        WHERE status = 'deleted'
+        ORDER BY self_deleted_at DESC NULLS LAST, id DESC
+        LIMIT $1 OFFSET $2
+        `,
+        [pageSize, offset],
+      );
+
+      const users = rows.map((r) => ({
+        id: r.id,
+        email: r.email,
+        deletedAtLabel: formatDateYMD(r.self_deleted_at),
+      }));
+
+      const currentHref = `/admin/users/trash?page=${page}`;
+
+      res.render('pages/admin/users-trash', {
+        title: 'Admin \u00b7 Users \u00b7 Trash',
+        bodyClass: 'admin',
+        isAdmin: true,
+        currentPage: 'users',
+        users,
+        total,
+        page,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+        prevHref: `/admin/users/trash?page=${Math.max(1, page - 1)}`,
+        nextHref: `/admin/users/trash?page=${Math.min(totalPages, page + 1)}`,
+        currentHref,
       });
     } catch (err) {
       return next(err);

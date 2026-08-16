@@ -220,6 +220,11 @@ export async function selectTemplatesForCatalogPage(db, filters = {}, pagination
       AND st.owner_withdrawn_at IS NULL
       AND st.admin_blocked_at IS NULL
       AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+      -- TEMPASI_ACCOUNT_SELF_DELETE (2026-08-16): a self-deleted
+      -- seller's templates stop showing up publicly without touching
+      -- a single seller_templates row — single source of truth is
+      -- users.self_deleted_at.
+      AND u.self_deleted_at IS NULL
       AND NOT EXISTS (
         SELECT 1
         FROM orders o
@@ -344,6 +349,7 @@ export async function selectTemplatesForCatalog(db) {
       AND st.owner_withdrawn_at IS NULL
       AND st.admin_blocked_at IS NULL
       AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+      AND u.self_deleted_at IS NULL
       -- Hide templates already bought exclusively.
       AND NOT EXISTS (
         SELECT 1
@@ -427,6 +433,15 @@ export async function getTemplateBySlug(db, slug, options = {}) {
       AND owner_withdrawn_at IS NULL
       AND admin_blocked_at IS NULL
       AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
+      -- TEMPASI_ACCOUNT_SELF_DELETE (2026-08-16): subquery instead of
+      -- a JOIN — this query uses bare (unprefixed) column names
+      -- throughout, so adding a JOIN would mean re-prefixing every
+      -- reference; a subquery keeps the change minimal.
+      AND NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = seller_templates.owner_user_id
+          AND u.self_deleted_at IS NOT NULL
+      )
       -- Direct URL must not bypass exclusive BUY for other users.
       -- The actual BUY owner may still open details.
       AND NOT EXISTS (

@@ -14,6 +14,7 @@ const rentAssignmentsService = require('../../modules/cases/rentAssignments.serv
 const accountCreditsService = require('../../modules/payments/accountCredits.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
+const { clearSessionCookie } = require('../../middlewares/auth.middleware.cjs');
 const CreditLedgerController = require("../../modules/finance/creditLedger.controller.cjs");
 
 function requireAuthPage(req, res, next) {
@@ -1352,6 +1353,41 @@ res.render('pages/cabinet', {
         },
       },
     });
+  });
+
+  router.post('/profile/delete-account', async (req, res, next) => {
+    // TEMPASI_ACCOUNT_SELF_DELETE (2026-08-16)
+    //
+    // No physical deletion — sets status='deleted' + self_deleted_at,
+    // exactly mirroring the login route's existing (previously
+    // dormant) `status !== 'active'` rejection in
+    // auth.pages.routes.js. Every place that lists templates/profiles
+    // publicly additionally checks the owner's self_deleted_at, so
+    // this account's listings disappear without touching a single
+    // seller_templates row. Existing buyers keep their
+    // entitlements/downloads — this doesn't touch orders/entitlements
+    // at all.
+    //
+    // Revokes ALL sessions for this user (same pattern already used
+    // by passwordReset.routes.cjs after a password change), then
+    // clears this browser's own cookie and redirects to /login.
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.redirect(302, '/login');
+
+      const pool = getPool();
+      await pool.query(
+        `UPDATE users SET status = 'deleted', self_deleted_at = NOW(), updated_at = NOW() WHERE id = $1::bigint`,
+        [userId],
+      );
+      await pool.query(`DELETE FROM sessions WHERE user_id = $1::bigint`, [userId]);
+
+      clearSessionCookie(req, res);
+
+      return res.redirect(302, '/login?account=deleted');
+    } catch (err) {
+      return next(err);
+    }
   });
 
   router.get('/support', (req, res) => {

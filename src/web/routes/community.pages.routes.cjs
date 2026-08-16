@@ -66,7 +66,12 @@ function createCommunityPagesRouter() {
       const page = parsePage(req.query.page);
 
       const countRes = await pool.query(
-        `SELECT COUNT(*)::int AS n FROM user_profiles WHERE public_profile = true`,
+        `
+        SELECT COUNT(*)::int AS n
+        FROM user_profiles up
+        JOIN users u ON u.id = up.user_id
+        WHERE up.public_profile = true AND u.self_deleted_at IS NULL
+        `,
       );
       const total = countRes.rows[0]?.n || 0;
       const totalPages = Math.max(1, Math.ceil(total / COMMUNITY_PAGE_SIZE));
@@ -92,7 +97,7 @@ function createCommunityPagesRouter() {
           )::int AS rent_count
         FROM users u
         JOIN user_profiles up ON up.user_id = u.id
-        WHERE up.public_profile = true
+        WHERE up.public_profile = true AND u.self_deleted_at IS NULL
         ORDER BY up.updated_at DESC, u.id DESC
         LIMIT $1 OFFSET $2
         `,
@@ -150,7 +155,7 @@ function createCommunityPagesRouter() {
           up.location
         FROM users u
         JOIN user_profiles up ON up.user_id = u.id
-        WHERE u.id = $1 AND up.public_profile = true
+        WHERE u.id = $1 AND up.public_profile = true AND u.self_deleted_at IS NULL
         LIMIT 1
         `,
         [userId],

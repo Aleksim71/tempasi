@@ -248,7 +248,45 @@
         </form>
       </div>
 
+      <div class="profile-section card">
+        <h2 class="section-title">Delete account</h2>
+        <p class="security-note">
+          Your account, orders, and templates are not physically deleted — they're marked as
+          closed and stop appearing publicly. If you already sold or rented templates, buyers
+          keep their downloads. You will be logged out everywhere and won't be able to log back
+          in. Contact support if you want this undone.
+        </p>
+
+        <form method="post" action="/cabinet/profile/delete-account" id="deleteAccountForm">
+          <button type="submit" class="c-btn c-btn--danger">Delete account</button>
+        </form>
+      </div>
+
     </section>
+
+    <script>
+      (function () {
+        var deleteForm = document.getElementById('deleteAccountForm');
+        if (deleteForm) {
+          deleteForm.addEventListener('submit', async function (e) {
+            if (deleteForm.dataset.confirmed === '1') return;
+            e.preventDefault();
+
+            var ok = await window.tempasiConfirm({
+              title: 'Delete your account?',
+              message:
+                "You'll be logged out everywhere and won't be able to log back in. Your data isn't physically deleted, but it stops appearing publicly.",
+              confirmLabel: 'Delete account',
+              danger: true,
+            });
+
+            if (!ok) return;
+            deleteForm.dataset.confirmed = '1';
+            deleteForm.submit();
+          });
+        }
+      })();
+    </script>
 
     <script>
       (function () {

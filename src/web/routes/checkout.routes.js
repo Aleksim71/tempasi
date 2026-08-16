@@ -69,6 +69,11 @@ async function loadDirectBuyTemplate(db, slug) {
         AND deleted_at IS NULL
         AND owner_withdrawn_at IS NULL
         AND admin_blocked_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = seller_templates.owner_user_id
+            AND u.self_deleted_at IS NOT NULL
+        )
       LIMIT 1
     `,
     [slug],
