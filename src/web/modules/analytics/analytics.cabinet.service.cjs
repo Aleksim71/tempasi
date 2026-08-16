@@ -73,16 +73,61 @@ async function getMyTemplatesKpis({ ownerUserId }) {
 
   const pool = getPool();
 
+  // TEMPASI_ANALYTICS_KPI_FIX (2026-08-16)
+  //
+  // Two real bugs fixed here, found while chasing a "community shows
+  // 9, Overview KPIs show 10" report:
+  //
+  // 1. COUNT(*) FILTER (...) counted JOINED ROWS, not distinct
+  //    templates — the LEFT JOIN to orders fans out one row per
+  //    order, so a template with 2 paid orders (e.g. rented twice)
+  //    got counted twice in every COUNT(*)-based metric below.
+  //    Confirmed with a standalone model before touching the SQL:
+  //    1 template + 2 orders \u2192 old COUNT(*) said 2, should say 1.
+  //    Fixed with COUNT(DISTINCT st.id) everywhere that counts
+  //    templates (the SUM()-based revenue numbers were never affected
+  //    — summing every matching order's amount is correct there,
+  //    duplicates are real separate orders, not join artifacts).
+  //
+  // 2. "active_templates" only checked deleted_at IS NULL — i.e.
+  //    "not soft-deleted", NOT "actually published and currently
+  //    live in the catalog". A sold, withdrawn, admin-blocked, or
+  //    on-hold template still counted as "active" here even though
+  //    the public catalog/community page (templates.repo.js's
+  //    selectTemplatesForCatalogPage, community.pages.routes.cjs)
+  //    already correctly excludes all of those. Added the same
+  //    visibility conditions here so "Active templates" actually
+  //    means "currently live", matching what buyers can see.
+  //
+  // total_templates (new) is the old, broader "not deleted" count,
+  // now correctly distinct-counted — this is what the cabinet page
+  // surfaces as "My templates": everything you own regardless of
+  // status, as opposed to "Active templates" which is now only
+  // what's actually purchasable right now.
   const sql = `
     SELECT
-      COUNT(*) FILTER (WHERE st.deleted_at IS NULL) AS active_templates,
-      COUNT(*) FILTER (
+      COUNT(DISTINCT st.id) FILTER (WHERE st.deleted_at IS NULL) AS total_templates,
+      COUNT(DISTINCT st.id) FILTER (
+        WHERE st.deleted_at IS NULL
+          AND st.status = 'published'
+          AND st.owner_withdrawn_at IS NULL
+          AND st.admin_blocked_at IS NULL
+          AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+          AND NOT EXISTS (
+            SELECT 1
+            FROM orders o2
+            WHERE o2.template_slug = st.slug
+              AND o2.deal_type = 'BUY'
+              AND o2.status = 'paid'
+          )
+      ) AS active_templates,
+      COUNT(DISTINCT st.id) FILTER (
         WHERE EXISTS (
           SELECT 1
-          FROM orders o
-          WHERE o.template_slug = st.slug
-            AND o.deal_type = 'BUY'
-            AND o.status = 'paid'
+          FROM orders o3
+          WHERE o3.template_slug = st.slug
+            AND o3.deal_type = 'BUY'
+            AND o3.status = 'paid'
         )
       ) AS sold_templates,
       COALESCE(SUM(o.amount_cents) FILTER (WHERE o.status = 'paid' AND o.deal_type = 'RENT'), 0) AS rent_revenue_cents,
@@ -100,12 +145,62 @@ async function getMyTemplatesKpis({ ownerUserId }) {
   const totalRevenueCents = Number(r.total_revenue_cents || 0);
 
   return {
+    totalTemplates: Number(r.total_templates || 0),
     activeTemplates: Number(r.active_templates || 0),
     soldTemplates: Number(r.sold_templates || 0),
     rentRevenueCents,
     totalRevenueCents,
     rentRevenueEur: formatMoneyEurFromCents(rentRevenueCents),
     totalRevenueEur: formatMoneyEurFromCents(totalRevenueCents),
+  };
+}
+
+// TEMPASI_MY_TEMPLATES_AVG_PRICES (2026-08-16)
+//
+// Personal-scope counterpart to getPlatformStats()'s avg_buy_cents /
+// avg_rent_cents — same "currently live" visibility rule (published,
+// not deleted, not withdrawn, not admin-blocked, hold expired, not
+// sold), just scoped to this one seller's own templates instead of
+// the whole platform. Deliberately its OWN query, not folded into
+// getMyTemplatesKpis() above — that function's LEFT JOIN to orders
+// fans out one row per order (needed there for the SUM() revenue
+// totals), and averaging price over a fanned-out join would silently
+// skew toward templates with more orders. This query never joins
+// orders directly (only a NOT EXISTS subquery, which doesn't
+// multiply rows), so it's safe from that class of bug by
+// construction.
+async function getMyTemplatesAvgPrices({ ownerUserId }) {
+  if (!ownerUserId) {
+    throw new Error('OWNER_USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+
+  const sql = `
+    SELECT
+      AVG(st.price_buy_cents) AS avg_buy_cents,
+      AVG(st.price_rent_cents) AS avg_rent_cents
+    FROM seller_templates st
+    WHERE st.owner_user_id = $1
+      AND st.status = 'published'
+      AND st.deleted_at IS NULL
+      AND st.owner_withdrawn_at IS NULL
+      AND st.admin_blocked_at IS NULL
+      AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+      AND NOT EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+      )
+  `;
+
+  const { rows } = await pool.query(sql, [ownerUserId]);
+  const r = rows?.[0] || {};
+  const avgBuyCents = Math.round(Number(r.avg_buy_cents || 0));
+  const avgRentCents = Math.round(Number(r.avg_rent_cents || 0));
+
+  return {
+    avgTemplatePriceEur: formatMoneyEurFromCents(avgBuyCents),
+    avgRentPricePerDayEur: formatMoneyEurFromCents(avgRentCents),
   };
 }
 
@@ -153,6 +248,66 @@ async function getMyTemplatesRevenueSeries30d({ ownerUserId }) {
       label: day ? day.slice(5) : '',
     };
   });
+}
+
+// TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16)
+//
+// Platform-wide (not per-seller) market-sizing numbers, shown on the
+// Analytics Overview tab to help a seller price their own templates
+// competitively — same numbers Admin > Dashboard already shows the
+// owner, now also surfaced to sellers on purpose (confirmed with
+// Alex: intentional, no reason found to hide it — helping sellers
+// price against the live market is the whole point of showing it).
+//
+// "Live catalog" here means the exact same visibility rule the public
+// catalog itself uses (templates.repo.js's
+// selectTemplatesForCatalogPage): published, not deleted, not
+// withdrawn, not admin-blocked, hold expired, owner not self-deleted,
+// and not already sold via a paid BUY order. Averages and the total
+// count are all scoped to that same set on purpose — a sold or
+// withdrawn template isn't something a new seller is actually
+// competing against right now.
+async function getPlatformStats() {
+  const pool = getPool();
+
+  const usersSql = `SELECT COUNT(*)::int AS n FROM users WHERE status = 'active'`;
+
+  const templatesSql = `
+    SELECT
+      COUNT(*)::int AS total_templates,
+      AVG(st.price_buy_cents) AS avg_buy_cents,
+      AVG(st.price_rent_cents) AS avg_rent_cents
+    FROM seller_templates st
+    LEFT JOIN users u ON u.id = st.owner_user_id
+    WHERE st.status = 'published'
+      AND st.deleted_at IS NULL
+      AND st.owner_withdrawn_at IS NULL
+      AND st.admin_blocked_at IS NULL
+      AND (st.owner_hold_until IS NULL OR st.owner_hold_until <= NOW())
+      AND u.self_deleted_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM orders o
+        WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+      )
+  `;
+
+  const [usersRes, templatesRes] = await Promise.all([
+    pool.query(usersSql),
+    pool.query(templatesSql),
+  ]);
+
+  const totalUsers = Number(usersRes.rows?.[0]?.n || 0);
+  const t = templatesRes.rows?.[0] || {};
+  const totalTemplates = Number(t.total_templates || 0);
+  const avgBuyCents = Math.round(Number(t.avg_buy_cents || 0));
+  const avgRentCents = Math.round(Number(t.avg_rent_cents || 0));
+
+  return {
+    totalUsers,
+    totalTemplates,
+    avgTemplatePriceEur: formatMoneyEurFromCents(avgBuyCents),
+    avgRentPricePerDayEur: formatMoneyEurFromCents(avgRentCents),
+  };
 }
 
 async function getMyTemplatesAnalytics({ ownerUserId, sort, dir }) {
@@ -236,7 +391,7 @@ async function getCabinetAnalytics({ ownerUserId, months = 6, sort, dir } = {}) 
 
   return {
     summary: {
-      templatesCount: Number(summary.activeTemplates || 0),
+      templatesCount: Number(summary.totalTemplates || 0),
       publishedCount: Number(summary.activeTemplates || 0),
       soldTemplatesCount: Number(summary.soldTemplates || 0),
       buyOrdersCount: topTemplates.reduce((acc, row) => acc + (row.sold_at ? 1 : 0), 0),
@@ -255,5 +410,7 @@ module.exports = {
   getCabinetAnalytics,
   getMyTemplatesAnalytics,
   getMyTemplatesKpis,
+  getMyTemplatesAvgPrices,
   getMyTemplatesRevenueSeries30d,
+  getPlatformStats,
 };

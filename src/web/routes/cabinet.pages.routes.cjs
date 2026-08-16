@@ -718,6 +718,18 @@ res.render('pages/cabinet', {
         tab,
         sort,
         dir,
+        kpis: {
+          myTemplatesCount: 0,
+          activeTemplates: 0,
+          avgTemplatePriceEur: '0.00',
+          avgRentPricePerDayEur: '0.00',
+        },
+        platformStats: {
+          totalUsers: 0,
+          totalTemplates: 0,
+          avgTemplatePriceEur: '0.00',
+          avgRentPricePerDayEur: '0.00',
+        },
         summary: {
           templatesCount: 0,
           publishedCount: 0,
@@ -758,11 +770,43 @@ res.render('pages/cabinet', {
         tab,
         sort,
         dir,
+        kpis: empty.analytics.kpis,
+        platformStats: empty.analytics.platformStats,
         summary: analytics.summary || empty.analytics.summary,
         topTemplates: analytics.topTemplates || [],
         monthlyRevenue: analytics.monthlyRevenue || [],
         columns: empty.analytics.columns,
       };
+
+      // TEMPASI_ANALYTICS_OVERVIEW_KPIS (2026-08-16): the Overview tab
+      // needs a different shape than Table/Advanced (kpis +
+      // platform-wide pricing benchmarks, not the sortable
+      // per-template table). Only fetched for that tab to avoid
+      // extra queries on every Table/Advanced view.
+      //
+      // TEMPASI_OVERVIEW_POLISH (2026-08-16): the 30-day revenue
+      // chart moved out of Overview — it'll live in the Finance
+      // section instead (separate task) — so
+      // getMyTemplatesRevenueSeries30d() is no longer called here.
+      // Sold templates / Rent revenue / Total revenue cards were also
+      // dropped from this tab (still computed by getMyTemplatesKpis()
+      // for whatever else might use them; simply not surfaced here
+      // anymore) in favor of two new personal pricing averages.
+      if (tab === 'overview') {
+        const [kpis, avgPrices, platformStats] = await Promise.all([
+          analyticsService.getMyTemplatesKpis({ ownerUserId }),
+          analyticsService.getMyTemplatesAvgPrices({ ownerUserId }),
+          analyticsService.getPlatformStats(),
+        ]);
+
+        analyticsPayload.kpis = {
+          myTemplatesCount: analytics.summary?.templatesCount ?? 0,
+          activeTemplates: kpis.activeTemplates,
+          avgTemplatePriceEur: avgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: avgPrices.avgRentPricePerDayEur,
+        };
+        analyticsPayload.platformStats = platformStats;
+      }
     } catch (e) {
       workspaceError = e;
     }

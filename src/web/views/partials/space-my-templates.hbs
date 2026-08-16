@@ -324,7 +324,6 @@
   ========================== --}}
   {{#if isMyTemplatesAnalytics}}
     <div class="cabinet__panel">
-      <div class="cabinet__panelTitle">Analytics</div>
 
       {{!-- MVP view switch: 3 subtabs --}}
       <nav class="mt-view-switch" aria-label="Analytics view">
@@ -353,110 +352,55 @@
         </a>
       </nav>
 
-      {{!-- OVERVIEW TAB: KPIs + chart only --}}
+      {{!-- OVERVIEW TAB: personal KPIs + platform-wide market stats.
+           No chart here anymore — the 30-day revenue chart moved to
+           Finance (separate task). --}}
       {{#if (eq workspaceData.analytics.tab "overview")}}
         <div data-analytics-tab="overview">
 
+          <div class="mt-kpis__section-title">My templates</div>
           <div class="mt-kpis">
             <div class="mt-kpi">
-              <div class="mt-kpi__label">Active templates</div>
+              <div class="mt-kpi__label">All</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.myTemplatesCount}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Active</div>
               <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
             </div>
             <div class="mt-kpi">
-              <div class="mt-kpi__label">Sold templates</div>
-              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.soldTemplates}}</div>
+              <div class="mt-kpi__label">Avg. template price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgTemplatePriceEur}}</div>
             </div>
             <div class="mt-kpi">
-              <div class="mt-kpi__label">Rent revenue</div>
-              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.rentRevenueEur}}</div>
-            </div>
-            <div class="mt-kpi">
-              <div class="mt-kpi__label">Total revenue</div>
-              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.totalRevenueEur}}</div>
+              <div class="mt-kpi__label">Avg. rent price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgRentPricePerDayEur}}</div>
             </div>
           </div>
 
-          <div class="mt-chart">
-            <div class="mt-chart__title">Revenue (last 30 days)</div>
-            <canvas id="rev30dChart" width="720" height="220" aria-label="Revenue last 30 days"></canvas>
-            <script type="application/json" id="rev30dData">{{{workspaceData.analytics.revenueSeries30dJson}}}</script>
+          {{!-- TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16): market-wide
+               pricing benchmarks (not this seller's own numbers) — helps
+               with deciding what to charge. Kept in its own labeled row so
+               it doesn't get confused with the personal KPIs above. --}}
+          <div class="mt-kpis__section-title">Market</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total users</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalUsers}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. template price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rent price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgRentPricePerDayEur}}</div>
+            </div>
           </div>
-
-          <script>
-            (function () {
-              const dataEl = document.getElementById('rev30dData');
-              const canvas = document.getElementById('rev30dChart');
-              if (!dataEl || !canvas) return;
-
-              let series = [];
-              try {
-                series = JSON.parse(dataEl.textContent || '[]');
-              } catch (e) {
-                return;
-              }
-
-              const ctx = canvas.getContext('2d');
-              if (!ctx) return;
-
-              const w = canvas.width;
-              const h = canvas.height;
-              const padding = 24;
-
-              ctx.clearRect(0, 0, w, h);
-
-              const values = series.map((d) => Number(d.revenueCents || 0));
-              const max = values.length ? Math.max(...values) : 0;
-
-              // Axes baseline
-              ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-              ctx.beginPath();
-              ctx.moveTo(padding, h - padding);
-              ctx.lineTo(w - padding, h - padding);
-              ctx.stroke();
-
-              if (max === 0) {
-                ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                ctx.font = '12px system-ui, sans-serif';
-                ctx.fillText('No revenue in last 30 days', padding, padding);
-                return;
-              }
-
-              const xStep = (w - padding * 2) / (series.length - 1 || 1);
-              const yScale = (h - padding * 2) / max;
-
-              ctx.strokeStyle = 'rgba(120, 200, 255, 0.9)';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-
-              series.forEach((d, i) => {
-                const x = padding + i * xStep;
-                const y = h - padding - Number(d.revenueCents || 0) * yScale;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-              });
-              ctx.stroke();
-
-              ctx.fillStyle = 'rgba(120, 200, 255, 0.9)';
-              series.forEach((d, i) => {
-                const x = padding + i * xStep;
-                const y = h - padding - Number(d.revenueCents || 0) * yScale;
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, Math.PI * 2);
-                ctx.fill();
-              });
-
-              // X labels (every ~6 points)
-              ctx.fillStyle = 'rgba(255,255,255,0.6)';
-              ctx.font = '10px system-ui, sans-serif';
-              const step = Math.max(1, Math.floor(series.length / 5));
-              series.forEach((d, i) => {
-                if (i % step !== 0 && i !== series.length - 1) return;
-                const x = padding + i * xStep;
-                const label = d.label || '';
-                ctx.fillText(label, x - 8, h - 8);
-              });
-            })();
-          </script>
 
         </div>
       {{/if}}

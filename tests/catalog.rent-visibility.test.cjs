@@ -24,7 +24,7 @@ async function createUser(client, email) {
   const result = await client.query(
     `
     INSERT INTO public.users (email, password_hash, status, created_at, updated_at)
-    VALUES ($1, 'test-hash', 'observer', NOW(), NOW())
+    VALUES ($1, 'test-hash', 'active', NOW(), NOW())
     RETURNING id
     `,
     [email],
