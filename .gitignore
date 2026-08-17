@@ -84,3 +84,4 @@ artifacts/
 .runner-work/
 outbox/
 *.bak_*
+outgoing/
