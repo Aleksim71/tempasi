@@ -15,48 +15,68 @@
   {{!-- OVERVIEW --}}
   {{#if (eq workspaceData.finance.tab "overview")}}
     <div class="finance-panel">
-      <div class="finance-panel__header">
-        <h3 class="finance-panel__title">Overview</h3>
-        <p class="finance-panel__text">Current snapshot of order activity and financial history.</p>
+      <nav class="finance-period-switch" aria-label="Period">
+        {{#each workspaceData.finance.periods}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <div class="finance-summary-grid">
+        <div class="finance-summary-card">
+          <div class="finance-summary-card__title">Buy</div>
+          <div class="finance-kpis finance-kpis--compact">
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Templates sold</div>
+              <div class="finance-kpi__value">{{workspaceData.finance.buyRent.buyCount}}</div>
+            </div>
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Total amount</div>
+              <div class="finance-kpi__value">€{{workspaceData.finance.buyRent.buySumEur}}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finance-summary-card">
+          <div class="finance-summary-card__title">Rent</div>
+          <div class="finance-kpis finance-kpis--compact">
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Rentals</div>
+              <div class="finance-kpi__value">{{workspaceData.finance.buyRent.rentCount}}</div>
+            </div>
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Total amount</div>
+              <div class="finance-kpi__value">€{{workspaceData.finance.buyRent.rentSumEur}}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="finance-kpis">
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Total orders</div>
-          <div class="finance-kpi__value">{{workspaceData.finance.overview.totalOrders}}</div>
+      <div class="finance-summary-card finance-summary-card--balance">
+        <div class="finance-summary-card__title">Balance</div>
+        <div class="finance-kpis finance-kpis--compact">
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">Tempasi credit</div>
+            <div class="finance-kpi__value">€{{workspaceData.finance.overview.creditBalanceEur}}</div>
+            <div class="finance-kpi__hint">Reserved, applied, and released credit movements.</div>
+          </div>
         </div>
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Buy orders</div>
-          <div class="finance-kpi__value">{{workspaceData.finance.overview.buyOrders}}</div>
-        </div>
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Rent orders</div>
-          <div class="finance-kpi__value">{{workspaceData.finance.overview.rentOrders}}</div>
-        </div>
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Own revenue</div>
-          <div class="finance-kpi__value">€{{workspaceData.finance.overview.ownRevenueEur}}</div>
-        </div>
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Procurement activity</div>
-          <div class="finance-kpi__value">€{{workspaceData.finance.overview.procurementEur}}</div>
-        </div>
-        <div class="finance-kpi">
-          <div class="finance-kpi__label">Tempasi credit</div>
-          <div class="finance-kpi__value">€{{workspaceData.finance.overview.creditBalanceEur}}</div>
-          <div class="finance-kpi__hint">Reserved, applied, and released credit movements.</div>
-        </div>
-      </div>
 
-      <div class="finance-credit-ledger-cta card">
-        <div>
-          <h4 class="finance-credit-ledger-cta__title">Credit ledger</h4>
-          <p class="finance-credit-ledger-cta__text">
-            Review Tempasi credit created from unused rent value and follow every checkout reservation,
-            payment application, and release.
-          </p>
+        <div class="finance-credit-ledger-cta card">
+          <div>
+            <h4 class="finance-credit-ledger-cta__title">Credit ledger</h4>
+            <p class="finance-credit-ledger-cta__text">
+              Review Tempasi credit created from unused rent value and follow every checkout reservation,
+              payment application, and release.
+            </p>
+          </div>
+          <a class="button button--primary" href="/cabinet/finance/credit-ledger">Open credit ledger</a>
         </div>
-        <a class="button button--primary" href="/cabinet/finance/credit-ledger">Open credit ledger</a>
       </div>
     </div>
   {{/if}}

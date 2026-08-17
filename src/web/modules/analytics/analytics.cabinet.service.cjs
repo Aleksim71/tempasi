@@ -336,6 +336,75 @@ async function getMyTemplatesRevenueSeries30d({ ownerUserId }) {
   });
 }
 
+// TEMPASI_FINANCE_BUY_RENT_SUMMARY (2026-08-17)
+//
+// Seller-scope BUY/RENT summary for a rolling window (1/7/28 days),
+// used by the Finance > Overview tab. Deliberately its OWN query
+// (not reusing getMyTemplatesKpis()'s LEFT JOIN) for two reasons:
+// 1. It needs a time window (created_at >= NOW() - N days), which
+//    getMyTemplatesKpis() doesn't have.
+// 2. It counts ORDERS (COUNT(o.id), not templates), so the usual
+//    "COUNT(DISTINCT st.id) to avoid LEFT JOIN fan-out" rule doesn't
+//    apply here — every matching order is meant to be counted once,
+//    fan-out per order is correct, not a bug (same reasoning as the
+//    SUM()-based revenue numbers in getMyTemplatesKpis()).
+// make_interval() instead of string-concatenating the interval —
+// days always comes from a whitelisted set (1/7/28) validated by the
+// route before this is called, but make_interval() avoids ever
+// needing to trust a raw string in SQL regardless.
+async function getMyTemplatesBuyRentSummary({ ownerUserId, days }) {
+  if (!ownerUserId) {
+    throw new Error('OWNER_USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+  const windowDays = Number.isFinite(Number(days)) && Number(days) > 0 ? Math.floor(Number(days)) : 28;
+
+  const sql = `
+    SELECT
+      COUNT(o.id) FILTER (
+        WHERE o.deal_type = 'BUY'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ) AS buy_count,
+      COALESCE(SUM(o.amount_cents) FILTER (
+        WHERE o.deal_type = 'BUY'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ), 0) AS buy_cents,
+      COUNT(o.id) FILTER (
+        WHERE o.deal_type = 'RENT'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ) AS rent_count,
+      COALESCE(SUM(o.amount_cents) FILTER (
+        WHERE o.deal_type = 'RENT'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ), 0) AS rent_cents
+    FROM seller_templates st
+    LEFT JOIN orders o
+      ON o.template_slug = st.slug
+    WHERE st.owner_user_id = $1
+  `;
+
+  const { rows } = await pool.query(sql, [ownerUserId, windowDays]);
+  const r = rows && rows[0] ? rows[0] : {};
+
+  const buyCents = Number(r.buy_cents || 0);
+  const rentCents = Number(r.rent_cents || 0);
+
+  return {
+    days: windowDays,
+    buyCount: Number(r.buy_count || 0),
+    buyCents,
+    buySumEur: formatMoneyEurFromCents(buyCents),
+    rentCount: Number(r.rent_count || 0),
+    rentCents,
+    rentSumEur: formatMoneyEurFromCents(rentCents),
+  };
+}
+
 // TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16)
 //
 // Platform-wide (not per-seller) market-sizing numbers, shown on the
@@ -596,6 +665,7 @@ module.exports = {
   getMyTemplatesAvgPrices,
   getMyTemplatesRealizedAvgPrices,
   getMyTemplatesRevenueSeries30d,
+  getMyTemplatesBuyRentSummary,
   getPlatformStats,
   getPlatformStatsByCategory,
   getPlatformRealizedAvgPrices,

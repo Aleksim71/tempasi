@@ -1225,6 +1225,17 @@ res.render('pages/cabinet', {
     const allowedTabs = new Set(['overview', 'orders', 'reports']);
     const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
 
+    // TEMPASI_FINANCE_OVERVIEW_PERIOD (2026-08-17): Overview's BUY/RENT
+    // summary is scoped to a rolling window, picked via ?period=1|7|28
+    // (days). Defaults to 28. Only meaningful for the Overview tab, but
+    // parsed unconditionally to keep this route's existing non-tab-gated
+    // style (it already always computes `orders`/`overview` regardless
+    // of which tab is active).
+    const requestedPeriod = String(req.query.period || '').trim();
+    const allowedPeriods = new Set(['1', '7', '28']);
+    const period = allowedPeriods.has(requestedPeriod) ? requestedPeriod : '28';
+    const periodDays = Number(period);
+
     const pool = getPool();
     let workspaceError = null;
     let overview = {
@@ -1234,6 +1245,12 @@ res.render('pages/cabinet', {
       ownRevenueEur: '0.00',
       procurementEur: '0.00',
       creditBalanceEur: '0.00',
+    };
+    let buyRent = {
+      buyCount: 0,
+      buySumEur: '0.00',
+      rentCount: 0,
+      rentSumEur: '0.00',
     };
     let orders = [];
     let reports = [
@@ -1263,7 +1280,7 @@ res.render('pages/cabinet', {
             o.currency,
             COALESCE(t.title, o.template_slug) AS template_title
           FROM orders o
-          LEFT JOIN templates t
+          LEFT JOIN seller_templates t
             ON t.slug = o.template_slug
           WHERE o.user_id = $1
           ORDER BY o.created_at DESC, o.id DESC
@@ -1305,6 +1322,17 @@ res.render('pages/cabinet', {
 
       const creditBalance = await accountCreditsService.getActiveCreditBalance({ userId });
 
+      const buyRentSummary = await analyticsService.getMyTemplatesBuyRentSummary({
+        ownerUserId: userId,
+        days: periodDays,
+      });
+      buyRent = {
+        buyCount: buyRentSummary.buyCount,
+        buySumEur: buyRentSummary.buySumEur,
+        rentCount: buyRentSummary.rentCount,
+        rentSumEur: buyRentSummary.rentSumEur,
+      };
+
       overview = {
         totalOrders: buyCount + rentCount,
         buyOrders: buyCount,
@@ -1343,6 +1371,13 @@ res.render('pages/cabinet', {
             { key: 'orders', label: 'Orders', href: '/cabinet/finance?tab=orders', isActive: tab === 'orders' },
             { key: 'reports', label: 'Reports', href: '/cabinet/finance?tab=reports', isActive: tab === 'reports' },
           ],
+          period,
+          periods: [
+            { key: '1', label: '1 day', href: '/cabinet/finance?tab=overview&period=1', isActive: period === '1' },
+            { key: '7', label: '7 days', href: '/cabinet/finance?tab=overview&period=7', isActive: period === '7' },
+            { key: '28', label: '28 days', href: '/cabinet/finance?tab=overview&period=28', isActive: period === '28' },
+          ],
+          buyRent,
           overview,
           orders,
           reports,

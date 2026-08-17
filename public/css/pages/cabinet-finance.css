@@ -56,6 +56,53 @@
   font-weight: 600;
 }
 
+/* Step 5V — Finance Overview: period switch + BUY/RENT/Balance sections */
+
+.finance-period-switch {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.finance-summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.finance-summary-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.finance-summary-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 12px;
+}
+
+.finance-kpis--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.finance-summary-card--balance .finance-kpis--compact {
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 14px;
+}
+
+@media (max-width: 620px) {
+  .finance-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .finance-filters {
   display: grid;
   gap: 14px;
