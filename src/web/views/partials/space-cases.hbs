@@ -445,28 +445,33 @@
   {{!-- ANALYTICS --}}
   {{#if (eq workspaceData.cases.tab "analytics")}}
     <div class="cases-panel">
-      <div class="cases-panel__header">
-        <h3 class="cases-panel__title">Analytics</h3>
-        <p class="cases-panel__text">Current state and later time-based case/rent analytics.</p>
-      </div>
-
+      {{!-- TEMPASI_CASES_MARKET_ANALYTICS (2026-08-17): same
+           My-vs-Market pattern as My Templates -> Analytics ->
+           Overview. Non-empty case = at least one active paid RENT
+           template assignment (see computeCaseMarketMetrics in
+           cabinet.pages.routes.cjs). --}}
+      <div class="mt-kpis__section-title">My cases</div>
       <div class="cases-kpis">
         <div class="cases-kpi">
-          <div class="cases-kpi__label">Active cases</div>
-          <div class="cases-kpi__value">{{workspaceData.cases.analytics.activeCases}}</div>
+          <div class="cases-kpi__label">Avg. templates per non-empty case</div>
+          <div class="cases-kpi__value">{{workspaceData.cases.analytics.myCases.avgTemplates}}</div>
         </div>
         <div class="cases-kpi">
-          <div class="cases-kpi__label">Held templates</div>
-          <div class="cases-kpi__value">{{workspaceData.cases.analytics.heldTemplates}}</div>
-        </div>
-        <div class="cases-kpi">
-          <div class="cases-kpi__label">Active rent cost</div>
-          <div class="cases-kpi__value">€{{workspaceData.cases.analytics.activeRentCostEur}}</div>
+          <div class="cases-kpi__label">Avg. rent cost per case</div>
+          <div class="cases-kpi__value">€{{workspaceData.cases.analytics.myCases.avgRentCostEur}}</div>
         </div>
       </div>
 
-      <div class="cases-placeholder">
-        Deeper analytics for periods, case efficiency, and rent dynamics will be added in the next pass.
+      <div class="mt-kpis__section-title">Market cases</div>
+      <div class="cases-kpis">
+        <div class="cases-kpi">
+          <div class="cases-kpi__label">Avg. templates per non-empty case</div>
+          <div class="cases-kpi__value">{{workspaceData.cases.analytics.marketCases.avgTemplates}}</div>
+        </div>
+        <div class="cases-kpi">
+          <div class="cases-kpi__label">Avg. rent cost per case</div>
+          <div class="cases-kpi__value">€{{workspaceData.cases.analytics.marketCases.avgRentCostEur}}</div>
+        </div>
       </div>
     </div>
   {{/if}}

@@ -872,6 +872,8 @@ res.render('pages/cabinet', {
       activeCases: 2,
       heldTemplates: 0,
       activeRentCostEur: '0.00',
+      myCases: { avgTemplates: '0.0', avgRentCostEur: '0.00', nonEmptyCaseCount: 0 },
+      marketCases: { avgTemplates: '0.0', avgRentCostEur: '0.00', nonEmptyCaseCount: 0 },
     };
 
     try {
@@ -957,10 +959,17 @@ res.render('pages/cabinet', {
         }));
       }
 
+      const caseMarketMetrics = await computeCaseMarketMetrics(
+        pool,
+        caseItems.map((item) => item.id),
+      );
+
       analytics = {
         activeCases: caseItems.length,
         heldTemplates: rents.length,
         activeRentCostEur: formatMoneyEurFromCents(activeRentCostCents),
+        myCases: caseMarketMetrics.myCases,
+        marketCases: caseMarketMetrics.marketCases,
       };
     } catch (e) {
       workspaceError = e;
@@ -1654,6 +1663,84 @@ function normalizeCaseTemplateRow(row) {
   };
 }
 
+
+function formatAvgNumber(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0.0';
+  return n.toFixed(1);
+}
+
+// TEMPASI_CASES_MARKET_ANALYTICS (2026-08-17)
+// "Non-empty case" here counts BOTH BUY and RENT assignments (per
+// product request — earlier metrics in this file, like the Rents tab,
+// only ever considered RENT since that's the only deal type that
+// currently produces order_case_assignments rows in practice; this
+// query intentionally doesn't restrict to RENT, so it keeps working
+// unchanged if BUY-into-case assignment is ever added later).
+// Avoids needing to know cases' owner column name (it varies —
+// owner_user_id vs user_id, see cases.repo.cjs#getCasesSchema) by
+// filtering "my cases" through the case IDs the route already loaded
+// via casesService.getOwnerCases(), rather than re-deriving ownership
+// here.
+async function computeCaseMarketMetrics(pool, myCaseIds) {
+  // TEMPASI_CASES_MARKET_ANALYTICS (2026-08-17)
+  // Non-empty case = at least one active, paid RENT template
+  // assignment — matches the same definition already used by
+  // listCaseTemplates() and the Rents tab (RENT + paid + entitlement
+  // not closed/expired). BUY was considered in an earlier draft of
+  // this metric and explicitly walked back — kept scoped to RENT only,
+  // matching every other "what's in this case" query in the codebase.
+  const metricsSql = `
+    WITH case_metrics AS (
+      SELECT
+        c.id AS case_id,
+        COUNT(DISTINCT oca.order_id) AS template_count,
+        COALESCE(SUM(COALESCE(st.price_rent_cents, 0)), 0) AS rent_cost_cents
+      FROM public.cases c
+      JOIN public.order_case_assignments oca ON oca.case_id::text = c.id::text
+      JOIN public.orders o ON o.id = oca.order_id
+      JOIN public.entitlements e ON e.order_id = o.id
+      LEFT JOIN public.seller_templates st ON st.slug = o.template_slug
+      WHERE UPPER(COALESCE(o.deal_type, '')) = 'RENT'
+        AND LOWER(COALESCE(o.status, '')) = 'paid'
+        AND e.closed_at IS NULL
+        AND (e.ends_at IS NULL OR e.ends_at > NOW())
+      GROUP BY c.id
+      HAVING COUNT(DISTINCT oca.order_id) > 0
+    )
+    SELECT
+      COALESCE(AVG(template_count), 0) AS avg_templates,
+      COALESCE(AVG(rent_cost_cents), 0) AS avg_rent_cost_cents,
+      COUNT(*)::int AS nonempty_case_count
+    FROM case_metrics
+  `;
+
+  const [marketResult, myResult] = await Promise.all([
+    pool.query(metricsSql),
+    myCaseIds.length > 0
+      ? pool.query(
+          `${metricsSql.replace('FROM case_metrics', 'FROM case_metrics WHERE case_id::text = ANY($1::text[])')}`,
+          [myCaseIds.map(String)],
+        )
+      : Promise.resolve({ rows: [{ avg_templates: 0, avg_rent_cost_cents: 0, nonempty_case_count: 0 }] }),
+  ]);
+
+  const marketRow = marketResult.rows[0] || {};
+  const myRow = myResult.rows[0] || {};
+
+  return {
+    myCases: {
+      avgTemplates: formatAvgNumber(myRow.avg_templates),
+      avgRentCostEur: formatMoneyEurFromCents(myRow.avg_rent_cost_cents),
+      nonEmptyCaseCount: Number(myRow.nonempty_case_count || 0),
+    },
+    marketCases: {
+      avgTemplates: formatAvgNumber(marketRow.avg_templates),
+      avgRentCostEur: formatMoneyEurFromCents(marketRow.avg_rent_cost_cents),
+      nonEmptyCaseCount: Number(marketRow.nonempty_case_count || 0),
+    },
+  };
+}
 
 function normalizeCaseRentRow(row) {
   const source = String(row.source || row.hold_source || row.reservation_source || 'rent').toLowerCase();
