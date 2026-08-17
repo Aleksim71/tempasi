@@ -904,7 +904,6 @@ res.render('pages/cabinet', {
             o.amount_cents,
             o.currency,
             COALESCE(st.title, e.template_slug) AS template_title,
-            st.price_rent_cents,
             COUNT(oca.case_id)::int AS cases_count
           FROM public.entitlements e
           LEFT JOIN public.orders o
@@ -917,7 +916,7 @@ res.render('pages/cabinet', {
             AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
             AND e.closed_at IS NULL
             AND (e.ends_at IS NULL OR e.ends_at > NOW())
-          GROUP BY e.id, o.id, st.title, st.price_rent_cents
+          GROUP BY e.id, o.id, st.title
           ORDER BY e.ends_at ASC NULLS LAST, e.created_at DESC, e.id DESC
         `,
         [userId],
@@ -938,14 +937,6 @@ res.render('pages/cabinet', {
         const availableCases = caseItems
           .filter((item) => !assignedSet.has(String(item.id)))
           .map((item) => ({ id: item.id, title: item.title }));
-
-        // TEMPASI_RENTS_TAB_REAL_PRICE (2026-08-17)
-        // row.price_rent_cents (the template's actual per-day rate,
-        // now selected above) is what "Rent cost: €X / 24h" and
-        // "Active rent cost" are meant to show. Before this fix
-        // neither was ever added up here, so both always rendered
-        // €0.00 regardless of the template's real price.
-        activeRentCostCents += Number(row.price_rent_cents || 0);
 
         rents.push(normalizeCaseRentRow({
           ...row,
@@ -1668,18 +1659,13 @@ function normalizeCaseRentRow(row) {
     row.hold_until ||
     null;
 
-  // TEMPASI_RENTS_TAB_REAL_PRICE (2026-08-17)
-  // Previously looked for active_rent_price_eur/daily_rent_price_eur/
-  // rent_price_eur/price_eur/rentPriceEur — none of which the SQL
-  // query above (or anything else) ever actually produced, so this
-  // always fell through to the `|| 0` default and rendered €0.00
-  // regardless of the template's real rent price. The real column is
-  // seller_templates.price_rent_cents (now selected in the query),
-  // in cents, not euros — formatMoneyEurFromCents() handles the
-  // conversion, matching how every other €-per-day price in this
-  // codebase (catalog cards, template details, case template cards)
-  // is derived from the same column.
-  const dailyRentPriceCents = Number(row.price_rent_cents ?? row.priceRentCents ?? 0);
+  const priceRaw =
+    row.active_rent_price_eur ||
+    row.daily_rent_price_eur ||
+    row.rent_price_eur ||
+    row.price_eur ||
+    row.rentPriceEur ||
+    0;
 
   return {
     ...row,
@@ -1700,8 +1686,8 @@ function normalizeCaseRentRow(row) {
     rentExpiresAt: expiresAt,
     expiresAtLabel: formatCaseRentDateTime(expiresAt),
     timeLeftLabel: formatCaseRentTimeLeft(expiresAt),
-    dailyRentPriceEur: formatMoneyEurFromCents(dailyRentPriceCents),
-    priceEur: dailyRentPriceCents / 100,
+    dailyRentPriceEur: formatCaseRentMoneyEur(priceRaw),
+    priceEur: Number(priceRaw || 0),
     isActiveRent,
   };
 }

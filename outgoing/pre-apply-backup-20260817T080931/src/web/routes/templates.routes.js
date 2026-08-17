@@ -74,9 +74,7 @@ const BUY_ERROR_MESSAGES = {
 };
 
 function pickBuyErrorMessage(req) {
-  const code = String(req.query?.buy_error || '')
-    .trim()
-    .toUpperCase();
+  const code = String(req.query?.buy_error || '').trim().toUpperCase();
   return BUY_ERROR_MESSAGES[code] || null;
 }
 
@@ -669,21 +667,7 @@ export function createTemplatesRouter() {
         checked: filters.cats.includes(opt.slug),
       }));
 
-      // TEMPASI_CATALOG_RENT_MODAL_CASE_PRESELECT (2026-08-16)
-      // template-details.hbs's rent form already pre-checks the case
-      // matching ?caseId=... (see templateDetailsCases.map below in
-      // this file) — this route (the catalog grid + its shared Rent
-      // modal) called the same loadUserCasesForTemplateDetails() but
-      // never added the isSelected flag, so arriving here via a case's
-      // "Add templates" link (?caseId=X) never pre-checked that case
-      // in the modal. Submitting without manually ticking a box then
-      // gets rejected by /cart/add's case_required check — which,
-      // before the buy_error/cart alert fix, was a silent redirect
-      // that looked exactly like "nothing happened".
-      const userCases = (await loadUserCasesForTemplateDetails(db, listingUserId)).map((item) => ({
-        ...item,
-        isSelected: Boolean(selectedCaseId) && String(item.id) === String(selectedCaseId),
-      }));
+      const userCases = await loadUserCasesForTemplateDetails(db, listingUserId);
       const pagination = buildCatalogPagination(filters, result);
 
       res.render('pages/templates/index', {

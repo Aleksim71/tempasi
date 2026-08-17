@@ -221,14 +221,6 @@ export function createWebApp({ db }) {
   // Template card v2
   const pTemplateCardV2 = path.join(partialsRoot, 'template-card.v2.hbs');
 
-  // TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16): registerPartials()'s default
-  // rename() replaces every "-" with "_" (confirmed empirically — the
-  // auto-scan above registers this file as "page_alert", not
-  // "page-alert"), so — same as template-card.v2/site-header/icon-* below
-  // — it needs an explicit re-registration under its real hyphenated
-  // name for {{> page-alert}} in the views to resolve.
-  const pPageAlert = path.join(partialsRoot, 'page-alert.hbs');
-
   // --- Cabinet space partials (with fallback to old root-level files) ---
   // New preferred location:
   //   partials/cabinet/space-*.hbs
@@ -272,7 +264,6 @@ export function createWebApp({ db }) {
   const iconLogout = safeRead(pIconLogout);
 
   const templateCardV2 = safeRead(pTemplateCardV2);
-  const pageAlert = safeRead(pPageAlert);
 
   // sprite (both names supported)
   if (iconsDash) registerPartialSafe('icons-sprite', iconsDash);
@@ -297,9 +288,6 @@ export function createWebApp({ db }) {
 
   // v2 partial name (with dot)
   registerPartialSafe('template-card.v2', templateCardV2);
-
-  // TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16)
-  registerPartialSafe('page-alert', pageAlert);
 
   // ✅ Cabinet partial aliases (REGISTER BOTH styles)
   // cases

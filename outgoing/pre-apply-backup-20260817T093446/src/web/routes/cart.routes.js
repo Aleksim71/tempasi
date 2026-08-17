@@ -152,13 +152,9 @@ function formatDateYMD(value) {
 // removed from the cart, reported as "already sold", not a hard
 // failure for the rest of the batch.
 async function checkoutAllCartItems(req, db, userId) {
-  // TEMPASI_CHECKOUT_ALL_RENT_SUPPORT (2026-08-16)
-  // case_ids added to the SELECT so RENT items can be processed below
-  // (previously only needed by demoCompleteCartCheckout()'s own copy
-  // of this query further down this file).
   const { rows: items } = await db.query(
     `
-      SELECT ci.id, ci.template_slug, ci.deal_type, ci.license, ci.case_ids
+      SELECT ci.id, ci.template_slug, ci.deal_type, ci.license
       FROM cart_items ci
       WHERE ci.user_id = $1
       ORDER BY ci.created_at ASC, ci.id ASC
@@ -172,17 +168,14 @@ async function checkoutAllCartItems(req, db, userId) {
   const failed = [];
 
   for (const item of items) {
-    const dealType = String(item.deal_type || '').toUpperCase();
-
-    if (dealType !== 'BUY' && dealType !== 'RENT') {
+    if (String(item.deal_type || '').toUpperCase() !== 'BUY') {
       skippedRent.push(item.template_slug);
       continue;
     }
 
     try {
-      const priceColumn = dealType === 'RENT' ? 'price_rent_cents' : 'price_buy_cents';
       const { rows: tplRows } = await db.query(
-        `SELECT title, ${priceColumn} AS price_cents FROM seller_templates WHERE slug = $1 AND status = 'published' LIMIT 1`,
+        `SELECT title, price_buy_cents FROM seller_templates WHERE slug = $1 AND status = 'published' LIMIT 1`,
         [item.template_slug],
       );
       const tpl = tplRows[0];
@@ -191,26 +184,12 @@ async function checkoutAllCartItems(req, db, userId) {
         continue;
       }
 
-      // TEMPASI_CHECKOUT_ALL_RENT_SUPPORT (2026-08-16)
-      // RENT items used to be filtered out above before reaching this
-      // point at all ("RENT items are not yet supported by bulk
-      // checkout"). createOrderCheckout()/createPendingOrder() already
-      // fully validate+support RENT (rentDays, caseIds, case
-      // ownership — same checks the single-item /:templateSlug/buy
-      // route already relies on), so this only needed to stop
-      // skipping RENT and build the matching payload — the
-      // order_case_assignments row itself is now created inside the
-      // canonical completePaidOrder() (see paymentCompletion.service.cjs),
-      // not duplicated here.
-      const rentDays = dealType === 'RENT' ? parseRentDaysFromLicense(item.license) : null;
-      const caseIds = dealType === 'RENT' ? normalizeCaseIdsFromCart(item.case_ids) : [];
-
       const result = await OrdersService.createOrderCheckout(req, {
         userId,
         templateSlug: item.template_slug,
         payload: {
-          dealType,
-          deal_type: dealType,
+          dealType: 'BUY',
+          deal_type: 'BUY',
           // TEMPASI_LICENSE_FIX (2026-08-14): cart_items.license for a
           // BUY item currently holds 'BUY' (from the catalog's Buy
           // button hidden field — a pre-existing mismatch, that value
@@ -226,12 +205,7 @@ async function checkoutAllCartItems(req, db, userId) {
           // cart_items.license.
           license: 'PU',
           currency: 'EUR',
-          amountCents:
-            dealType === 'RENT'
-              ? Number(tpl.price_cents || 0) * Number(rentDays || 1)
-              : Number(tpl.price_cents || 0),
-          rentDays,
-          caseIds,
+          amountCents: Number(tpl.price_buy_cents || 0),
         },
       });
 

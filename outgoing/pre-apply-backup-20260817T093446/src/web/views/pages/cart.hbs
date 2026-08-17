@@ -72,17 +72,16 @@
               <button type="submit" class="btn primary">Checkout</button>
             </form>
             <div class="cart-summary__hint">
-              Runs the real purchase pipeline for every item in your cart — BUY and RENT alike
-              (exclusivity check, payment completion, download link / Case assignment) — same code
-              path a real payment webhook would use.
+              Runs the real purchase pipeline for every BUY item in your cart (exclusivity check, payment
+              completion, download link) — same code path a real payment webhook would use. RENT items must
+              still be checked out individually for now.
             </div>
 
             <form method="post" action="/cart/demo-checkout" class="cart-summary__checkout" style="margin-top: 8px;">
-              <button type="submit" class="btn">Demo Checkout (legacy, no confirmation)</button>
+              <button type="submit" class="btn">Complete demo checkout (legacy, no confirmation)</button>
             </form>
             <div class="cart-summary__hint">
-              Instantly marks the current cart as paid, skipping the exclusivity check above —
-              dev/testing convenience only, available outside production.
+              Demo checkout marks the current cart as paid and is available only outside production.
             </div>
           </div>
         </div>

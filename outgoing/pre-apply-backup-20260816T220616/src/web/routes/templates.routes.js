@@ -40,54 +40,6 @@ function pickCartErrorMessage(req) {
   return CART_ERROR_MESSAGES[code] || null;
 }
 
-// TEMPASI_BUY_ERROR_MESSAGES (2026-08-16)
-// /checkout/direct/buy/:slug/pay (checkout.routes.js) and
-// /:templateSlug/buy (orders.routes.cjs) both redirect back to
-// /templates with ?buy_error=CODE on failure (already sold, reserved,
-// license mismatch, checkout session creation failed, etc.) — same
-// silent-redirect problem CART_ERROR_MESSAGES fixed for ?cart=CODE.
-// Kept as a separate dictionary from CART_ERROR_MESSAGES on purpose:
-// same underlying template-state (sold/reserved) can read differently
-// depending on which flow (cart vs. direct buy) surfaces it, and the
-// two dictionaries are allowed to diverge in wording over time.
-// Codes here are looked up UPPER_SNAKE_CASE (see pickBuyErrorMessage below)
-// to match the err.code convention used throughout orders.service.cjs
-// — unlike CART_ERROR_MESSAGES, whose codes are lower_snake_case
-// literals hardcoded directly in cart.routes.js.
-const BUY_ERROR_MESSAGES = {
-  INVALID_LICENSE: 'Invalid license selection.',
-  RENT_DAYS_REQUIRED: 'Choose how many days you want to rent for.',
-  RENT_DAYS_INVALID: 'Rental period must be between 1 and 365 days.',
-  RENT_CASE_IDS_REQUIRED: 'Select at least one client case for this rent.',
-  RENT_CASE_NOT_OWNED: "That case doesn't belong to you.",
-  USER_ID_REQUIRED: 'Please log in to continue.',
-  TEMPLATE_SLUG_REQUIRED: 'Missing template.',
-  TEMPLATE_NOT_FOUND: 'This template could not be found.',
-  TEMPLATE_ALREADY_SOLD: 'This template has already been sold and is no longer available.',
-  TEMPLATE_RENT_RESERVED: 'This template is currently reserved for another active rental.',
-  ZERO_PAY_COMPLETION_SERVICE_UNAVAILABLE:
-    'Checkout is temporarily unavailable. Please try again shortly.',
-  CHECKOUT_SESSION_CREATE_FAILED: 'Could not start checkout. Please try again.',
-  BAD_REQUEST: 'Something went wrong with that request.',
-  BUY_FAILED: 'Purchase could not be completed. Please try again.',
-  DIRECT_BUY_FAILED: 'Purchase could not be completed. Please try again.',
-};
-
-function pickBuyErrorMessage(req) {
-  const code = String(req.query?.buy_error || '')
-    .trim()
-    .toUpperCase();
-  return BUY_ERROR_MESSAGES[code] || null;
-}
-
-// TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16)
-// Single combined flag consumed by partials/page-alert.hbs so the
-// template doesn't need to know which query param (cart vs buy_error)
-// produced it. cart takes priority if somehow both were present.
-function pickPageAlertMessage(req) {
-  return pickCartErrorMessage(req) || pickBuyErrorMessage(req);
-}
-
 // TEMPASI_CATALOG_CATEGORIES_FROM_DB (2026-07-21, corrected 2026-07-22)
 // Was a hardcoded 10-item list duplicated here; categories are now
 // admin-managed (Settings > Catalog, catalog_categories table).
@@ -669,21 +621,7 @@ export function createTemplatesRouter() {
         checked: filters.cats.includes(opt.slug),
       }));
 
-      // TEMPASI_CATALOG_RENT_MODAL_CASE_PRESELECT (2026-08-16)
-      // template-details.hbs's rent form already pre-checks the case
-      // matching ?caseId=... (see templateDetailsCases.map below in
-      // this file) — this route (the catalog grid + its shared Rent
-      // modal) called the same loadUserCasesForTemplateDetails() but
-      // never added the isSelected flag, so arriving here via a case's
-      // "Add templates" link (?caseId=X) never pre-checked that case
-      // in the modal. Submitting without manually ticking a box then
-      // gets rejected by /cart/add's case_required check — which,
-      // before the buy_error/cart alert fix, was a silent redirect
-      // that looked exactly like "nothing happened".
-      const userCases = (await loadUserCasesForTemplateDetails(db, listingUserId)).map((item) => ({
-        ...item,
-        isSelected: Boolean(selectedCaseId) && String(item.id) === String(selectedCaseId),
-      }));
+      const userCases = await loadUserCasesForTemplateDetails(db, listingUserId);
       const pagination = buildCatalogPagination(filters, result);
 
       res.render('pages/templates/index', {
@@ -699,7 +637,7 @@ export function createTemplatesRouter() {
         selectedCaseParam,
         query: filters,
         pagination,
-        pageAlertMessage: pickPageAlertMessage(req),
+        cartErrorMessage: pickCartErrorMessage(req),
       });
     } catch (err) {
       // ✅ Hard fail-safe: never 500 for catalog
@@ -727,7 +665,7 @@ export function createTemplatesRouter() {
           selectedCaseParam,
           query: filters,
           pagination: buildCatalogPagination(filters, emptyResult),
-          pageAlertMessage: pickPageAlertMessage(req),
+          cartErrorMessage: pickCartErrorMessage(req),
         });
       } catch (e2) {
         return next(e2);
@@ -928,7 +866,7 @@ export function createTemplatesRouter() {
         selectedCaseParam: selectedCaseId ? `caseId=${encodeURIComponent(selectedCaseId)}` : '',
         isAuthenticated: Boolean(templateDetailsUserId),
         isOwner: Boolean(template.isOwner),
-        pageAlertMessage: pickPageAlertMessage(req),
+        cartErrorMessage: pickCartErrorMessage(req),
       });
     } catch (err) {
       return next(err);

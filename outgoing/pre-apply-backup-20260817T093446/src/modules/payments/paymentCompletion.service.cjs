@@ -32,71 +32,6 @@ async function query(sql, params = []) {
   throw new Error('DB_QUERY_NOT_AVAILABLE');
 }
 
-// TEMPASI_CANONICAL_ORDER_CASE_ASSIGNMENT (2026-08-16)
-// order.case_ids (jsonb, populated at order-creation time for RENT —
-// see orders.service.cjs createPendingOrder) previously never turned
-// into public.order_case_assignments rows anywhere in this canonical
-// completion path. Only two non-canonical shortcuts did that insert:
-// cart.checkout-pass.service.js (at checkout-SESSION-creation time,
-// i.e. before payment) and cart.routes.js's demoCompleteCartCheckout
-// (its own from-scratch reimplementation). Neither is the code every
-// RENT completion — including a real future payment-provider webhook —
-// is meant to funnel through. Adding it here, once, at the single
-// canonical "this order is now paid" point, fixes every current and
-// future entry point at once instead of adding a fourth copy of the
-// same insert.
-function normalizeCaseIdsFromOrder(input) {
-  if (!input) return [];
-  const raw = Array.isArray(input)
-    ? input
-    : (() => {
-        if (typeof input === 'string') {
-          try {
-            return JSON.parse(input);
-          } catch (_) {
-            return input.split(',');
-          }
-        }
-        return [];
-      })();
-
-  if (!Array.isArray(raw)) return [];
-  return [...new Set(raw.map((id) => String(id || '').trim()).filter(Boolean))];
-}
-
-async function assignPaidRentOrderToCases(paidOrder) {
-  if (String(paidOrder.deal_type || '').toUpperCase() !== 'RENT') return [];
-
-  const caseIds = normalizeCaseIdsFromOrder(paidOrder.case_ids);
-  if (caseIds.length === 0) return [];
-
-  const assigned = [];
-  for (const caseId of caseIds) {
-    try {
-      await query(
-        `
-          INSERT INTO public.order_case_assignments(order_id, case_id)
-          VALUES ($1, $2)
-          ON CONFLICT DO NOTHING
-        `,
-        [paidOrder.id, caseId],
-      );
-      assigned.push(caseId);
-    } catch (e) {
-      // TEMPASI_ORDER_CASE_ASSIGNMENTS_TABLE_MISSING (2026-08-16):
-      // some minimal test/dev DBs (see tests/helpers) don't create
-      // this table at all. Don't let that crash payment completion —
-      // undefined_table (42P01) is the one error we deliberately
-      // swallow here; anything else (constraint violation, connection
-      // failure, etc.) is a real problem and must still surface.
-      if (e && e.code === '42P01') continue;
-      throw e;
-    }
-  }
-
-  return assigned;
-}
-
 async function findOrder({ orderId, providerSessionId }) {
   if (orderId) {
     const result = await query(
@@ -203,15 +138,12 @@ async function completePaidOrder(input = {}) {
 
   const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidOrder);
 
-  const assignedCaseIds = await assignPaidRentOrderToCases(paidOrder);
-
   return {
     order: paidOrder,
     entitlement,
     closedRentEntitlements,
     createdCredits,
     appliedCredits,
-    assignedCaseIds,
   };
 }
 

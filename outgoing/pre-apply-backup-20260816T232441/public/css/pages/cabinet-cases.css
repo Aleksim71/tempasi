@@ -1212,23 +1212,6 @@
   display: none !important;
 }
 
-/* TEMPASI_PUBLIC_PREVIEW_EMPTY_STATE_COMPACT (2026-08-16)
-   The full-bleed width/padding reset above is intentional for the
-   carousel (immersive client presentation), but .cases-empty (shown
-   instead of the carousel when the case has no active rented
-   templates, or when the preview token/case is invalid) inherited
-   that same 100%-width container with nothing constraining its own
-   width, so it rendered as a banner stretched across the whole
-   browser instead of a compact centered notice. Sized/centered to
-   match .standalone-page__panel (same treatment as the 404 page) for
-   visual consistency across the site's "nothing here" states. */
-.case-public-preview .cases-empty {
-  max-width: 640px;
-  margin: 40px auto;
-  padding: 32px;
-  border-radius: 16px;
-}
-
 .case-public-preview .case-client-carousel {
   min-height: calc(100vh - 120px) !important;
 }

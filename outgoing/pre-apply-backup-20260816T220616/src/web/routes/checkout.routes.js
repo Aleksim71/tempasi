@@ -175,7 +175,7 @@ router.post('/direct/buy/:slug/pay', async (req, res, next) => {
     if (!db || typeof db.query !== 'function') throw new Error('DB_NOT_CONFIGURED');
 
     const tpl = await loadDirectBuyTemplate(db, slug);
-    if (!tpl) return res.redirect(303, '/templates?buy_error=TEMPLATE_NOT_FOUND');
+    if (!tpl) return res.redirect(303, '/templates?buy_error=template_not_found');
 
     const result = await ordersService.createOrderCheckout(req, {
       userId,

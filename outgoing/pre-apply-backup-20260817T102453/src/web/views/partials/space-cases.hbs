@@ -27,12 +27,8 @@
               </div>
               <div class="cases-card__actions">
                 <a class="button tp-control tp-tab tp-tab--sub" href="/cabinet/cases/{{id}}">View</a>
-{{#if templatesCount}}
-                  {{#if publicPreviewUrl}}
+{{#if publicPreviewUrl}}
                   <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="{{publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
-                  {{/if}}
-                {{else}}
-                  <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/cabinet/cases/{{id}}/preview">Client preview</a>
                 {{/if}}
                 <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/templates?caseId={{id}}">Add templates</a>
                 <form method="post" action="/cabinet/cases/{{id}}/clear">
@@ -67,12 +63,8 @@
         <div class="cases-card__actions cases-card__actions--header">
           <a class="button tp-control tp-tab tp-tab--sub is-active" href="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}" aria-current="page">View</a>
 
-          {{#if workspaceData.cases.templates.length}}
-            {{#if workspaceData.cases.selectedCase.publicPreviewUrl}}
+          {{#if workspaceData.cases.selectedCase.publicPreviewUrl}}
             <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="{{workspaceData.cases.selectedCase.publicPreviewUrl}}" target="_blank" rel="noopener">Client preview</a>
-            {{/if}}
-          {{else}}
-            <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/preview">Client preview</a>
           {{/if}}
 
           <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/templates?caseId={{workspaceData.cases.selectedCase.id}}">Add templates</a>
@@ -171,22 +163,6 @@
       <div class="cases-panel__header">
         <h3 class="cases-panel__title">{{workspaceData.cases.selectedCase.title}}</h3>
         <p class="cases-panel__text">Presentation preview. Show the selected website concepts with large previews and live demos.</p>
-
-        <div class="cases-card__actions cases-card__actions--header">
-          <a class="button tp-control tp-tab tp-tab--sub" href="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}">View</a>
-
-          <a class="button button--ghost tp-control tp-tab tp-tab--sub is-active" href="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/preview" aria-current="page">Client preview</a>
-
-          <a class="button button--ghost tp-control tp-tab tp-tab--sub" href="/templates?caseId={{workspaceData.cases.selectedCase.id}}">Add templates</a>
-
-          <form method="post" action="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/clear">
-            <button class="button button--ghost tp-control tp-button tp-button--secondary" type="submit">Clear</button>
-          </form>
-
-          <form method="post" action="/cabinet/cases/{{workspaceData.cases.selectedCase.id}}/delete">
-            <button class="button button--ghost tp-control tp-button tp-button--danger" type="submit">Delete</button>
-          </form>
-        </div>
       </div>
 
       {{#if workspaceData.cases.templates.length}}
@@ -318,7 +294,6 @@
         <div class="cases-empty">
           <div class="cases-empty__title">No templates to preview yet</div>
           <div class="cases-empty__text">Add templates to this case before opening the presentation preview.</div>
-          <a class="button button--primary" href="/templates?caseId={{workspaceData.cases.selectedCase.id}}">Browse templates</a>
         </div>
       {{/if}}
     </div>
@@ -329,6 +304,7 @@
   {{#if (eq workspaceData.cases.tab "create")}}
     <div class="cases-panel">
       <div class="cases-panel__header">
+        <h3 class="cases-panel__title">Create Case</h3>
         <p class="cases-panel__text">Create an empty client space and fill it later.</p>
       </div>
 

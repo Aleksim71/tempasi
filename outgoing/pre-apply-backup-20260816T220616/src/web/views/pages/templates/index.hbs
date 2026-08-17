@@ -4,7 +4,17 @@
 
 <section class="templates-page">
 
-  {{> page-alert}}
+  {{#if cartErrorMessage}}
+    <div id="tcmAutoAlertMessage" hidden>{{cartErrorMessage}}</div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('tcmAutoAlertMessage');
+        if (el && window.tempasiAlert) {
+          window.tempasiAlert({ title: 'Heads up', message: el.textContent, danger: true });
+        }
+      });
+    </script>
+  {{/if}}
 
   <div class="templates-layout">
 
@@ -177,7 +187,7 @@
           <div class="rent-modal__cases">
             {{#each userCases}}
               <label class="rent-modal__case">
-                <input type="checkbox" name="case_ids" value="{{this.id}}" {{#if this.isSelected}}checked{{/if}}>
+                <input type="checkbox" name="case_ids" value="{{this.id}}">
                 <span>{{this.title}}</span>
               </label>
             {{/each}}
