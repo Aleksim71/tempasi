@@ -39,7 +39,16 @@ describe('page alert message contract (cart + buy_error)', () => {
     // lookup must normalize case, or the historically lowercase
     // template_not_found code (now fixed at the source, see below)
     // would silently fail to match again in the future.
-    expect(routes).toContain("req.query?.buy_error || '').trim().toUpperCase()");
+    //
+    // Regex (not a literal substring) on purpose: a prettier/eslint
+    // reformat that breaks the .trim().toUpperCase() chain across
+    // multiple lines is not a behavioural regression and shouldn't
+    // fail this test — only actually removing the uppercase
+    // normalization should. \s* tolerates any whitespace/newlines
+    // between the chained calls; the call names/order still must match.
+    expect(routes).toMatch(
+      /String\(req\.query\?\.buy_error \|\| ''\)\s*\.trim\(\)\s*\.toUpperCase\(\)/,
+    );
   });
 
   test('checkout.routes.js sends TEMPLATE_NOT_FOUND in the same case convention as other buy_error codes', () => {
