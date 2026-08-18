@@ -319,4 +319,85 @@ describe('Finance Overview BUY/RENT period summary (via real server)', () => {
       expect(response28d.text).not.toMatch(/€42\.00/);
     });
   });
+
+  it('separates buyer-side ("Bought/Rented") from seller-side ("Sold/Rented out") stats via the role switch', async () => {
+    await migrateDb();
+
+    await withRealServer(async (srv) => {
+      const sellerEmail = `finance_overview_role_seller_${Date.now()}@example.com`;
+      const buyerEmail = `finance_overview_role_buyer_${Date.now()}@example.com`;
+      const password = 'Passw0rd__OK';
+
+      const sellerCookie = await registerAndLogin(srv, sellerEmail, password);
+      const buyerCookie = await registerAndLogin(srv, buyerEmail, password);
+
+      await withClient(async (client) => {
+        const sellerUserId = await findUserIdByEmail(client, sellerEmail);
+        const buyerUserId = await findUserIdByEmail(client, buyerEmail);
+
+        const template = await insertFlexible(client, 'seller_templates', {
+          owner_user_id: sellerUserId,
+          title: 'Step 5W Finance Overview Role Fixture',
+          slug: `step-5w-finance-overview-role-${Date.now()}`,
+          status: 'published',
+          price_buy_cents: 6600,
+          price_rent_cents: 1500,
+        });
+
+        // A different user (buyerUserId) buys the seller's template.
+        // This order must show up under the SELLER's "Sold/Rented out"
+        // view and under the BUYER's "Bought/Rented" view — but never
+        // under the seller's own "Bought/Rented" view (they didn't buy
+        // anything themselves) nor the buyer's "Sold/Rented out" view
+        // (they don't own the template).
+        await insertFlexible(client, 'orders', {
+          user_id: buyerUserId,
+          template_slug: template.slug,
+          deal_type: 'BUY',
+          status: 'paid',
+          license: 'EX',
+          amount_cents: 6600,
+          currency: 'EUR',
+          created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        });
+      });
+
+      const sellerAsSeller = await request(srv.baseUrl)
+        .get('/cabinet/finance?tab=overview&role=seller&period=28')
+        .set(srv.headers)
+        .set('Cookie', sellerCookie);
+      expect(sellerAsSeller.status).toBe(200);
+      expect(sellerAsSeller.text).toMatch(/€66\.00/);
+
+      const sellerAsBuyer = await request(srv.baseUrl)
+        .get('/cabinet/finance?tab=overview&role=buyer&period=28')
+        .set(srv.headers)
+        .set('Cookie', sellerCookie);
+      expect(sellerAsBuyer.status).toBe(200);
+      expect(sellerAsBuyer.text).not.toMatch(/€66\.00/);
+
+      const buyerAsBuyer = await request(srv.baseUrl)
+        .get('/cabinet/finance?tab=overview&role=buyer&period=28')
+        .set(srv.headers)
+        .set('Cookie', buyerCookie);
+      expect(buyerAsBuyer.status).toBe(200);
+      expect(buyerAsBuyer.text).toMatch(/€66\.00/);
+
+      const buyerAsSeller = await request(srv.baseUrl)
+        .get('/cabinet/finance?tab=overview&role=seller&period=28')
+        .set(srv.headers)
+        .set('Cookie', buyerCookie);
+      expect(buyerAsSeller.status).toBe(200);
+      expect(buyerAsSeller.text).not.toMatch(/€66\.00/);
+
+      // No explicit role param -> defaults to buyer.
+      const buyerDefault = await request(srv.baseUrl)
+        .get('/cabinet/finance?tab=overview&period=28')
+        .set(srv.headers)
+        .set('Cookie', buyerCookie);
+      expect(buyerDefault.status).toBe(200);
+      expect(buyerDefault.text).toMatch(/€66\.00/);
+    });
+  });
 });

@@ -1225,7 +1225,7 @@ res.render('pages/cabinet', {
 
   router.get('/finance', async (req, res) => {
     const requestedTab = String(req.query.tab || '').trim();
-    const allowedTabs = new Set(['overview', 'orders', 'reports']);
+    const allowedTabs = new Set(['overview', 'orders']);
     const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
 
     // TEMPASI_FINANCE_OVERVIEW_PERIOD (2026-08-17): Overview's BUY/RENT
@@ -1238,6 +1238,15 @@ res.render('pages/cabinet', {
     const allowedPeriods = new Set(['1', '7', '28']);
     const period = allowedPeriods.has(requestedPeriod) ? requestedPeriod : '28';
     const periodDays = Number(period);
+
+    // TEMPASI_FINANCE_OVERVIEW_ROLE (2026-08-18): Overview tab now has the
+    // same "Bought/Rented" vs "Sold/Rented out" role switch already
+    // shipped for Orders (same query param name `role`, same default
+    // 'buyer' — each tab's own nav links don't carry the param over to
+    // the other tab, so in normal navigation they don't collide).
+    const requestedOverviewRole = String(req.query.role || '').trim();
+    const allowedOverviewRoles = new Set(['buyer', 'seller']);
+    const overviewRole = allowedOverviewRoles.has(requestedOverviewRole) ? requestedOverviewRole : 'buyer';
 
     // TEMPASI_FINANCE_ORDERS_ROLE (2026-08-18): Orders tab now distinguishes
     // orders the user placed as a buyer/renter ("buyer") from orders on
@@ -1257,11 +1266,6 @@ res.render('pages/cabinet', {
     const pool = getPool();
     let workspaceError = null;
     let overview = {
-      totalOrders: 0,
-      buyOrders: 0,
-      rentOrders: 0,
-      ownRevenueEur: '0.00',
-      procurementEur: '0.00',
       creditBalanceEur: '0.00',
     };
     let buyRent = {
@@ -1269,6 +1273,8 @@ res.render('pages/cabinet', {
       buySumEur: '0.00',
       rentCount: 0,
       rentSumEur: '0.00',
+      buyCountLabel: overviewRole === 'seller' ? 'Templates sold' : 'Templates bought',
+      rentCountLabel: overviewRole === 'seller' ? 'Rentals' : 'Rentals (as renter)',
     };
     let orders = [];
     let ordersSummary = {
@@ -1280,59 +1286,9 @@ res.render('pages/cabinet', {
       rentCount: 0,
       sumEur: '0.00',
     };
-    let reports = [
-      {
-        month: 'Current',
-        totalOrders: 0,
-        buyOrders: 0,
-        rentOrders: 0,
-        ownRevenueEur: '0.00',
-        procurementEur: '0.00',
-      },
-    ];
 
     try {
       const userId = getUserId(req);
-
-      const { rows: overviewRows } = await pool.query(
-        `
-          SELECT
-            o.id,
-            o.template_slug,
-            o.deal_type,
-            o.license,
-            o.status,
-            o.created_at,
-            o.amount_cents,
-            o.currency,
-            COALESCE(t.title, o.template_slug) AS template_title
-          FROM orders o
-          LEFT JOIN seller_templates t
-            ON t.slug = o.template_slug
-          WHERE o.user_id = $1
-          ORDER BY o.created_at DESC, o.id DESC
-        `,
-        [userId],
-      );
-
-      let buyCount = 0;
-      let rentCount = 0;
-      let paidBuyTotal = 0;
-      let paidRentTotal = 0;
-
-      (overviewRows || []).forEach((row) => {
-        const type = String(row.deal_type || '').toUpperCase();
-        const status = String(row.status || '').toLowerCase();
-        const cents = Number(row.amount_cents || 0);
-
-        if (type === 'BUY') {
-          buyCount += 1;
-          if (status === 'paid') paidBuyTotal += cents;
-        } else if (type === 'RENT') {
-          rentCount += 1;
-          if (status === 'paid') paidRentTotal += cents;
-        }
-      });
 
       const ordersResult = await ordersQueryService.loadOrdersForUser(pool, {
         userId,
@@ -1344,36 +1300,27 @@ res.render('pages/cabinet', {
 
       const creditBalance = await accountCreditsService.getActiveCreditBalance({ userId });
 
-      const buyRentSummary = await analyticsService.getMyTemplatesBuyRentSummary({
-        ownerUserId: userId,
-        days: periodDays,
-      });
+      const buyRentSummary = overviewRole === 'seller'
+        ? await analyticsService.getMyTemplatesBuyRentSummary({
+            ownerUserId: userId,
+            days: periodDays,
+          })
+        : await analyticsService.getMyOrdersBuyRentSummary({
+            userId,
+            days: periodDays,
+          });
       buyRent = {
         buyCount: buyRentSummary.buyCount,
         buySumEur: buyRentSummary.buySumEur,
         rentCount: buyRentSummary.rentCount,
         rentSumEur: buyRentSummary.rentSumEur,
+        buyCountLabel: overviewRole === 'seller' ? 'Templates sold' : 'Templates bought',
+        rentCountLabel: overviewRole === 'seller' ? 'Rentals' : 'Rentals (as renter)',
       };
 
       overview = {
-        totalOrders: buyCount + rentCount,
-        buyOrders: buyCount,
-        rentOrders: rentCount,
-        ownRevenueEur: '0.00',
-        procurementEur: formatMoneyEurFromCents(paidBuyTotal + paidRentTotal),
         creditBalanceEur: formatMoneyEurFromCents(creditBalance.amountCents),
       };
-
-      reports = [
-        {
-          month: 'Current',
-          totalOrders: overview.totalOrders,
-          buyOrders: overview.buyOrders,
-          rentOrders: overview.rentOrders,
-          ownRevenueEur: overview.ownRevenueEur,
-          procurementEur: overview.procurementEur,
-        },
-      ];
     } catch (e) {
       workspaceError = e;
     }
@@ -1391,13 +1338,27 @@ res.render('pages/cabinet', {
           tabs: [
             { key: 'overview', label: 'Overview', href: '/cabinet/finance?tab=overview', isActive: tab === 'overview' },
             { key: 'orders', label: 'Orders', href: '/cabinet/finance?tab=orders', isActive: tab === 'orders' },
-            { key: 'reports', label: 'Reports', href: '/cabinet/finance?tab=reports', isActive: tab === 'reports' },
           ],
           period,
           periods: [
-            { key: '1', label: '1 day', href: '/cabinet/finance?tab=overview&period=1', isActive: period === '1' },
-            { key: '7', label: '7 days', href: '/cabinet/finance?tab=overview&period=7', isActive: period === '7' },
-            { key: '28', label: '28 days', href: '/cabinet/finance?tab=overview&period=28', isActive: period === '28' },
+            { key: '1', label: '1 day', href: `/cabinet/finance?tab=overview&period=1&role=${overviewRole}`, isActive: period === '1' },
+            { key: '7', label: '7 days', href: `/cabinet/finance?tab=overview&period=7&role=${overviewRole}`, isActive: period === '7' },
+            { key: '28', label: '28 days', href: `/cabinet/finance?tab=overview&period=28&role=${overviewRole}`, isActive: period === '28' },
+          ],
+          overviewRole,
+          overviewRoles: [
+            {
+              key: 'buyer',
+              label: 'Bought / Rented',
+              href: `/cabinet/finance?tab=overview&role=buyer&period=${period}`,
+              isActive: overviewRole === 'buyer',
+            },
+            {
+              key: 'seller',
+              label: 'Sold / Rented out',
+              href: `/cabinet/finance?tab=overview&role=seller&period=${period}`,
+              isActive: overviewRole === 'seller',
+            },
           ],
           buyRent,
           overview,
@@ -1419,7 +1380,6 @@ res.render('pages/cabinet', {
           ordersFilters,
           ordersSummary,
           orders,
-          reports,
         },
       },
     });

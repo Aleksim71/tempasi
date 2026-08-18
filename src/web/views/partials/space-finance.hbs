@@ -15,6 +15,18 @@
   {{!-- OVERVIEW --}}
   {{#if (eq workspaceData.finance.tab "overview")}}
     <div class="finance-panel">
+      <nav class="finance-period-switch" aria-label="Overview role">
+        {{#each workspaceData.finance.overviewRoles}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
       <nav class="finance-period-switch" aria-label="Period">
         {{#each workspaceData.finance.periods}}
           <a
@@ -32,7 +44,7 @@
           <div class="finance-summary-card__title">Buy</div>
           <div class="finance-kpis finance-kpis--compact">
             <div class="finance-kpi">
-              <div class="finance-kpi__label">Templates sold</div>
+              <div class="finance-kpi__label">{{workspaceData.finance.buyRent.buyCountLabel}}</div>
               <div class="finance-kpi__value">{{workspaceData.finance.buyRent.buyCount}}</div>
             </div>
             <div class="finance-kpi">
@@ -46,7 +58,7 @@
           <div class="finance-summary-card__title">Rent</div>
           <div class="finance-kpis finance-kpis--compact">
             <div class="finance-kpi">
-              <div class="finance-kpi__label">Rentals</div>
+              <div class="finance-kpi__label">{{workspaceData.finance.buyRent.rentCountLabel}}</div>
               <div class="finance-kpi__value">{{workspaceData.finance.buyRent.rentCount}}</div>
             </div>
             <div class="finance-kpi">
@@ -211,31 +223,6 @@
             {{/if}}
           </tbody>
         </table>
-      </div>
-    </div>
-  {{/if}}
-
-  {{!-- REPORTS --}}
-  {{#if (eq workspaceData.finance.tab "reports")}}
-    <div class="finance-panel">
-      <div class="finance-panel__header">
-        <h3 class="finance-panel__title">Reports</h3>
-        <p class="finance-panel__text">Monthly summaries for review, reporting, and later export.</p>
-      </div>
-
-      <div class="finance-reports">
-        {{#each workspaceData.finance.reports}}
-          <article class="finance-report-card">
-            <div class="finance-report-card__title">{{month}}</div>
-            <div class="finance-report-card__grid">
-              <div><strong>Total orders:</strong> {{totalOrders}}</div>
-              <div><strong>Buy orders:</strong> {{buyOrders}}</div>
-              <div><strong>Rent orders:</strong> {{rentOrders}}</div>
-              <div><strong>Own revenue:</strong> €{{ownRevenueEur}}</div>
-              <div><strong>Procurement activity:</strong> €{{procurementEur}}</div>
-            </div>
-          </article>
-        {{/each}}
       </div>
     </div>
   {{/if}}

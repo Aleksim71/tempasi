@@ -405,6 +405,66 @@ async function getMyTemplatesBuyRentSummary({ ownerUserId, days }) {
   };
 }
 
+// TEMPASI_FINANCE_OVERVIEW_ROLE (2026-08-18)
+//
+// Buyer-scope counterpart to getMyTemplatesBuyRentSummary() above, for
+// the Finance > Overview role switch ("Bought/Rented" vs "Sold/Rented
+// out" — same role concept already shipped for the Orders tab). Same
+// rolling-window shape and return contract, but scoped to orders the
+// user PLACED (orders.user_id) rather than orders on templates they
+// OWN (seller_templates.owner_user_id) — no join needed here since
+// orders.user_id already identifies the buyer directly.
+async function getMyOrdersBuyRentSummary({ userId, days }) {
+  if (!userId) {
+    throw new Error('USER_ID_REQUIRED');
+  }
+
+  const pool = getPool();
+  const windowDays = Number.isFinite(Number(days)) && Number(days) > 0 ? Math.floor(Number(days)) : 28;
+
+  const sql = `
+    SELECT
+      COUNT(o.id) FILTER (
+        WHERE o.deal_type = 'BUY'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ) AS buy_count,
+      COALESCE(SUM(o.amount_cents) FILTER (
+        WHERE o.deal_type = 'BUY'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ), 0) AS buy_cents,
+      COUNT(o.id) FILTER (
+        WHERE o.deal_type = 'RENT'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ) AS rent_count,
+      COALESCE(SUM(o.amount_cents) FILTER (
+        WHERE o.deal_type = 'RENT'
+          AND o.status = 'paid'
+          AND o.created_at >= NOW() - make_interval(days => $2::int)
+      ), 0) AS rent_cents
+    FROM orders o
+    WHERE o.user_id = $1
+  `;
+
+  const { rows } = await pool.query(sql, [userId, windowDays]);
+  const r = rows && rows[0] ? rows[0] : {};
+
+  const buyCents = Number(r.buy_cents || 0);
+  const rentCents = Number(r.rent_cents || 0);
+
+  return {
+    days: windowDays,
+    buyCount: Number(r.buy_count || 0),
+    buyCents,
+    buySumEur: formatMoneyEurFromCents(buyCents),
+    rentCount: Number(r.rent_count || 0),
+    rentCents,
+    rentSumEur: formatMoneyEurFromCents(rentCents),
+  };
+}
+
 // TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16)
 //
 // Platform-wide (not per-seller) market-sizing numbers, shown on the
@@ -666,6 +726,7 @@ module.exports = {
   getMyTemplatesRealizedAvgPrices,
   getMyTemplatesRevenueSeries30d,
   getMyTemplatesBuyRentSummary,
+  getMyOrdersBuyRentSummary,
   getPlatformStats,
   getPlatformStatsByCategory,
   getPlatformRealizedAvgPrices,
