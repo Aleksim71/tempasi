@@ -16,6 +16,8 @@ const accountCreditsService = require('../../modules/payments/accountCredits.ser
 const { getPool } = require('../../../scripts/db.pool.cjs');
 const { clearSessionCookie } = require('../../middlewares/auth.middleware.cjs');
 const CreditLedgerController = require("../../modules/finance/creditLedger.controller.cjs");
+const OrdersExportController = require("../../modules/finance/ordersExport.controller.cjs");
+const ordersQueryService = require("../../modules/finance/ordersQuery.service.cjs");
 
 function requireAuthPage(req, res, next) {
   if (
@@ -1218,6 +1220,7 @@ res.render('pages/cabinet', {
   });
 
   router.get('/finance/credit-ledger/export.csv', requireAuthPage, CreditLedgerController.handleCreditLedgerCsv);
+  router.get('/finance/orders/export.csv', requireAuthPage, OrdersExportController.handleOrdersCsv);
   router.get('/finance/credit-ledger', requireAuthPage, CreditLedgerController.handleCreditLedger);
 
   router.get('/finance', async (req, res) => {
@@ -1236,6 +1239,21 @@ res.render('pages/cabinet', {
     const period = allowedPeriods.has(requestedPeriod) ? requestedPeriod : '28';
     const periodDays = Number(period);
 
+    // TEMPASI_FINANCE_ORDERS_ROLE (2026-08-18): Orders tab now distinguishes
+    // orders the user placed as a buyer/renter ("buyer") from orders on
+    // templates the user owns/sells ("seller"). Real filters (q/type/date)
+    // are wired to the SQL for real now — they used to be decorative.
+    const requestedRole = String(req.query.role || '').trim();
+    const allowedRoles = new Set(['buyer', 'seller']);
+    const ordersRole = allowedRoles.has(requestedRole) ? requestedRole : 'buyer';
+
+    const ordersFilters = {
+      q: String(req.query.q || '').trim(),
+      type: String(req.query.type || '').trim(),
+      dateFrom: String(req.query.date_from || '').trim(),
+      dateTo: String(req.query.date_to || '').trim(),
+    };
+
     const pool = getPool();
     let workspaceError = null;
     let overview = {
@@ -1253,6 +1271,15 @@ res.render('pages/cabinet', {
       rentSumEur: '0.00',
     };
     let orders = [];
+    let ordersSummary = {
+      role: ordersRole,
+      counterpartyLabel: ordersRole === 'seller' ? 'Buyer' : 'Seller',
+      sumLabel: ordersRole === 'seller' ? 'Income (paid)' : 'Procurement (paid)',
+      totalOrders: 0,
+      buyCount: 0,
+      rentCount: 0,
+      sumEur: '0.00',
+    };
     let reports = [
       {
         month: 'Current',
@@ -1267,7 +1294,7 @@ res.render('pages/cabinet', {
     try {
       const userId = getUserId(req);
 
-      const { rows } = await pool.query(
+      const { rows: overviewRows } = await pool.query(
         `
           SELECT
             o.id,
@@ -1293,7 +1320,7 @@ res.render('pages/cabinet', {
       let paidBuyTotal = 0;
       let paidRentTotal = 0;
 
-      orders = (rows || []).map((row) => {
+      (overviewRows || []).forEach((row) => {
         const type = String(row.deal_type || '').toUpperCase();
         const status = String(row.status || '').toLowerCase();
         const cents = Number(row.amount_cents || 0);
@@ -1305,20 +1332,15 @@ res.render('pages/cabinet', {
           rentCount += 1;
           if (status === 'paid') paidRentTotal += cents;
         }
-
-        return {
-          id: row.id,
-          type,
-          direction: type === 'BUY' ? 'Procurement' : 'Rent',
-          templateTitle: row.template_title || row.template_slug || '',
-          seller: '—',
-          amountEur: formatMoneyEurFromCents(cents),
-          status: row.status || '',
-          license: row.license || '—',
-          date: formatDateYMD(row.created_at),
-          caseTitle: '—',
-        };
       });
+
+      const ordersResult = await ordersQueryService.loadOrdersForUser(pool, {
+        userId,
+        role: ordersRole,
+        filters: ordersFilters,
+      });
+      orders = ordersResult.orders;
+      ordersSummary = ordersResult.summary;
 
       const creditBalance = await accountCreditsService.getActiveCreditBalance({ userId });
 
@@ -1379,6 +1401,23 @@ res.render('pages/cabinet', {
           ],
           buyRent,
           overview,
+          ordersRole,
+          ordersRoles: [
+            {
+              key: 'buyer',
+              label: 'Bought / Rented',
+              href: `/cabinet/finance?tab=orders&role=buyer`,
+              isActive: ordersRole === 'buyer',
+            },
+            {
+              key: 'seller',
+              label: 'Sold / Rented out',
+              href: `/cabinet/finance?tab=orders&role=seller`,
+              isActive: ordersRole === 'seller',
+            },
+          ],
+          ordersFilters,
+          ordersSummary,
           orders,
           reports,
         },

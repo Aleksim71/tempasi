@@ -84,70 +84,95 @@
   {{!-- ORDERS --}}
   {{#if (eq workspaceData.finance.tab "orders")}}
     <div class="finance-panel">
-      <div class="finance-panel__header">
-        <h3 class="finance-panel__title">Orders</h3>
-        <p class="finance-panel__text">Order history with filters for finance, reporting, and audit use.</p>
+      <nav class="finance-period-switch" aria-label="Orders role">
+        {{#each workspaceData.finance.ordersRoles}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <div class="finance-summary-card">
+        <div class="finance-summary-card__title">{{workspaceData.finance.ordersSummary.sumLabel}}</div>
+        <div class="finance-kpis finance-kpis--compact">
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">Orders</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.totalOrders}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">BUY</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.buyCount}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">RENT</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.rentCount}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">{{workspaceData.finance.ordersSummary.sumLabel}}</div>
+            <div class="finance-kpi__value">€{{workspaceData.finance.ordersSummary.sumEur}}</div>
+          </div>
+        </div>
       </div>
 
       <form class="finance-filters" method="get" action="/cabinet/finance">
         <input type="hidden" name="tab" value="orders" />
+        <input type="hidden" name="role" value="{{workspaceData.finance.ordersRole}}" />
 
         <div class="finance-filters__grid">
           <div class="form__row">
             <label class="form__label" for="financeQuery">Search</label>
-            <input class="input" id="financeQuery" name="q" type="text" placeholder="Template, seller, author..." />
+            <input
+              class="input"
+              id="financeQuery"
+              name="q"
+              type="text"
+              placeholder="Template, seller, author..."
+              value="{{workspaceData.finance.ordersFilters.q}}"
+            />
           </div>
 
           <div class="form__row">
             <label class="form__label" for="financeType">Type</label>
             <select class="input" id="financeType" name="type">
-              <option value="">All</option>
-              <option value="BUY">BUY</option>
-              <option value="RENT">RENT</option>
-            </select>
-          </div>
-
-          <div class="form__row">
-            <label class="form__label" for="financeDirection">Direction</label>
-            <select class="input" id="financeDirection" name="direction">
-              <option value="">All</option>
-              <option value="own-income">Own income</option>
-              <option value="external-procurement">External procurement</option>
-            </select>
-          </div>
-
-          <div class="form__row">
-            <label class="form__label" for="financeStatus">Status</label>
-            <select class="input" id="financeStatus" name="status">
-              <option value="">All</option>
-              <option value="paid">Paid</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-
-          <div class="form__row">
-            <label class="form__label" for="financeLicense">License</label>
-            <select class="input" id="financeLicense" name="license">
-              <option value="">All</option>
-              <option value="exclusive">Exclusive</option>
-              <option value="rent">Rent</option>
+              <option value="" {{#unless workspaceData.finance.ordersFilters.type}}selected{{/unless}}>All</option>
+              <option value="BUY" {{#if (eq workspaceData.finance.ordersFilters.type "BUY")}}selected{{/if}}>BUY</option>
+              <option value="RENT" {{#if (eq workspaceData.finance.ordersFilters.type "RENT")}}selected{{/if}}>RENT</option>
             </select>
           </div>
 
           <div class="form__row">
             <label class="form__label" for="financeDateFrom">Date from</label>
-            <input class="input" id="financeDateFrom" name="date_from" type="date" />
+            <input
+              class="input"
+              id="financeDateFrom"
+              name="date_from"
+              type="date"
+              value="{{workspaceData.finance.ordersFilters.dateFrom}}"
+            />
           </div>
 
           <div class="form__row">
             <label class="form__label" for="financeDateTo">Date to</label>
-            <input class="input" id="financeDateTo" name="date_to" type="date" />
+            <input
+              class="input"
+              id="financeDateTo"
+              name="date_to"
+              type="date"
+              value="{{workspaceData.finance.ordersFilters.dateTo}}"
+            />
           </div>
         </div>
 
         <div class="actions">
           <button class="button button--primary" type="submit">Apply filters</button>
-          <a class="button" href="/cabinet/finance?tab=orders">Reset</a>
+          <a class="button" href="/cabinet/finance?tab=orders&role={{workspaceData.finance.ordersRole}}">Reset</a>
+          <button class="button button--secondary" type="submit" formaction="/cabinet/finance/orders/export.csv">
+            Download CSV
+          </button>
         </div>
       </form>
 
@@ -157,12 +182,9 @@
             <tr>
               <th>Order</th>
               <th>Type</th>
-              <th>Direction</th>
               <th>Template</th>
-              <th>Seller / Owner</th>
+              <th>{{workspaceData.finance.ordersSummary.counterpartyLabel}}</th>
               <th>Amount</th>
-              <th>Status</th>
-              <th>License</th>
               <th>Date</th>
               <th>Case</th>
             </tr>
@@ -173,19 +195,16 @@
                 <tr>
                   <td>{{id}}</td>
                   <td>{{type}}</td>
-                  <td>{{direction}}</td>
                   <td>{{templateTitle}}</td>
-                  <td>{{seller}}</td>
+                  <td>{{counterparty}}</td>
                   <td>€{{amountEur}}</td>
-                  <td>{{status}}</td>
-                  <td>{{license}}</td>
                   <td>{{date}}</td>
                   <td>{{caseTitle}}</td>
                 </tr>
               {{/each}}
             {{else}}
               <tr>
-                <td colspan="10" class="finance-table__empty">
+                <td colspan="7" class="finance-table__empty">
                   No orders found for the selected filters.
                 </td>
               </tr>
