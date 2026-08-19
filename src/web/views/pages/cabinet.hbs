@@ -55,10 +55,10 @@
 
       <main class="cabinet__workspace">
 
-        {{!-- Title/subtitle are hidden for My Templates, Profile, and Finance workspaces
-             (Finance builds its own Overview period/BUY/RENT/Balance layout without
-             a page-level heading, see space-finance.hbs) --}}
-        {{#unless (or (eq activeSpace 'my-templates') (eq activeSpace 'profile') (eq activeSpace 'finance'))}}
+        {{!-- Title/subtitle are hidden for My Templates, Profile, Finance, and Support
+             workspaces (Finance builds its own Overview period/BUY/RENT/Balance layout
+             without a page-level heading, see space-finance.hbs) --}}
+        {{#unless (or (eq activeSpace 'my-templates') (eq activeSpace 'profile') (eq activeSpace 'finance') (eq activeSpace 'support'))}}
           <h1 class="cabinet__title">{{pageTitle}}</h1>
           <p class="cabinet__subtitle">{{pageSubtitle}}</p>
         {{/unless}}

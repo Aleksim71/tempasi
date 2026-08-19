@@ -13,12 +13,24 @@
   {{#if (eq workspaceData.support.tab "help")}}
     <div class="support-panel">
       <div class="support-card">
-        <h3>Help Center</h3>
-        <p>Guides on how to use Tempasi, templates, cases, and finance.</p>
+        <h3>Help</h3>
+        <p>Background reading about Tempasi and how it works.</p>
 
-        <div class="support-actions">
-          <a class="btn" href="/templates">Browse Templates</a>
-        </div>
+        <ul class="support-links">
+          <li>
+            <a href="/about">About Tempasi</a>
+            <span>What Tempasi is, and buy vs. rent in a nutshell.</span>
+          </li>
+          <li>
+            <a href="/functionality">How Tempasi works</a>
+            <span>A walkthrough of the catalog and the cabinet.</span>
+          </li>
+        </ul>
+
+        <p class="support-note">
+          Template license terms and the Tempasi user agreement will be
+          added here once finalized.
+        </p>
       </div>
     </div>
   {{/if}}
@@ -37,17 +49,61 @@
     </div>
   {{/if}}
 
-  {{!-- QUICK HELP --}}
-  {{#if (eq workspaceData.support.tab "quick")}}
+  {{!-- FAQ --}}
+  {{#if (eq workspaceData.support.tab "faq")}}
     <div class="support-panel">
       <div class="support-card">
-        <h3>Quick Help</h3>
-        <p>Common actions and quick navigation.</p>
+        <h3>Frequently asked questions</h3>
 
-        <div class="support-actions">
-          <a class="btn alt" href="/cabinet/my-templates">My Templates</a>
-          <a class="btn alt" href="/cabinet/finance">Finance</a>
-          <a class="btn alt" href="/cabinet/profile">Profile</a>
+        <div class="support-faq">
+          <details>
+            <summary>What's the difference between Buy and Rent?</summary>
+            <p>
+              <strong>Buy</strong> is an outright purchase — the template is
+              yours. <strong>Rent</strong> is a temporary exclusivity hold
+              for the period you choose, priced accordingly.
+            </p>
+          </details>
+
+          <details>
+            <summary>What does "exclusive" actually mean?</summary>
+            <p>
+              While you hold an active Buy or Rent on a template, it's not
+              available to anyone else — it's removed from the catalog for
+              other buyers/renters for that period. You're not sharing the
+              same design with unrelated visitors of your site.
+            </p>
+          </details>
+
+          <details>
+            <summary>I'm renting a template — can I buy it later?</summary>
+            <p>
+              Yes. If you decide to buy a template you're actively renting,
+              the unused value of that rental is converted into Tempasi
+              credit and applied toward the purchase automatically. You can
+              see your credit balance and its history under
+              <a href="/cabinet/finance">Finance</a>.
+            </p>
+          </details>
+
+          <details>
+            <summary>What are Cases for?</summary>
+            <p>
+              A Case groups the templates you're renting for a specific
+              client project, and gives you a shareable preview link for
+              that client — without giving them access to your cabinet.
+            </p>
+          </details>
+
+          <details>
+            <summary>Can I get a refund?</summary>
+            <p>
+              Templates are digital goods delivered immediately on
+              purchase or rental, so we don't offer refunds. If something
+              is broken or not as described, contact us — we'll sort it
+              out.
+            </p>
+          </details>
         </div>
       </div>
     </div>

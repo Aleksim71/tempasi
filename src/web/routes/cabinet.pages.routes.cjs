@@ -1514,12 +1514,14 @@ res.render('pages/cabinet', {
   });
 
   router.get('/support', (req, res) => {
-    const tab = req.query.tab || 'help';
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['help', 'contact', 'faq']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'help';
 
     const tabs = [
       { key: 'help', label: 'Help', href: '/cabinet/support?tab=help', isActive: tab === 'help' },
       { key: 'contact', label: 'Contact', href: '/cabinet/support?tab=contact', isActive: tab === 'contact' },
-      { key: 'quick', label: 'Quick Help', href: '/cabinet/support?tab=quick', isActive: tab === 'quick' },
+      { key: 'faq', label: 'FAQ', href: '/cabinet/support?tab=faq', isActive: tab === 'faq' },
     ];
 
     res.render('pages/cabinet', {

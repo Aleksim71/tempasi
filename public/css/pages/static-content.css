@@ -1,0 +1,84 @@
+/* public/css/pages/static-content.css
+   Public static content pages (About, Functionality, and similar).
+   Uses the design tokens already defined in core.css (--c-text, --c-muted,
+   --c-surface, --c-border, ...) rather than the unused custom.css, so it
+   stays visually consistent with the rest of the site without pulling in
+   custom.css's broader (and untested) header/footer overrides. */
+
+.static-page {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 8px 0 64px;
+}
+
+.static-page__intro {
+  margin-bottom: 32px;
+}
+
+.static-page__intro h1 {
+  font-size: 32px;
+  margin: 0 0 10px;
+  color: var(--c-text);
+}
+
+.static-page__subtitle {
+  font-size: 15px;
+  color: var(--c-muted);
+  margin: 0;
+}
+
+.static-page__section {
+  margin-bottom: 28px;
+}
+
+.static-page__section h2 {
+  font-size: 19px;
+  color: var(--c-text);
+  margin: 0 0 10px;
+}
+
+.static-page__section p,
+.static-page__section li {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--c-muted);
+}
+
+.static-page__section p {
+  margin: 0 0 12px;
+}
+
+.static-page__section ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.static-page__section strong {
+  color: var(--c-text);
+}
+
+.static-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 0 0 12px;
+}
+
+.static-page__card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.static-page__card h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+  color: var(--c-text);
+}
+
+.static-page__card p {
+  margin: 0;
+  font-size: 14px;
+}

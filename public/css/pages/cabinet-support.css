@@ -45,3 +45,70 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+.support-links {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.support-links li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.support-links a {
+  font-weight: 600;
+}
+
+.support-links span {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.support-note {
+  font-size: 13px;
+  opacity: 0.6;
+  margin: 12px 0 0;
+}
+
+.support-faq {
+  display: grid;
+  gap: 10px;
+}
+
+.support-faq details {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.support-faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.support-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.support-faq summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  color: var(--c-primary, #6aa7ff);
+}
+
+.support-faq details[open] summary::before {
+  content: '−';
+}
+
+.support-faq p {
+  margin: 10px 0 0;
+  opacity: 0.85;
+}
