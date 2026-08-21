@@ -228,9 +228,6 @@ function createCabinetPagesRouter() {
   router.use((req, res, next) => {
     res.locals.isCabinet = true;
     res.locals.activePage = 'cabinet';
-    res.locals.metrics = {
-      today: { revenue: 0, invested: 0 },
-    };
     next();
   });
 
