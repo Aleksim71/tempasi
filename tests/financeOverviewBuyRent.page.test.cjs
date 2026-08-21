@@ -174,13 +174,15 @@ describe('Finance Overview BUY/RENT period summary (via real server)', () => {
       expect(response.text).toMatch(/7 days/i);
       expect(response.text).toMatch(/28 days/i);
       expect(response.text).toMatch(/tp-tab--sub/i);
-      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;1"/i);
-      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;7"/i);
-      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;28"/i);
+      // Period links carry the current role (default "buyer") so switching
+      // period doesn't reset the buyer/seller selection.
+      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;1&amp;role&#x3D;buyer"/i);
+      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;7&amp;role&#x3D;buyer"/i);
+      expect(response.text).toMatch(/href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;28&amp;role&#x3D;buyer"/i);
       // Default period is 28 days -> that link should carry is-active
       // (class comes before href in the markup, so match class -> href).
       expect(response.text).toMatch(
-        /tp-tab--sub is-active"\s*href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;28"/i,
+        /tp-tab--sub is-active"\s*href="\/cabinet\/finance\?tab&#x3D;overview&amp;period&#x3D;28&amp;role&#x3D;buyer"/i,
       );
     });
   });
