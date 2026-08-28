@@ -82,3 +82,18 @@
   margin: 0;
   font-size: 14px;
 }
+
+.static-page__notice {
+  margin: 0 0 28px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--c-muted);
+}
+
+.static-page__notice strong {
+  color: var(--c-text);
+}
