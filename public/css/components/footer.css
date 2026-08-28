@@ -85,27 +85,6 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
-.site-footer-lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.site-footer-lang-link {
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 12px;
-}
-
-.site-footer-lang-link:hover,
-.site-footer-lang-link:focus-visible {
-  color: rgba(255, 255, 255, 0.92);
-  outline: none;
-}
-
-.site-footer-lang-sep {
-  color: rgba(255, 255, 255, 0.35);
-}
-
 /* Responsive */
 @media (max-width: 980px) {
   .site-footer-inner {
