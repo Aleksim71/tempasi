@@ -34,6 +34,38 @@
   gap: 16px;
 }
 
+/* TEMPASI_CART_BUY_RENT_SPLIT (2026-08-21) */
+.cart-group {
+  display: grid;
+  gap: 10px;
+}
+
+.cart-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cart-group__title {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.cart-group__subtotal {
+  opacity: 0.72;
+}
+
+/* Visual separation between the Buy and Rent groups: extra top spacing
+   plus a divider line, since both are BUY/RENT-labeled tables stacked
+   in one panel and need a clear break between them. */
+.cart-group--divider {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+}
+
 .cart-summary {
   max-width: 360px;
   padding: 16px;

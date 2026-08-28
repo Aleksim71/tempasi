@@ -700,6 +700,21 @@ export function createCartRouter() {
         .filter((item) => item.isAvailable)
         .reduce((sum, item) => sum + Number(item.amountCents || 0), 0);
 
+      // TEMPASI_CART_BUY_RENT_SPLIT (2026-08-21): BUY and RENT are
+      // different commitments (permanent purchase vs. a temporary hold
+      // that can convert to credit — see account_credits), so the page
+      // groups them into two sections with their own subtotals. Checkout
+      // itself stays a single combined action (checkoutAllCartItems
+      // already processes BUY and RENT items independently in one pass).
+      const buyItems = items.filter((item) => item.deal_type === 'BUY');
+      const rentItems = items.filter((item) => item.deal_type === 'RENT');
+      const buySubtotalCents = buyItems
+        .filter((item) => item.isAvailable)
+        .reduce((sum, item) => sum + Number(item.amountCents || 0), 0);
+      const rentSubtotalCents = rentItems
+        .filter((item) => item.isAvailable)
+        .reduce((sum, item) => sum + Number(item.amountCents || 0), 0);
+
       return res.status(200).render('pages/cart', {
         title: 'Cart',
         styles: ['/css/pages/cart.css'],
@@ -710,6 +725,12 @@ export function createCartRouter() {
           items,
           itemCount: items.length,
           subtotalEur: formatMoneyEurFromCents(subtotalCents),
+          buyItems,
+          rentItems,
+          buyCount: buyItems.length,
+          rentCount: rentItems.length,
+          buySubtotalEur: formatMoneyEurFromCents(buySubtotalCents),
+          rentSubtotalEur: formatMoneyEurFromCents(rentSubtotalCents),
         },
         notice: pickNotice(req),
       });

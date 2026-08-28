@@ -13,50 +13,95 @@
 
       {{#if cart.items.length}}
         <div class="cart-panel">
-          <div class="finance-table-wrap">
-            <table class="finance-table">
-              <thead>
-                <tr>
-                  <th>Template</th>
-                  <th>Type</th>
-                  <th>License</th>
-                  <th>Added</th>
-                  <th>Amount</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each cart.items}}
-                  <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
-                    <td>
-                      {{template_title}}
-                      {{#unless isAvailable}}
-                        <div class="cart-badge cart-badge--warn">Not available</div>
-                      {{/unless}}
-                    </td>
-                    <td>
-                      {{deal_type}}
-                      {{#if durationLabel}}
-                        <div class="cart-muted">{{durationLabel}}</div>
-                      {{/if}}
-                    </td>
-                    <td>{{license}}</td>
-                    <td>{{created_at_str}}</td>
-                    <td>€{{amountEur}}</td>
-                    <td>
-                      <div class="cart-actions">
-                        <a class="btn alt" href="{{detailsHref}}">Details</a>
-                        <form method="post" action="/cart/remove">
-                          <input type="hidden" name="item_id" value="{{id}}" />
-                          <button type="submit" class="btn alt">Remove</button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                {{/each}}
-              </tbody>
-            </table>
-          </div>
+          {{#if cart.buyItems.length}}
+            <div class="cart-group">
+              <div class="cart-group__head">
+                <span class="cart-group__title">BUY</span>
+                <span class="cart-group__subtotal">{{cart.buyCount}} item{{#unless (eq cart.buyCount 1)}}s{{/unless}} · €{{cart.buySubtotalEur}}</span>
+              </div>
+              <div class="finance-table-wrap">
+                <table class="finance-table">
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Added</th>
+                      <th>Amount</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each cart.buyItems}}
+                      <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
+                        <td>
+                          {{template_title}}
+                          {{#unless isAvailable}}
+                            <div class="cart-badge cart-badge--warn">Not available</div>
+                          {{/unless}}
+                        </td>
+                        <td>{{created_at_str}}</td>
+                        <td>€{{amountEur}}</td>
+                        <td>
+                          <div class="cart-actions">
+                            <a class="btn alt" href="{{detailsHref}}">Details</a>
+                            <form method="post" action="/cart/remove">
+                              <input type="hidden" name="item_id" value="{{id}}" />
+                              <button type="submit" class="btn alt">Remove</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {{/if}}
+
+          {{#if cart.rentItems.length}}
+            <div class="cart-group cart-group--divider">
+              <div class="cart-group__head">
+                <span class="cart-group__title">RENT</span>
+                <span class="cart-group__subtotal">{{cart.rentCount}} item{{#unless (eq cart.rentCount 1)}}s{{/unless}} · €{{cart.rentSubtotalEur}}</span>
+              </div>
+              <div class="finance-table-wrap">
+                <table class="finance-table">
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Duration</th>
+                      <th>Added</th>
+                      <th>Amount</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each cart.rentItems}}
+                      <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
+                        <td>
+                          {{template_title}}
+                          {{#unless isAvailable}}
+                            <div class="cart-badge cart-badge--warn">Not available</div>
+                          {{/unless}}
+                        </td>
+                        <td>{{durationLabel}}</td>
+                        <td>{{created_at_str}}</td>
+                        <td>€{{amountEur}}</td>
+                        <td>
+                          <div class="cart-actions">
+                            <a class="btn alt" href="{{detailsHref}}">Details</a>
+                            <form method="post" action="/cart/remove">
+                              <input type="hidden" name="item_id" value="{{id}}" />
+                              <button type="submit" class="btn alt">Remove</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {{/if}}
 
           <div class="cart-summary">
             <div class="cart-summary__row">
