@@ -77,6 +77,19 @@ export function createWebRouter() {
     });
   });
 
+  // Grounded in actual cookie usage: a single first-party session cookie
+  // (sid), strictly necessary, no analytics/marketing cookies exist in
+  // the codebase. See src/middlewares/auth.middleware.cjs for the cookie
+  // itself; this page just documents it.
+  router.get('/cookies', (_req, res) => {
+    res.render('pages/static/cookies', {
+      title: 'Cookie Policy',
+      bodyClass: 'page-static',
+      activePage: 'cookies',
+      styles: ['/css/pages/static-content.css'],
+    });
+  });
+
   // Auth pages (SSR): /login, /logout, etc.
   // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
   // so we mount it at root.

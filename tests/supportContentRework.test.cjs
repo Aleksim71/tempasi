@@ -65,6 +65,19 @@ describe('Static content pages: /about and /functionality', () => {
     expect(footer).not.toContain('/landing');
   });
 
+  test('/cookies documents only the real sid session cookie, no fabricated analytics claims', async () => {
+    const { createWebApp } = await import('../src/app.web.js');
+    const request = require('supertest');
+    const app = createWebApp({ db: null });
+
+    const res = await request(app).get('/cookies');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('Cookie Policy');
+    expect(res.text).toContain('sid');
+    expect(res.text).toContain('HttpOnly');
+    expect(res.text).not.toMatch(/googletagmanager\.com|gtag\(|fbq\(/i);
+  });
+
   test('/about does not link into the auth-gated cabinet (anonymous visitors would just get redirected)', () => {
     const view = readProjectFile('src/web/views/pages/static/about.hbs');
     expect(view).not.toMatch(/href="\/cabinet\/support\?tab=/);
