@@ -43,7 +43,10 @@ describe('cart commercial business rules contract', () => {
     expect(source).toContain('rentDays');
     expect(source).toContain('PU:${rentDays}d');
 
-    expect(view).toContain('{{#if durationLabel}}');
+    // Cart groups items into Buy/Rent sections (TEMPASI_CART_BUY_RENT_SPLIT);
+    // the Rent section has its own Duration column showing durationLabel.
+    expect(view).toContain('cart.rentItems');
+    expect(view).toContain('<th>Duration</th>');
     expect(view).toContain('{{durationLabel}}');
   });
 });
