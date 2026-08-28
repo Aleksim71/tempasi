@@ -114,6 +114,12 @@
             </div>
 
             <form method="post" action="/cart/checkout-all" class="cart-summary__checkout" id="cartCheckoutAllForm">
+              <label class="cart-summary__consent">
+                <input type="checkbox" name="withdrawal_waiver_ack" value="1" required>
+                I understand this purchase completes immediately and I
+                waive my 14-day right of withdrawal for this digital
+                content (<a href="/license" target="_blank">license</a>).
+              </label>
               <button type="submit" class="btn primary">Checkout</button>
             </form>
             <div class="cart-summary__hint">

@@ -148,6 +148,7 @@ router.get('/direct/buy/:slug', async (req, res, next) => {
         styles: ['/css/pages/checkout-direct.css'],
         directBuy: buildDirectBuyViewModel(tpl, req),
         error: 'You cannot buy your own template.',
+        blockPurchase: true,
       });
     }
 
@@ -176,6 +177,23 @@ router.post('/direct/buy/:slug/pay', async (req, res, next) => {
 
     const tpl = await loadDirectBuyTemplate(db, slug);
     if (!tpl) return res.redirect(303, '/templates?buy_error=TEMPLATE_NOT_FOUND');
+
+    // TEMPASI_WITHDRAWAL_WAIVER_CONSENT (2026-08-28): EU consumers get a
+    // 14-day right of withdrawal for online purchases, but it can be
+    // waived for digital content delivered immediately, if the buyer
+    // explicitly acknowledges that before paying. Enforced here, not
+    // just in the UI, since the checkbox is only a hint without a
+    // server-side check.
+    const withdrawalWaiverAck = String(req.body?.withdrawal_waiver_ack || '') === '1';
+    if (!withdrawalWaiverAck) {
+      return res.status(400).render('pages/checkout-direct-buy-review', {
+        title: `Review purchase — ${tpl.title || slug} — Tempasi`,
+        bodyClass: 'checkout-direct',
+        styles: ['/css/pages/checkout-direct.css'],
+        directBuy: buildDirectBuyViewModel(tpl, req),
+        error: 'Please confirm you understand this purchase completes immediately before paying.',
+      });
+    }
 
     const result = await ordersService.createOrderCheckout(req, {
       userId,

@@ -105,6 +105,35 @@
   align-items: center;
 }
 
+.checkout-direct-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(245, 242, 234, 0.8);
+  cursor: pointer;
+}
+
+.checkout-direct-consent input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.checkout-direct-consent a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.checkout-direct-actions form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
 .checkout-direct-pay {
   border: 1px solid #f0c86a;
   background: #d7b056;

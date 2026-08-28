@@ -87,6 +87,27 @@
   opacity: 0.72;
 }
 
+.cart-summary__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.cart-summary__consent input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.cart-summary__consent a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .cart-empty {
   padding: 20px;
   border: 1px dashed rgba(0, 0, 0, 0.2);

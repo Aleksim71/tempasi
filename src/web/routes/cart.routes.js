@@ -289,6 +289,9 @@ function pickNotice(req) {
       ? `Sorry — ${slugs.join(', ')} was just purchased by another buyer and has been removed from your cart.`
       : 'Sorry — that template was just purchased by another buyer and has been removed from your cart.';
   }
+  if (String(req.query?.error || '').trim() === 'consent_required') {
+    return 'Please confirm the checkbox before checkout — purchases complete immediately.';
+  }
   const demoCheckout = String(req.query?.demo_checkout || '').trim();
   if (demoCheckout === 'done') {
     return 'Demo checkout complete.';
@@ -956,6 +959,13 @@ export function createCartRouter() {
     try {
       const userId = getUserId(req);
       if (!userId) return redirectToLogin(res, '/cart');
+
+      // TEMPASI_WITHDRAWAL_WAIVER_CONSENT (2026-08-28): see the matching
+      // check in checkout.routes.js /direct/buy/:slug/pay for context.
+      const withdrawalWaiverAck = String(req.body?.withdrawal_waiver_ack || '') === '1';
+      if (!withdrawalWaiverAck) {
+        return res.redirect(303, '/cart?error=consent_required');
+      }
 
       const db = req.app.locals?.db;
       if (!db || typeof db.query !== 'function') {

@@ -32,10 +32,16 @@
       </div>
 
       <div class="checkout-direct-actions">
-        {{#unless error}}
+        {{#unless blockPurchase}}
           <form method="post" action="/checkout/direct/buy/{{directBuy.slug}}/pay">
             <input type="hidden" name="caseId" value="{{directBuy.caseId}}">
             <input type="hidden" name="returnTo" value="{{directBuy.returnTo}}">
+            <label class="checkout-direct-consent">
+              <input type="checkbox" name="withdrawal_waiver_ack" value="1" required>
+              I understand this purchase is completed immediately and I
+              waive my 14-day right of withdrawal for this digital
+              content (<a href="/license" target="_blank">license</a>).
+            </label>
             <button class="checkout-direct-pay" type="submit">Pay</button>
           </form>
         {{/unless}}
