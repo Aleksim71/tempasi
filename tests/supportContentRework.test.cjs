@@ -46,6 +46,25 @@ describe('Static content pages: /about and /functionality', () => {
     expect(contact.text).not.toContain('legal@tempasi.com');
   });
 
+  test('/landing renders 200 with both CTAs and no main site header (ad-traffic page)', async () => {
+    const { createWebApp } = await import('../src/app.web.js');
+    const request = require('supertest');
+    const app = createWebApp({ db: null });
+
+    const res = await request(app).get('/landing');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('/css/pages/landing.css');
+    expect(res.text).toContain('href="#studios"');
+    expect(res.text).toContain('href="#designers"');
+    expect(res.text).toContain('href="/templates"');
+    expect(res.text).toContain('href="/register"');
+    // Deliberately not linked from main nav/footer, and header is hidden
+    // to keep ad traffic focused on the two CTAs.
+    expect(res.text).not.toMatch(/site-header__nav/);
+    const footer = readProjectFile('src/web/views/partials/footer.hbs');
+    expect(footer).not.toContain('/landing');
+  });
+
   test('/about does not link into the auth-gated cabinet (anonymous visitors would just get redirected)', () => {
     const view = readProjectFile('src/web/views/pages/static/about.hbs');
     expect(view).not.toMatch(/href="\/cabinet\/support\?tab=/);

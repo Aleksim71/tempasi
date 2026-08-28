@@ -65,6 +65,18 @@ export function createWebRouter() {
     });
   });
 
+  // Ad-traffic landing page: hero + Studios/Designers sections, deliberately
+  // not linked from the main nav or footer — reached only via direct/ad
+  // links. Main site header hidden to keep focus on the two CTAs.
+  router.get('/landing', (_req, res) => {
+    res.render('pages/landing', {
+      title: 'Tempasi — эксклюзивные шаблоны для вебстудий и дизайнеров',
+      bodyClass: 'page-landing',
+      hideHeader: true,
+      styles: ['/css/pages/landing.css'],
+    });
+  });
+
   // Auth pages (SSR): /login, /logout, etc.
   // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
   // so we mount it at root.
