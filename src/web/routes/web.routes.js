@@ -31,6 +31,31 @@ export function createWebRouter() {
     });
   });
 
+  // Provider identification (§ 5 DDG). Content is a structural placeholder
+  // until real details (name, address, contact) are supplied — see
+  // src/web/views/pages/static/impressum.hbs.
+  router.get('/impressum', (_req, res) => {
+    res.render('pages/static/impressum', {
+      title: 'Impressum',
+      bodyClass: 'page-static',
+      activePage: 'impressum',
+      styles: ['/css/pages/static-content.css'],
+    });
+  });
+
+  // Template usage rights (Buy/Rent). Real first-draft content, not a
+  // placeholder — but explicitly marked "pending legal review" and with
+  // one open business decision flagged (Rent expiry mid-project) — see
+  // src/web/views/pages/static/license.hbs.
+  router.get('/license', (_req, res) => {
+    res.render('pages/static/license', {
+      title: 'Template License',
+      bodyClass: 'page-static',
+      activePage: 'license',
+      styles: ['/css/pages/static-content.css'],
+    });
+  });
+
   // Auth pages (SSR): /login, /logout, etc.
   // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
   // so we mount it at root.

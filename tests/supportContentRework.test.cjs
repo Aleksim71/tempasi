@@ -27,6 +27,16 @@ describe('Static content pages: /about and /functionality', () => {
     const functionality = await request(app).get('/functionality');
     expect(functionality.status).toBe(200);
     expect(functionality.text).toContain('How Tempasi works');
+
+    const impressum = await request(app).get('/impressum');
+    expect(impressum.status).toBe(200);
+    expect(impressum.text).toContain('Impressum');
+    expect(impressum.text).toContain('§ 5 DDG');
+
+    const license = await request(app).get('/license');
+    expect(license.status).toBe(200);
+    expect(license.text).toContain('Template License');
+    expect(license.text).toContain('No reusing the same purchase across multiple unrelated websites');
   });
 
   test('/about does not link into the auth-gated cabinet (anonymous visitors would just get redirected)', () => {
