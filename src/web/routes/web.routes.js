@@ -56,6 +56,15 @@ export function createWebRouter() {
     });
   });
 
+  router.get('/contact', (_req, res) => {
+    res.render('pages/static/contact', {
+      title: 'Contact',
+      bodyClass: 'page-static',
+      activePage: 'contact',
+      styles: ['/css/pages/static-content.css'],
+    });
+  });
+
   // Auth pages (SSR): /login, /logout, etc.
   // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
   // so we mount it at root.

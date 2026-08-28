@@ -37,6 +37,13 @@ describe('Static content pages: /about and /functionality', () => {
     expect(license.status).toBe(200);
     expect(license.text).toContain('Template License');
     expect(license.text).toContain('No reusing the same purchase across multiple unrelated websites');
+
+    const contact = await request(app).get('/contact');
+    expect(contact.status).toBe(200);
+    expect(contact.text).toContain('support@tempasi.com');
+    // Fabricated inboxes from the old orphaned contact.hbs must not resurface.
+    expect(contact.text).not.toContain('partners@tempasi.com');
+    expect(contact.text).not.toContain('legal@tempasi.com');
   });
 
   test('/about does not link into the auth-gated cabinet (anonymous visitors would just get redirected)', () => {
