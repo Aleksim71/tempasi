@@ -97,3 +97,44 @@
 .static-page__notice strong {
   color: var(--c-text);
 }
+
+/* FAQ accordion — same visual language as the cabinet's .support-faq
+   (public/css/pages/cabinet-support.css), duplicated here so /faq stays
+   self-contained and doesn't need to load cabinet-only CSS. */
+.support-faq {
+  display: grid;
+  gap: 10px;
+}
+
+.support-faq details {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.support-faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.support-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.support-faq summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  color: var(--c-primary);
+}
+
+.support-faq details[open] summary::before {
+  content: '−';
+}
+
+.support-faq p {
+  margin: 10px 0 0;
+  color: var(--c-muted);
+}

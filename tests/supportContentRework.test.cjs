@@ -46,7 +46,7 @@ describe('Static content pages: /about and /functionality', () => {
     expect(contact.text).not.toContain('legal@tempasi.com');
   });
 
-  test('/landing renders 200 with both CTAs and no main site header (ad-traffic page)', async () => {
+  test('/landing renders 200 with both CTAs, no main site header, and is now linked from the footer', async () => {
     const { createWebApp } = await import('../src/app.web.js');
     const request = require('supertest');
     const app = createWebApp({ db: null });
@@ -58,11 +58,13 @@ describe('Static content pages: /about and /functionality', () => {
     expect(res.text).toContain('href="#designers"');
     expect(res.text).toContain('href="/templates"');
     expect(res.text).toContain('href="/register"');
-    // Deliberately not linked from main nav/footer, and header is hidden
-    // to keep ad traffic focused on the two CTAs.
+    // Decision reversed on 2026-08-28: /landing is now deliberately
+    // linked from the footer (Product -> "Who benefits from this?"),
+    // alongside FAQ. Header stays hidden on the landing page itself
+    // regardless of referral source.
     expect(res.text).not.toMatch(/site-header__nav/);
     const footer = readProjectFile('src/web/views/partials/footer.hbs');
-    expect(footer).not.toContain('/landing');
+    expect(footer).toContain('/landing');
   });
 
   test('/cookies documents only the real sid session cookie, no fabricated analytics claims', async () => {
@@ -76,6 +78,22 @@ describe('Static content pages: /about and /functionality', () => {
     expect(res.text).toContain('sid');
     expect(res.text).toContain('HttpOnly');
     expect(res.text).not.toMatch(/googletagmanager\.com|gtag\(|fbq\(/i);
+  });
+
+  test('/faq is public (no auth), has all 5 questions, and the refund answer no longer flatly says "no refunds"', async () => {
+    const { createWebApp } = await import('../src/app.web.js');
+    const request = require('supertest');
+    const app = createWebApp({ db: null });
+
+    const res = await request(app).get('/faq');
+    expect(res.status).toBe(200);
+    const questionCount = (res.text.match(/<summary>/g) || []).length;
+    expect(questionCount).toBe(5);
+    expect(res.text).toContain('Buy and Rent');
+    expect(res.text).toContain('href="/license"');
+    // Aligned with the checkout withdrawal-waiver consent: refunds
+    // aren't flatly refused anymore, the waiver is explained instead.
+    expect(res.text).not.toContain("so we don't offer refunds");
   });
 
   test('/about does not link into the auth-gated cabinet (anonymous visitors would just get redirected)', () => {
@@ -116,19 +134,15 @@ describe('Cabinet Support tab rework', () => {
     expect(view).not.toContain('Help Center');
   });
 
-  test('FAQ tab replaces the old "Quick Help" shortcut buttons and covers the real mechanics', () => {
+  test('FAQ tab replaces the old "Quick Help" shortcut buttons and links out to the public /faq', () => {
     const view = readProjectFile('src/web/views/partials/space-support.hbs');
     const faqSection = view.slice(view.indexOf('tab "faq"'));
 
     expect(view).not.toContain('Quick Help');
-    expect(faqSection).toMatch(/Buy and Rent/);
-    expect(faqSection).toMatch(/exclusive/i);
-    expect(faqSection).toMatch(/Tempasi\s*credit/i);
-    expect(faqSection).toMatch(/Cases/);
-    expect(faqSection).toMatch(/refund/i);
+    expect(faqSection).toMatch(/href="\/faq"/);
   });
 
-  test('rendered FAQ tab produces exactly 5 FAQ entries via real hbs compile', () => {
+  test('rendered FAQ tab links to the public /faq page instead of duplicating the content', () => {
     const hbs = require('hbs');
     hbs.registerHelper('eq', (a, b) => a === b);
 
@@ -148,7 +162,9 @@ describe('Cabinet Support tab rework', () => {
       },
     });
 
-    const detailsCount = (html.match(/<details>/g) || []).length;
-    expect(detailsCount).toBe(5);
+    expect(html).toContain('href="/faq"');
+    // The old inline accordion is gone from this tab -- /faq is now the
+    // single source of truth for FAQ content.
+    expect(html).not.toContain('<details>');
   });
 });

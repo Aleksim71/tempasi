@@ -90,6 +90,18 @@ export function createWebRouter() {
     });
   });
 
+  // Public FAQ: single source of truth, extracted from the previously
+  // auth-gated cabinet Support "FAQ" tab (space-support.hbs), which now
+  // links here instead of duplicating the content.
+  router.get('/faq', (_req, res) => {
+    res.render('pages/static/faq', {
+      title: 'FAQ',
+      bodyClass: 'page-static',
+      activePage: 'faq',
+      styles: ['/css/pages/static-content.css'],
+    });
+  });
+
   // Auth pages (SSR): /login, /logout, etc.
   // IMPORTANT: auth.pages.routes.js defines routes like router.get('/login'...)
   // so we mount it at root.
