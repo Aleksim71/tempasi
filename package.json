@@ -53,7 +53,6 @@
     "express": "^5.2.1",
     "express-handlebars": "^8.0.4",
     "hbs": "^4.2.0",
-    "http-proxy-middleware": "^3.0.5",
     "multer": "^2.0.2",
     "pg": "^8.16.3"
   }
