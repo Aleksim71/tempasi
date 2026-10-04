@@ -20,7 +20,7 @@ import { createWebApp } from './app.web.js';
 import { requireAuthWeb } from './web/middleware/require-auth.web.js';
 import { requireAdminWeb } from './web/middleware/require-admin.web.js';
 import checkoutRouter from './web/routes/checkout.routes.js';
-import { createPreviewProxyRouter } from './web/routes/preview-proxy.routes.js';
+import { createTemplatesRedirectRouter } from './web/routes/templates-redirect.routes.js';
 
 const require = createRequire(import.meta.url);
 const { renderStandalonePage } = require('./web/helpers/renderStandalonePage.cjs');
@@ -457,14 +457,14 @@ if (process.env.TEMPASI_SKIP_SSR) {
     });
   });
 
-  // TEMPASI_PREVIEW_PROXY_PRIORITY (2026-08-05)
-  // Mounted on `app` (not `webApp`) and BEFORE `app.use(webApp)`
-  // below, so it gets first crack at any /t/* request — taking
-  // priority over webApp's own /t/:slug/preview/... and /t/:slug/*
-  // routes (which read from TEMPLATE_UPLOAD_DIR, the mount that
-  // turned out to have never actually been live). This is the real,
-  // working path: an nginx server on the separate storage machine.
-  app.use(createPreviewProxyRouter());
+  // TEMPASI_TEMPLATES_ORIGIN_REDIRECT (2026-10-04)
+  // Reverses TEMPASI_PREVIEW_PROXY_PRIORITY (2026-08-05): /t/* is no
+  // longer proxied onto the app origin. With PREVIEW_ORIGIN set, it is
+  // 302-redirected to that separate origin, so seller-uploaded HTML/JS
+  // never runs same-origin with the app (see templates-redirect.routes.js).
+  // Unset PREVIEW_ORIGIN -> falls through to webApp's local /t routes.
+  // Must stay mounted on `app`, BEFORE `app.use(webApp)`.
+  app.use(createTemplatesRedirectRouter());
 
   app.use(webApp);
 }
