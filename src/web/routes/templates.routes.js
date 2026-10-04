@@ -68,6 +68,8 @@ const BUY_ERROR_MESSAGES = {
   ZERO_PAY_COMPLETION_SERVICE_UNAVAILABLE:
     'Checkout is temporarily unavailable. Please try again shortly.',
   CHECKOUT_SESSION_CREATE_FAILED: 'Could not start checkout. Please try again.',
+  // TEMPASI_PAYMENTS_UNAVAILABLE_GUARD (2026-10-04)
+  PAYMENTS_UNAVAILABLE: 'Purchases are not open yet — payments are coming soon.',
   BAD_REQUEST: 'Something went wrong with that request.',
   BUY_FAILED: 'Purchase could not be completed. Please try again.',
   DIRECT_BUY_FAILED: 'Purchase could not be completed. Please try again.',

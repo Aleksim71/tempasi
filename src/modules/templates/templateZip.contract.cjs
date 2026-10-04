@@ -15,6 +15,28 @@ function fileExists(p) {
   }
 }
 
+// TEMPASI_EXTRACT_PERMISSIONS_NORMALIZE (2026-10-04)
+// `unzip` restores per-file Unix modes stored in the ZIP and fs.cpSync
+// keeps them, so a seller's archive could yield 0600 files (unreadable
+// by the static file server, which reads via the group) or 0777 ones.
+// Normalize the copied tree: directories 2750 (setgid keeps the upload
+// dir's group on new entries), files 0640. Symlinks never get here —
+// validateExtractedTree() rejects them before the copy.
+function normalizeTreePermissions(rootDir) {
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const stat = fs.lstatSync(current);
+    if (stat.isSymbolicLink()) continue;
+    if (stat.isDirectory()) {
+      fs.chmodSync(current, 0o2750);
+      for (const child of fs.readdirSync(current)) stack.push(path.join(current, child));
+    } else if (stat.isFile()) {
+      fs.chmodSync(current, 0o640);
+    }
+  }
+}
+
 function ensureDirSync(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
@@ -347,6 +369,8 @@ async function extractFullTemplateToUploadDir({ zipPath, slug, destRoot }) {
       });
     }
 
+    normalizeTreePermissions(targetDir);
+
     return { targetDir };
   } finally {
     try {
@@ -362,6 +386,7 @@ module.exports = {
   validateTemplateZipOrThrowAsync,
   extractPreviewPngToFile,
   extractFullTemplateToUploadDir,
+  normalizeTreePermissions,
 
   // low-level (might be useful later)
   runUnzipList,

@@ -162,7 +162,24 @@ async function createPendingOrder({ userId, templateSlug, payload }) {
   return order;
 }
 
+// TEMPASI_PAYMENTS_UNAVAILABLE_GUARD (2026-10-04)
+// Production launches without a real payment provider (Stripe is a
+// separate task). With the default 'fake' provider in production,
+// checkout would create a pending order, reserve credit, and redirect
+// to /checkout/success, which is dev-only (404 in production). Refuse
+// up front instead, before any order/credit rows are written. Read at
+// call time (not module load) so tests and env changes apply directly.
+function paymentsAvailable() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const provider = String(process.env.PAYMENTS_PROVIDER || 'fake').trim().toLowerCase();
+  return !(isProduction && provider === 'fake');
+}
+
 async function createOrderCheckout(req, { userId, templateSlug, payload }) {
+  if (!paymentsAvailable()) {
+    fail('PAYMENTS_UNAVAILABLE', 503, 'Payments are not enabled yet.');
+  }
+
   const order = await createPendingOrder({ userId, templateSlug, payload });
 
   const grossAmountCents = Number(
@@ -251,6 +268,7 @@ module.exports = {
   normalizeBuyPayload,
   createPendingOrder,
   createOrderCheckout,
+  paymentsAvailable,
 };
 
 
