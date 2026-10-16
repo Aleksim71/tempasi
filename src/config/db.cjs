@@ -1,5 +1,4 @@
 // src/config/db.cjs
-/* eslint-env node */
 'use strict';
 
 const pg = require('pg');

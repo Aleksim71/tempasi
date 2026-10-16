@@ -1,4 +1,3 @@
-/* eslint-env node */
 'use strict';
 
 // src/modules/admin/testDataReset.service.cjs

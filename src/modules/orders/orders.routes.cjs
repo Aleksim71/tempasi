@@ -1,5 +1,4 @@
 // src/modules/orders/orders.routes.cjs
-/* eslint-env node */
 'use strict';
 
 const express = require('express');

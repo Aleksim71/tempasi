@@ -1,5 +1,4 @@
 // src/modules/downloads/downloads.controller.cjs
-/* eslint-env node */
 'use strict';
 
 const fs = require('fs');
