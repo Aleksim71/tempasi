@@ -131,22 +131,7 @@ function redirectWithError(res, pagePath, code, next) {
   return res.redirect(303, `${pagePath}?${qs.toString()}`);
 }
 
-function getBcrypt() {
-  try {
-    return require('bcrypt');
-  } catch (_) {
-    try {
-      return require('bcryptjs');
-    } catch (e2) {
-      const err = new Error('PASSWORD_HASHER_NOT_FOUND: install "bcrypt" or "bcryptjs"');
-      err.cause = e2;
-      throw err;
-    }
-  }
-}
-
-const bcrypt = getBcrypt();
-const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
+const { hashPassword, verifyPassword } = require('../../lib/password.cjs');
 
 async function createSessionForUser(userId, maxAgeSeconds) {
   if (!getPool) throw new Error('DB_POOL_HELPER_NOT_FOUND');
@@ -311,7 +296,7 @@ export function createAuthPagesRouter() {
           'AUTH_INVALID_CREDENTIALS',
           safeNext(req.body?.next) || '',
         );
-      const ok = await bcrypt.compare(password, String(u.password_hash || ''));
+      const ok = await verifyPassword(password, u.password_hash);
       if (!ok)
         return redirectWithError(
           res,
@@ -360,7 +345,7 @@ export function createAuthPagesRouter() {
         );
       if (!getPool)
         return redirectWithError(res, '/register', 'AUTH_TIMEOUT', safeNext(req.body?.next) || '');
-      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const passwordHash = await hashPassword(password);
       const pool = getPool();
       let userId;
       try {

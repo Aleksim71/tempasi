@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const bcrypt = require('bcrypt');
+const { hashPassword, verifyPassword } = require('../../lib/password.cjs');
 const {
   newSessionId,
   setSessionCookie,
@@ -29,7 +29,7 @@ function authRouter() {
         return res.status(400).json({ ok: false, error: 'EMAIL_PASSWORD_REQUIRED' });
       }
       const db = req.db;
-      const hash = await bcrypt.hash(password, 10);
+      const hash = await hashPassword(password);
       const { rows } = await db.query(
         `
         INSERT INTO users (email, password_hash, email_verified)
@@ -67,7 +67,7 @@ function authRouter() {
       );
       const user = rows[0];
       if (!user) return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS' });
-      const ok = await bcrypt.compare(password, user.password_hash);
+      const ok = await verifyPassword(password, user.password_hash);
       if (!ok) return res.status(401).json({ ok: false, error: 'INVALID_CREDENTIALS' });
       const sid = newSessionId();
       await db.query(

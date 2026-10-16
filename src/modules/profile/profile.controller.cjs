@@ -1,7 +1,7 @@
 // src/modules/profile/profile.controller.cjs
 'use strict';
 
-const bcrypt = require('bcryptjs');
+const { hashPassword, verifyPassword } = require('../../lib/password.cjs');
 const path = require('path');
 const EntitlementsService = require('../payments/entitlements.service.cjs');
 
@@ -306,7 +306,7 @@ async function changeMyPasswordJson(req, res) {
     });
   }
 
-  const isCurrentValid = await bcrypt.compare(currentPassword, user.password_hash);
+  const isCurrentValid = await verifyPassword(currentPassword, user.password_hash);
 
   if (!isCurrentValid) {
     return res.status(400).json({
@@ -315,7 +315,7 @@ async function changeMyPasswordJson(req, res) {
     });
   }
 
-  const nextHash = await bcrypt.hash(newPassword, 12);
+  const nextHash = await hashPassword(newPassword);
 
   await db.query(
     `
