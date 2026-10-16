@@ -2,7 +2,7 @@
 // ESM (src/server.js: import app from './app.js')
 //
 // Debug toggles:
-//   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware
+//   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware (dev only; refused in production)
 //   TEMPASI_SKIP_SSR=1       -> enable SSR stub (templates ok text)
 //   TEMPASI_SKIP_WATCHDOG=1  -> disable requestWatchdog
 //   TEMPASI_LOG_REQ=1        -> log req/res for debugging
@@ -14,6 +14,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'module';
+import { isAuthSkipped } from './config/devFlags.js';
 
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
@@ -265,7 +266,9 @@ app.use('/api', express.urlencoded({ extended: false }));
 app.use(attachDb(db));
 
 // auth (optional)
-if (!process.env.TEMPASI_SKIP_AUTH) {
+// Evaluated once at startup: with NODE_ENV=production a set flag throws
+// here, so the server refuses to boot instead of running without auth.
+if (!isAuthSkipped()) {
   const authMw = resolveAuthMiddleware(initAuth);
   if (!authMw) {
     throw new Error(

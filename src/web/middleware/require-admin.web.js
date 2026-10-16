@@ -6,7 +6,10 @@
 // instead of a redirect, since re-authenticating won't change their role.
 //
 // Dev toggle (same convention as require-auth.web.js):
-//   TEMPASI_SKIP_AUTH=1  -> bypass this guard entirely
+//   TEMPASI_SKIP_AUTH=1  -> bypass this guard entirely (dev only; refused
+//                           in production, see config/devFlags.js)
+
+import { isAuthSkipped } from '../../config/devFlags.js';
 
 const ADMIN_ROLES = new Set(['admin', 'superadmin']);
 
@@ -14,7 +17,7 @@ export function requireAdminWeb(options = {}) {
   const loginPath = options.loginPath || '/login';
 
   return function requireAdminWebMiddleware(req, res, next) {
-    if (process.env.TEMPASI_SKIP_AUTH) return next();
+    if (isAuthSkipped()) return next();
 
     const userId =
       req?.user?.id ??
