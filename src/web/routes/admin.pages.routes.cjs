@@ -238,7 +238,7 @@ async function getTemplateCategories() {
 }
 
 // Read-only cross-module report query (seller_templates + orders + user_profiles).
-// Per PILGRIM isolation rule this is fine for admin reads; any WRITE to
+// Module isolation rule: cross-module reads are fine for admin reports; any WRITE to
 // seller_templates must instead go through sellerTemplates.service.cjs.
 async function listAdminTemplates(filters) {
   const pool = getPool();

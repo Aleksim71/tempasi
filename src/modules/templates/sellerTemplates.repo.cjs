@@ -407,7 +407,8 @@ async function updateStatusByOwner({ pool, ownerUserId, id, status }) {
 // ------------------------------------------------------------
 // ADMIN block/unblock (NOT owner-scoped — admin-only write path).
 // Block forces status='draft'; unblock does NOT restore 'published'
-// (seller must republish manually). See PILGRIM.md for the decision.
+// (seller must republish manually): an unblocked template should not
+// reappear in the catalog without the seller reviewing it first.
 // ------------------------------------------------------------
 async function adminSetBlocked({ pool, id, blocked }) {
   if (!pool) throw new Error('DB_POOL_REQUIRED');

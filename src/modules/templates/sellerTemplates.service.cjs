@@ -304,7 +304,7 @@ async function addSellerTemplate({ pool, user, body, file }) {
   // TEMPASI_ADD_TEMPLATE_LIVE_CATEGORY_FIX (2026-08-12)
   // normalizeTemplateCategory() (used above, inside
   // validateAddOrEditTemplateForm) only recognizes the original 11
-  // hardcoded category slugs — documented known debt in PILGRIM.md.
+  // hardcoded category slugs (known debt: should read catalog_categories).
   // Any category added later via admin (e.g. saas-tech-startups,
   // corporate-business, healthcare-wellness, ...) silently fell back
   // to 'other' on create, even though edit already handles this
