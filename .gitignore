@@ -85,3 +85,6 @@ artifacts/
 outbox/
 *.bak_*
 outgoing/
+
+# local build / diagnostic output (scripts/build-outbox.sh)
+artifacts/
