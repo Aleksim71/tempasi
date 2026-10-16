@@ -1,14 +1,14 @@
 /* public/css/components/icons-tempasi.css */
 
 .tp-icon {
-  /* ключ: переменная для pattern/mask */
+  /* key: variable for pattern/mask */
   --tp-icon-color: currentColor;
 
   display: inline-block;
   width: 1em;
   height: 1em;
 
-  /* на всякий случай */
+  /* just in case */
   color: rgba(255, 255, 255, 0.9);
   fill: currentColor;
   stroke: currentColor;

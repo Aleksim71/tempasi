@@ -1,10 +1,67 @@
-{{!-- src/web/views/partials/cabinet/space-support.hbs --}}
-<div class="cabinet__workspace-title">Support</div>
-<div class="cabinet__workspace-text">
-  Help center, contact, FAQs. Next: add support form and documentation links.
-</div>
+{{!-- src/web/views/partials/space-support.hbs --}}
+<section class="support-shell">
 
-<div class="cabinet__workspace-actions">
-  <a class="cabinet__btn" href="/cabinet/support">Open Support</a>
-  <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-</div>
+  <nav class="support-tabs">
+    {{#each workspaceData.support.tabs}}
+      <a class="tp-control tp-tab tp-tab--main {{#if isActive}}is-active{{/if}}" href="{{href}}">
+        {{label}}
+      </a>
+    {{/each}}
+  </nav>
+
+  {{!-- HELP --}}
+  {{#if (eq workspaceData.support.tab "help")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Help</h3>
+        <p>Background reading about Tempasi and how it works.</p>
+
+        <ul class="support-links">
+          <li>
+            <a href="/about">About Tempasi</a>
+            <span>What Tempasi is, and buy vs. rent in a nutshell.</span>
+          </li>
+          <li>
+            <a href="/functionality">How Tempasi works</a>
+            <span>A walkthrough of the catalog and the cabinet.</span>
+          </li>
+        </ul>
+
+        <p class="support-note">
+          Template license terms: see <a href="/license">/license</a>.
+        </p>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- CONTACT --}}
+  {{#if (eq workspaceData.support.tab "contact")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Contact</h3>
+        <p>If something is not working or unclear — contact us.</p>
+
+        <div class="support-actions">
+          <a class="btn primary" href="mailto:support@tempasi.com">Email Support</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- FAQ --}}
+  {{#if (eq workspaceData.support.tab "faq")}}
+    <div class="support-panel">
+      <div class="support-card">
+        <h3>Frequently asked questions</h3>
+        <p>
+          The FAQ now lives on a public page — no login needed to read
+          it, and you can share the link with a client if it helps.
+        </p>
+        <div class="support-actions">
+          <a class="btn primary" href="/faq">Open FAQ</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+</section>

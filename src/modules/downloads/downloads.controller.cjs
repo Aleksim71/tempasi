@@ -1,5 +1,4 @@
 // src/modules/downloads/downloads.controller.cjs
-/* eslint-env node */
 'use strict';
 
 const fs = require('fs');
@@ -18,7 +17,44 @@ function getUserId(req) {
   return null;
 }
 
-function resolveDownloadFile(templateSlug) {
+function downloadStubEnabled() {
+  return (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.TEMPASI_ENABLE_DOWNLOAD_STUB === '1'
+  );
+}
+
+async function resolveDownloadFile(db, templateSlug) {
+  // TEMPASI_DOWNLOAD_USE_REAL_ZIP_PATH (2026-08-04)
+  // This used to ONLY guess at storage/templates/<slug>/*.zip paths —
+  // which only ever existed for templates manually run through the
+  // (now-removed) ingest-template.js CLI script. The actual uploaded
+  // ZIP for a real seller template lives wherever
+  // seller_templates.zip_path says (TEMPLATE_UPLOAD_DIR, a flat,
+  // randomly-named file — not under any storage/templates/<slug>/
+  // folder), and this function never looked there at all. Real
+  // purchased-template downloads were silently falling through to
+  // the dev/test stub response instead of the actual file.
+  if (db && typeof db.query === 'function') {
+    try {
+      const { rows } = await db.query(
+        `SELECT zip_path FROM seller_templates WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`,
+        [templateSlug],
+      );
+      const dbZipPath = rows[0]?.zip_path;
+      if (dbZipPath) {
+        const resolved = path.resolve(dbZipPath);
+        if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+          return resolved;
+        }
+      }
+    } catch (_e) {
+      // fall through to legacy candidates below
+    }
+  }
+
+  // Legacy fallback: templates manually placed via the old CLI
+  // ingest pipeline (storage/templates/), if any still remain.
   // Common places in this repo:
   // - storage/templates/<slug>/template.zip
   // - storage/templates/<slug>/download.zip
@@ -79,11 +115,18 @@ async function downloadTemplate(req, res, next) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No entitlement' } });
     }
 
-    const filePath = resolveDownloadFile(templateSlug);
+    const filePath = await resolveDownloadFile(db, templateSlug);
 
-    // ✅ Schema/test-friendly: if there is no real zip yet, don’t 500.
+    // Schema/test-friendly stub is allowed only outside production,
+    // or when explicitly enabled for controlled diagnostics.
     if (!filePath) {
-      return res.status(200).type('text').send(`DOWNLOAD OK (stub): ${templateSlug}`);
+      if (downloadStubEnabled()) {
+        return res.status(200).type('text').send(`DOWNLOAD OK (stub): ${templateSlug}`);
+      }
+
+      return res.status(404).json({
+        error: { code: 'DOWNLOAD_FILE_NOT_FOUND', message: 'Download file not found' },
+      });
     }
 
     // Real download

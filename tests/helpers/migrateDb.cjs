@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const pg = require('pg');
+const { assertTestDatabaseUrl, assertConnectedToTestDb } = require('./testDbGuard.cjs');
 
 function resolveMigrationsDir() {
   const candidates = [
@@ -49,6 +50,7 @@ async function execSqlFile(db, filepath) {
 }
 
 async function resetPublicSchema(db) {
+  await assertConnectedToTestDb(db);
   await db.query('DROP SCHEMA IF EXISTS public CASCADE;');
   await db.query('CREATE SCHEMA public;');
   await db.query('GRANT ALL ON SCHEMA public TO public;');
@@ -158,10 +160,7 @@ async function ensureOrdersCurrency(db) {
 }
 
 async function migrateDb() {
-  const connectionString = process.env.DATABASE_URL_TEST || '';
-  if (!connectionString) {
-    throw new Error('[migrateDb] DATABASE_URL_TEST is required');
-  }
+  const connectionString = assertTestDatabaseUrl(process.env.DATABASE_URL_TEST || '');
 
   const migrationsDir = resolveMigrationsDir();
   const files = listSqlMigrations(migrationsDir);
@@ -183,6 +182,79 @@ async function migrateDb() {
       console.log('[migrateDb] applying', path.basename(f));
       await execSqlFile(client, f);
     }
+
+  // TEMPASI_STEP_7J_TEST_SCHEMA_BACKFILL
+  // Keep older test DB migration sets compatible with current MVP schema.
+  await client.query(`
+    ALTER TABLE seller_templates
+      ADD COLUMN IF NOT EXISTS owner_hold_until TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS owner_hold_days INTEGER,
+      ADD COLUMN IF NOT EXISTS owner_hold_reason TEXT,
+      ADD COLUMN IF NOT EXISTS owner_withdrawn_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS owner_withdraw_reason TEXT,
+      ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Template',
+      ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS zip_path TEXT,
+      ADD COLUMN IF NOT EXISTS zip_original_name TEXT,
+      ADD COLUMN IF NOT EXISTS zip_mime TEXT,
+      ADD COLUMN IF NOT EXISTS zip_size_bytes BIGINT,
+      ADD COLUMN IF NOT EXISTS zip_uploaded_at TIMESTAMPTZ;
+
+      ALTER TABLE seller_templates
+        ADD COLUMN IF NOT EXISTS tags TEXT NOT NULL DEFAULT '';
+
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      user_id BIGINT PRIMARY KEY,
+      full_name VARCHAR(255) NOT NULL DEFAULT '',
+      nickname VARCHAR(120) NOT NULL DEFAULT '',
+      about TEXT NOT NULL DEFAULT '',
+      avatar_url TEXT,
+      role_title TEXT,
+      location TEXT,
+      website_url TEXT,
+      public_profile BOOLEAN NOT NULL DEFAULT false,
+      public_email VARCHAR(255),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS catalog_categories (
+      id BIGSERIAL PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    INSERT INTO catalog_categories (slug, label) VALUES
+      ('landing', 'Landing pages'),
+      ('ecommerce', 'E-commerce'),
+      ('blog', 'Blog / Media'),
+      ('portfolio', 'Portfolio'),
+      ('saas', 'SaaS / IT'),
+      ('restaurant', 'Restaurant / Caf\u00e9'),
+      ('real-estate', 'Real estate'),
+      ('education', 'Education'),
+      ('events', 'Events'),
+      ('health', 'Healthcare'),
+      ('other', 'Other')
+    ON CONFLICT (slug) DO NOTHING;
+
+    CREATE TABLE IF NOT EXISTS commission_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      rent_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+      sale_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_by BIGINT,
+      CONSTRAINT commission_settings_single_row CHECK (id = 1),
+      CONSTRAINT commission_settings_rent_percent_range CHECK (rent_percent >= 0 AND rent_percent <= 100),
+      CONSTRAINT commission_settings_sale_percent_range CHECK (sale_percent >= 0 AND sale_percent <= 100)
+    );
+
+    INSERT INTO commission_settings (id, rent_percent, sale_percent)
+    VALUES (1, 0, 0)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
 
     // Post-migration compatibility patches (safe no-ops if already present)
     await ensureEntitlementsKind(client);

@@ -45,7 +45,10 @@ async function ensureEntitlementForOrder(order) {
   try {
     const kind = defaultKindForDealType(order.deal_type);
     const isRent = upper(order.deal_type) === 'RENT';
-    const endsAtSql = isRent ? `now() + interval '7 days'` : 'NULL';
+    const dealType = upper(order.deal_type) || 'BUY';
+    const rentDays = Number.parseInt(String(order.rent_days || '1'), 10);
+    const safeRentDays = Number.isInteger(rentDays) && rentDays >= 1 && rentDays <= 365 ? rentDays : 1;
+    const endsAtSql = isRent ? `now() + (${safeRentDays} * interval '1 day')` : 'NULL';
 
     // Fast path: return existing
     const existing = await getEntitlementByOrderId(client, order.id);
@@ -53,8 +56,8 @@ async function ensureEntitlementForOrder(order) {
 
     // Preferred insert path (needs UNIQUE on order_id)
     const insertSql = `
-      INSERT INTO public.entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at, created_at)
-      VALUES ($1, $2, $3, $4, now(), ${endsAtSql}, now())
+      INSERT INTO public.entitlements (user_id, template_slug, kind, deal_type, order_id, starts_at, ends_at, created_at)
+      VALUES ($1, $2, $3, $4, $5, now(), ${endsAtSql}, now())
       ON CONFLICT (order_id) DO NOTHING
       RETURNING *
     `;
@@ -64,6 +67,7 @@ async function ensureEntitlementForOrder(order) {
         order.user_id,
         order.template_slug,
         kind,
+        dealType,
         order.id,
       ]);
       if (ins.rows[0]) return ins.rows[0];
@@ -81,10 +85,10 @@ async function ensureEntitlementForOrder(order) {
       try {
         await client.query(
           `
-          INSERT INTO public.entitlements (user_id, template_slug, kind, order_id, starts_at, ends_at, created_at)
-          VALUES ($1, $2, $3, $4, now(), ${endsAtSql}, now())
+          INSERT INTO public.entitlements (user_id, template_slug, kind, deal_type, order_id, starts_at, ends_at, created_at)
+          VALUES ($1, $2, $3, $4, $5, now(), ${endsAtSql}, now())
           `,
-          [order.user_id, order.template_slug, kind, order.id]
+          [order.user_id, order.template_slug, kind, dealType, order.id]
         );
       } catch (_e2) {
         // ignore and select below
@@ -96,6 +100,54 @@ async function ensureEntitlementForOrder(order) {
     client.release();
   }
 }
+
+async function closeActiveRentForBuyerBuy({ userId, templateSlug, buyOrderId = null }) {
+  const sql = `
+    WITH active_rent AS (
+      SELECT
+        e.id AS entitlement_id,
+        e.order_id AS rent_order_id,
+        e.starts_at AS original_starts_at,
+        e.ends_at AS original_ends_at,
+        o.amount_cents AS rent_amount_cents,
+        o.currency AS rent_currency
+      FROM public.entitlements e
+      LEFT JOIN public.orders o
+        ON o.id = e.order_id
+      WHERE e.user_id = $1
+        AND e.template_slug = $2
+        AND (
+          LOWER(COALESCE(e.kind, '')) = 'rent'
+          OR UPPER(COALESCE(e.deal_type, '')) = 'RENT'
+          AND e.closed_at IS NULL
+          AND (e.ends_at IS NULL OR e.ends_at > now())
+        )
+        AND (e.ends_at IS NULL OR e.ends_at > now())
+        AND (
+          e.closed_reason IS NULL
+          OR e.closed_reason = ''
+        )
+    )
+    UPDATE public.entitlements e
+       SET ends_at = now(),
+           closed_at = now(),
+           closed_reason = 'converted_to_buy',
+           updated_at = now()
+      FROM active_rent ar
+     WHERE e.id = ar.entitlement_id
+     RETURNING
+       e.*,
+       ar.rent_order_id,
+       ar.original_starts_at,
+       ar.original_ends_at,
+       ar.rent_amount_cents,
+       ar.rent_currency
+  `;
+
+  const { rows } = await pool.query(sql, [userId, templateSlug]);
+  return rows;
+}
+
 
 async function findActiveEntitlement({ userId, slug }) {
   const sql = `
@@ -130,6 +182,7 @@ async function listUserEntitlements({ userId }) {
 
 module.exports = {
   ensureEntitlementForOrder,
+  closeActiveRentForBuyerBuy,
   findActiveEntitlement,
   hasEntitlement,
   listUserEntitlements,

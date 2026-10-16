@@ -1,0 +1,61 @@
+<div class="admin-templates">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Users &middot; Trash</h1>
+
+    <div class="admin-view-toggle" aria-label="Back to Users">
+      <a href="/admin/users" class="c-btn c-btn--sm">Back to Users</a>
+    </div>
+  </div>
+
+  <p class="admin-empty-state__hint">
+    Deleted accounts land here first &mdash; whether they deleted themselves (Cabinet &gt; Profile
+    &amp; Security) or an admin deleted them from the Users page. Restore reactivates the account
+    and lets it log in again; their templates become publicly visible again too, unless
+    individually withdrawn or blocked. Nothing here is ever physically removed.
+  </p>
+
+  <section class="admin-table-card">
+    {{#if users.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Deleted</th>
+            <th>Restore</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each users}}
+            <tr>
+              <td>{{this.email}}</td>
+              <td>{{this.deletedAtLabel}}</td>
+              <td>
+                <form method="post" action="/admin/users/{{this.id}}/restore">
+                  <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                  <button type="submit" class="c-btn c-btn--sm">Restore</button>
+                </form>
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="admin-pagination">
+        <span class="admin-pagination__summary">{{total}} in trash &middot; page {{page}} of {{totalPages}}</span>
+        <div class="admin-pagination__links">
+          {{#if hasPrev}}
+            <a class="c-btn" href="{{prevHref}}">Previous</a>
+          {{/if}}
+          {{#if hasNext}}
+            <a class="c-btn" href="{{nextHref}}">Next</a>
+          {{/if}}
+        </div>
+      </div>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>Trash is empty</h2>
+        <p class="admin-empty-state__hint">Deleted accounts (self-deleted or admin-deleted) will show up here.</p>
+      </div>
+    {{/if}}
+  </section>
+</div>

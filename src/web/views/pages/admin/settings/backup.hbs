@@ -1,0 +1,178 @@
+<div class="admin-settings">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Settings</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Settings sections">
+    <a href="/admin/settings/catalog" class="admin-subnav__link{{#if (eq settingsTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/settings/commission" class="admin-subnav__link{{#if (eq settingsTab 'commission')}} admin-subnav__link--active{{/if}}">Commission fee</a>
+    <a href="/admin/settings/backup" class="admin-subnav__link{{#if (eq settingsTab 'backup')}} admin-subnav__link--active{{/if}}">Backup</a>
+    <a href="/admin/settings/storage" class="admin-subnav__link{{#if (eq settingsTab 'storage')}} admin-subnav__link--active{{/if}}">Storage</a>
+    <a href="/admin/settings/danger" class="admin-subnav__link{{#if (eq settingsTab 'danger')}} admin-subnav__link--active{{/if}}">Danger zone</a>
+  </nav>
+
+  <p class="admin-empty-state__hint">
+    Automatic backup runs daily via cron: templates sync + DB dump, paired
+    by a small manifest (no site downtime, no duplicated files — the
+    templates history already lives in the backup drive's own git log).
+  </p>
+
+  {{#if error}}
+    <div class="admin-form-error">{{error}}</div>
+  {{/if}}
+
+  {{#if toggled}}
+    <div class="admin-form-success">Automatic backup setting updated.</div>
+  {{/if}}
+
+  {{#if ranNow}}
+    <div class="admin-form-success">Backup completed — see the file list below.</div>
+  {{/if}}
+
+  <section class="admin-table-card" style="padding: var(--s-16, 16px); margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <strong>Automatic backup:</strong>
+        {{#if automaticEnabled}}
+          <span style="color: var(--c-success, #2dd4bf);">Enabled</span> — runs daily via cron.
+        {{else}}
+          <span style="color: var(--c-danger, #fb7185);">Disabled</span> — the cron job checks this and skips itself.
+        {{/if}}
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <form method="post" action="/admin/settings/backup/toggle">
+          <input type="hidden" name="enable" value="{{#if automaticEnabled}}0{{else}}1{{/if}}" />
+          <button type="submit" class="c-btn">
+            {{#if automaticEnabled}}Disable automatic backup{{else}}Enable automatic backup{{/if}}
+          </button>
+        </form>
+
+        <form method="post" action="/admin/settings/backup/run-now">
+          <button type="submit" class="c-btn c-btn--primary">Run backup now</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  {{#unless backupDirConfigured}}
+    <div class="admin-empty-state">
+      <h2>BACKUP_DIR is not configured</h2>
+      <p class="admin-empty-state__hint">Set the BACKUP_DIR environment variable to the folder your backup cron writes to.</p>
+    </div>
+  {{else}}
+    {{#if dirError}}
+      <div class="admin-form-error">Could not read {{backupDir}}: {{dirError}}</div>
+    {{else}}
+      {{#unless dirExists}}
+        <div class="admin-empty-state">
+          <h2>Backup folder not found</h2>
+          <p class="admin-empty-state__hint">{{backupDir}} does not exist yet.</p>
+        </div>
+      {{else}}
+        <section class="admin-table-card">
+          {{#if files.length}}
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Size</th>
+                  <th>Modified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each files}}
+                  <tr>
+                    <td>{{this.name}}</td>
+                    <td>{{this.sizeLabel}}</td>
+                    <td>{{this.modifiedLabel}}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            <div class="admin-empty-state">
+              <h2>No backup files found</h2>
+              <p class="admin-empty-state__hint">{{backupDir}} is empty.</p>
+            </div>
+          {{/if}}
+        </section>
+      {{/unless}}
+    {{/if}}
+  {{/unless}}
+
+  {{#if restorablePairs.length}}
+    <section class="admin-table-card" style="padding: var(--s-16, 16px); margin-top: 16px;">
+      <h2 style="margin: 0 0 8px;">Restore</h2>
+      <p class="admin-empty-state__hint" style="margin: 0 0 16px;">
+        Restores the database AND templates together to a specific snapshot (paired by that snapshot's manifest —
+        never one without the other). Stops the site for about a minute while it restores and restarts itself.
+        "additive" template mode only adds/updates files on the storage machine; "exact" also deletes anything not in the
+        snapshot — use that if the storage machine's files themselves might be compromised.
+      </p>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Snapshot</th>
+            <th>Mode</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each restorablePairs}}
+            <tr>
+              <td>{{this.name}} <span class="admin-empty-state__hint">({{this.modifiedLabel}})</span></td>
+              <td colspan="2">
+                <form method="post" action="/admin/settings/backup/restore" class="admin-restore-form" data-dump-name="{{this.name}}" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="hidden" name="dumpFile" value="{{this.name}}" />
+                  <input type="hidden" name="confirmFile" value="" />
+                  <select name="mode">
+                    <option value="additive">additive</option>
+                    <option value="exact">exact (delete extra)</option>
+                  </select>
+                  <button type="submit" class="c-btn c-btn--danger">Restore</button>
+                </form>
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </section>
+  {{/if}}
+</div>
+
+<script>
+  (function () {
+    document.addEventListener('submit', async function (e) {
+      var form = e.target;
+      if (!form || !form.classList || !form.classList.contains('admin-restore-form')) return;
+      if (form.dataset.confirmed === '1') return;
+
+      e.preventDefault();
+
+      var dumpName = form.getAttribute('data-dump-name');
+      var modeSelect = form.querySelector('select[name="mode"]');
+      var mode = modeSelect ? modeSelect.value : 'additive';
+
+      var typed = await window.tempasiPrompt({
+        title: 'Restore from backup?',
+        message:
+          'This stops the site, wipes and reloads the database, and restores templates (' +
+          mode +
+          ' mode). This cannot be undone once started.\n\nType the exact dump filename to confirm:',
+        inputPlaceholder: dumpName,
+        confirmLabel: 'Restore',
+        danger: true,
+      });
+
+      if (typed !== dumpName) return;
+
+      var confirmInput = form.querySelector('input[name="confirmFile"]');
+      if (confirmInput) confirmInput.value = typed;
+
+      form.dataset.confirmed = '1';
+      form.submit();
+    });
+  })();
+</script>

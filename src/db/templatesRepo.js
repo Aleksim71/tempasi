@@ -25,7 +25,7 @@ function normalizeType(raw) {
 }
 
 function computeHasZip(slug) {
-  // ожидаем: storage/zips/seed-001_v1.0.0.zip (любой v*)
+  // expecting: storage/zips/seed-001_v1.0.0.zip (any v*)
   if (!fs.existsSync(ZIPS_DIR)) return false;
   const prefix = `${slug}_v`;
   try {

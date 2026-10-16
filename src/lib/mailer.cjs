@@ -21,7 +21,6 @@ function hasSmtp() {
 
 async function sendViaNodemailer({ to, subject, text }) {
   // Lazy require so project doesn't hard-depend on nodemailer in MVP
-  // eslint-disable-next-line global-require
   const nodemailer = require('nodemailer');
 
   const transporter = nodemailer.createTransport(String(process.env.SMTP_URL));
@@ -34,7 +33,6 @@ async function sendViaNodemailer({ to, subject, text }) {
 }
 
 async function sendToConsole({ to, subject, text }) {
-  // eslint-disable-next-line no-console
   console.log('[MAIL:FALLBACK]', { to, subject, text });
 }
 

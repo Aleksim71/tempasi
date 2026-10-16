@@ -6,7 +6,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 
 function loadDotenv() {
-  // Важно: грузим .env максимально рано и предсказуемо
+  // Important: load .env as early and predictably as possible
   const root = path.resolve(__dirname, '..', '..');
 
   const candidates = [
@@ -20,7 +20,7 @@ function loadDotenv() {
     if (fs.existsSync(p)) {
       const res = dotenv.config({ path: p });
       if (!res.error) loaded = true;
-      // если есть ошибка — не падаем, но можно будет увидеть в логах ниже
+      // if there's an error, don't crash — it'll be visible in the logs below
     }
   }
 
@@ -40,7 +40,7 @@ function pick(v, fallback) {
 
 const NODE_ENV = pick(process.env.NODE_ENV, 'development');
 
-// Приоритет: DATABASE_URL > PG* переменные > дефолты
+// Priority: DATABASE_URL > PG* variables > defaults
 const DATABASE_URL = pick(process.env.DATABASE_URL, '');
 
 const PGHOST = pick(process.env.PGHOST, '127.0.0.1');
@@ -49,7 +49,7 @@ const PGUSER = pick(process.env.PGUSER, 'tempasi');
 const PGPASSWORD = pick(process.env.PGPASSWORD, 'tempasi');
 const PGDATABASE = pick(process.env.PGDATABASE, 'tempasi_dev');
 
-// В логах удобно видеть, что реально подхватилось
+// Handy to see in the logs what actually got picked up
 const debug = {
   root,
   dotenvLoaded: loaded,

@@ -42,7 +42,10 @@
     position: static;
   }
 }
-/* My Templates: tabs + workspace */
+
+/* =========================
+   My Templates: tabs + workspace
+========================= */
 .mt-tabs {
   display: flex;
   gap: 10px;
@@ -50,6 +53,10 @@
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   overflow-x: auto;
+}
+
+.mt-tabs--sub {
+  margin-top: 10px;
 }
 
 .mt-tab {
@@ -80,6 +87,32 @@
 .mt-workspace {
   margin-top: 12px;
 }
+
+/* =========================
+   Analytics: view switch (Overview / Table / Advanced)
+   "slightly horizontally stretched checkbox"
+========================= */
+.mt-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 16px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 520px) {
+  .mt-view-switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* =========================
+   Seller cards (List)
+========================= */
 .seller-card {
   display: flex;
   gap: 32px;
@@ -126,4 +159,176 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* =========================
+   Analytics table
+========================= */
+.mt-analytics {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.mt-analytics th,
+.mt-analytics td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.mt-analytics th.is-active {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.mt-analytics__sortLink {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.mt-analytics__sortLink.is-active {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.mt-analytics__templateTitle {
+  font-weight: 600;
+}
+
+.mt-analytics__templateSlug {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.mt-analytics__arrow {
+  margin-left: 4px;
+}
+
+/* =========================
+   KPI grid
+========================= */
+.mt-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+
+.mt-kpi {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-kpi__label {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.mt-kpi__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16): small label above the
+   platform-wide "Market" row of KPI cards, so it reads as clearly
+   distinct from the personal KPIs above it. */
+.mt-kpis__section-title {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 760px) {
+  .mt-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   Chart
+========================= */
+.mt-chart {
+  margin: 12px 0 18px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-chart__title {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.mt-analytics-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.mt-analytics__emptyRow {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mt-analytics__emptyRow td,
+.mt-analytics__empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mt-analytics__empty {
+  min-height: 96px;
+}
+
+/* =========================
+   Advanced placeholder
+========================= */
+.mt-advanced-placeholder {
+  margin-top: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-advanced-placeholder__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: 8px;
+}
+
+.mt-advanced-placeholder__title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.mt-advanced-placeholder__text {
+  margin: 0 0 14px;
+  opacity: 0.86;
+  max-width: 62ch;
+}
+
+.mt-advanced-placeholder__list {
+  margin: 0;
+  padding-left: 18px;
+  opacity: 0.92;
+}
+
+.mt-advanced-placeholder__list li + li {
+  margin-top: 6px;
 }

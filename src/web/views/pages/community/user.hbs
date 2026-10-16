@@ -1,0 +1,69 @@
+<div class="community-page-inner">
+  <a class="community-back-link" href="/community">&larr; Back to Community</a>
+
+  <div class="community-profile-header">
+    <div class="community-profile-avatar">
+      {{#if member.avatarUrl}}
+        <img src="{{member.avatarUrl}}" alt="{{member.displayName}}" />
+      {{else}}
+        <div class="community-profile-avatar__placeholder" aria-hidden="true"></div>
+      {{/if}}
+    </div>
+    <div>
+      <h1>{{member.displayName}}</h1>
+      {{#if member.roleTitle}}
+        <p class="community-profile-role">{{member.roleTitle}}</p>
+      {{/if}}
+      {{#if member.location}}
+        <p class="community-profile-location">{{member.location}}</p>
+      {{/if}}
+    </div>
+  </div>
+
+  {{#if member.about}}
+    <section class="community-profile-section">
+      <h2>About</h2>
+      <p>{{member.about}}</p>
+    </section>
+  {{/if}}
+
+  {{#if (or member.publicEmail member.websiteUrl)}}
+    <section class="community-profile-section">
+      <h2>Contact</h2>
+      {{#if member.publicEmail}}
+        <p><a href="mailto:{{member.publicEmail}}">{{member.publicEmail}}</a></p>
+      {{/if}}
+      {{#if member.websiteUrl}}
+        <p><a href="{{member.websiteUrl}}" target="_blank" rel="noopener">{{member.websiteUrl}}</a></p>
+      {{/if}}
+    </section>
+  {{/if}}
+
+  <section class="community-profile-section">
+    <h2>Templates</h2>
+    {{#if templates.length}}
+      <div class="community-templates-grid">
+        {{#each templates}}
+          <a class="community-template-card" href="/templates/{{this.slug}}">
+            <div class="community-template-card__preview">
+              {{#if this.previewSrc}}
+                <img src="{{this.previewSrc}}" alt="{{this.title}}" loading="lazy" />
+              {{/if}}
+            </div>
+            <div class="community-template-card__title">{{this.title}}</div>
+            <div class="community-template-card__prices">
+              {{#if this.priceBuyLabel}}
+                <span>Buy &euro;{{this.priceBuyLabel}}</span>
+              {{/if}}
+              {{#if this.priceRentLabel}}
+                <span>Rent &euro;{{this.priceRentLabel}}/day</span>
+              {{/if}}
+            </div>
+          </a>
+        {{/each}}
+      </div>
+    {{else}}
+      <p class="community-empty__hint">No published templates yet.</p>
+    {{/if}}
+  </section>
+</div>

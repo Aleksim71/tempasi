@@ -1,0 +1,174 @@
+{{!-- src/web/views/pages/cart.hbs --}}
+<section class="cart-page">
+  <div class="l-container">
+    <div class="cart-shell">
+      <div class="cart-head">
+        <h1 class="cart-title">Cart</h1>
+        <p class="cart-subtitle">Selected templates for checkout.</p>
+      </div>
+
+      {{#if notice}}
+        <div class="cart-notice">{{notice}}</div>
+      {{/if}}
+
+      {{#if cart.items.length}}
+        <div class="cart-panel">
+          {{#if cart.buyItems.length}}
+            <div class="cart-group">
+              <div class="cart-group__head">
+                <span class="cart-group__title">BUY</span>
+                <span class="cart-group__subtotal">{{cart.buyCount}} item{{#unless (eq cart.buyCount 1)}}s{{/unless}} · €{{cart.buySubtotalEur}}</span>
+              </div>
+              <div class="finance-table-wrap">
+                <table class="finance-table">
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Added</th>
+                      <th>Amount</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each cart.buyItems}}
+                      <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
+                        <td>
+                          {{template_title}}
+                          {{#unless isAvailable}}
+                            <div class="cart-badge cart-badge--warn">Not available</div>
+                          {{/unless}}
+                        </td>
+                        <td>{{created_at_str}}</td>
+                        <td>€{{amountEur}}</td>
+                        <td>
+                          <div class="cart-actions">
+                            <a class="btn alt" href="{{detailsHref}}">Details</a>
+                            <form method="post" action="/cart/remove">
+                              <input type="hidden" name="item_id" value="{{id}}" />
+                              <button type="submit" class="btn alt">Remove</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {{/if}}
+
+          {{#if cart.rentItems.length}}
+            <div class="cart-group cart-group--divider">
+              <div class="cart-group__head">
+                <span class="cart-group__title">RENT</span>
+                <span class="cart-group__subtotal">{{cart.rentCount}} item{{#unless (eq cart.rentCount 1)}}s{{/unless}} · €{{cart.rentSubtotalEur}}</span>
+              </div>
+              <div class="finance-table-wrap">
+                <table class="finance-table">
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Duration</th>
+                      <th>Added</th>
+                      <th>Amount</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each cart.rentItems}}
+                      <tr{{#unless isAvailable}} class="cart-row--unavailable"{{/unless}}>
+                        <td>
+                          {{template_title}}
+                          {{#unless isAvailable}}
+                            <div class="cart-badge cart-badge--warn">Not available</div>
+                          {{/unless}}
+                        </td>
+                        <td>{{durationLabel}}</td>
+                        <td>{{created_at_str}}</td>
+                        <td>€{{amountEur}}</td>
+                        <td>
+                          <div class="cart-actions">
+                            <a class="btn alt" href="{{detailsHref}}">Details</a>
+                            <form method="post" action="/cart/remove">
+                              <input type="hidden" name="item_id" value="{{id}}" />
+                              <button type="submit" class="btn alt">Remove</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {{/if}}
+
+          <div class="cart-summary">
+            <div class="cart-summary__row">
+              <span>Items</span>
+              <strong>{{cart.itemCount}}</strong>
+            </div>
+            <div class="cart-summary__row">
+              <span>Subtotal</span>
+              <strong>€{{cart.subtotalEur}}</strong>
+            </div>
+
+            <form method="post" action="/cart/checkout-all" class="cart-summary__checkout" id="cartCheckoutAllForm">
+              <label class="cart-summary__consent">
+                <input type="checkbox" name="withdrawal_waiver_ack" value="1" required>
+                I understand this purchase completes immediately and I
+                waive my 14-day right of withdrawal for this digital
+                content (<a href="/license" target="_blank">license</a>).
+              </label>
+              <button type="submit" class="btn primary">Checkout</button>
+            </form>
+            <div class="cart-summary__hint">
+              Runs the real purchase pipeline for every item in your cart — BUY and RENT alike
+              (exclusivity check, payment completion, download link / Case assignment) — same code
+              path a real payment webhook would use.
+            </div>
+
+            <form method="post" action="/cart/demo-checkout" class="cart-summary__checkout" style="margin-top: 8px;">
+              <button type="submit" class="btn">Demo Checkout (legacy, no confirmation)</button>
+            </form>
+            <div class="cart-summary__hint">
+              Instantly marks the current cart as paid, skipping the exclusivity check above —
+              dev/testing convenience only, available outside production.
+            </div>
+          </div>
+        </div>
+      {{else}}
+        <div class="cart-empty">
+          <div class="cart-empty__title">Your cart is empty</div>
+          <div class="cart-empty__text">Add templates from the catalog to start checkout.</div>
+          <a class="btn primary" href="/templates">Browse templates</a>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var form = document.getElementById('cartCheckoutAllForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+      if (form.dataset.confirmed === '1') return;
+      e.preventDefault();
+
+      var itemCount = {{cart.itemCount}};
+      var subtotal = '{{cart.subtotalEur}}';
+      var ok = await window.tempasiConfirm({
+        title: 'Checkout?',
+        message: 'Buy ' + itemCount + ' item(s) for €' + subtotal + '? This completes payment immediately — there is no undo.',
+        confirmLabel: 'Checkout',
+      });
+
+      if (!ok) return;
+
+      form.dataset.confirmed = '1';
+      form.submit();
+    });
+  })();
+</script>

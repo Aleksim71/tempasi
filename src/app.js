@@ -2,7 +2,7 @@
 // ESM (src/server.js: import app from './app.js')
 //
 // Debug toggles:
-//   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware
+//   TEMPASI_SKIP_AUTH=1      -> skip initAuth middleware (dev only; refused in production)
 //   TEMPASI_SKIP_SSR=1       -> enable SSR stub (templates ok text)
 //   TEMPASI_SKIP_WATCHDOG=1  -> disable requestWatchdog
 //   TEMPASI_LOG_REQ=1        -> log req/res for debugging
@@ -14,12 +14,26 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'module';
+import { isAuthSkipped } from './config/devFlags.js';
 
 import { requestWatchdog } from './web/middleware/request-watchdog.js';
 import { createWebApp } from './app.web.js';
 import { requireAuthWeb } from './web/middleware/require-auth.web.js';
+import { requireAdminWeb } from './web/middleware/require-admin.web.js';
+import checkoutRouter from './web/routes/checkout.routes.js';
+import { createTemplatesRedirectRouter } from './web/routes/templates-redirect.routes.js';
 
 const require = createRequire(import.meta.url);
+const { renderStandalonePage } = require('./web/helpers/renderStandalonePage.cjs');
+
+function escapeHtmlForNotFound(value) {
+  return String(value == null ? '' : value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 // --------------------
 // paths
@@ -98,6 +112,12 @@ const profileApiMod = require('./modules/profile/profile.api.routes.cjs'); // ap
 
 // Cabinet pages router (CJS)
 const { createCabinetPagesRouter } = require('./web/routes/cabinet.pages.routes.cjs');
+
+// Community pages router (CJS)
+const { createCommunityPagesRouter } = require('./web/routes/community.pages.routes.cjs');
+
+// Admin pages router (CJS)
+const { createAdminPagesRouter } = require('./web/routes/admin.pages.routes.cjs');
 
 // --------------------
 // helpers
@@ -246,7 +266,9 @@ app.use('/api', express.urlencoded({ extended: false }));
 app.use(attachDb(db));
 
 // auth (optional)
-if (!process.env.TEMPASI_SKIP_AUTH) {
+// Evaluated once at startup: with NODE_ENV=production a set flag throws
+// here, so the server refuses to boot instead of running without auth.
+if (!isAuthSkipped()) {
   const authMw = resolveAuthMiddleware(initAuth);
   if (!authMw) {
     throw new Error(
@@ -291,6 +313,22 @@ const downloadsRouter = pickRouter(
   { db },
 );
 
+function isPublicCasePreviewRequest(req) {
+  if (!req || String(req.method || '').toUpperCase() !== 'GET') return false;
+  const originalUrl = String(req.originalUrl || req.url || '');
+  const pathname = originalUrl.split('?')[0];
+  return /^\/cabinet\/cases\/[^/]+\/preview\/public\/?$/.test(pathname);
+}
+
+function requireCabinetAuthExceptPublicCasePreview(options) {
+  const requireAuth = requireAuthWeb(options);
+
+  return function cabinetAuthGate(req, res, next) {
+    if (isPublicCasePreviewRequest(req)) return next();
+    return requireAuth(req, res, next);
+  };
+}
+
 const profileApiRouter = pickRouter(
   profileApiMod,
   ['profileApiRouter', 'profileApiRoutes', 'router', 'routes'],
@@ -306,16 +344,69 @@ app.use('/api/orders', ordersRouter);
 app.use('/downloads', downloadsRouter);
 app.use('/api/profile', profileApiRouter);
 
+// TEMPASI_API_JSON_ERROR_HANDLER (2026-08-11)
+// Previously /api/* routes had no error-handling middleware of their
+// own in this file (unlike app.api.js, which is a separate Express
+// app not actually mounted for the running server). An unhandled
+// error thrown by any /api/* route (e.g. a Postgres unique-constraint
+// violation) fell through to Express's built-in default handler,
+// which returns an HTML error page — not JSON. Client-side fetch()
+// callers doing `await response.json()` would then throw trying to
+// parse HTML as JSON, landing in their generic catch block and
+// showing a misleading "Network error." even though the real cause
+// was an ordinary validation failure (e.g. "nickname already taken").
+// Scoped to '/api' only, mounted before the SSR/webApp fallback, so
+// page rendering and its own error handling are untouched.
+app.use('/api', (err, req, res, next) => {
+  console.error('[api] error:', err?.stack || err);
+
+  const status = Number.isInteger(err?.status) ? err.status : 500;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Postgres errors carry: code, detail, hint, constraint, table, column
+  const pg =
+    err && typeof err === 'object'
+      ? {
+          code: err.code,
+          detail: err.detail,
+          hint: err.hint,
+          constraint: err.constraint,
+          table: err.table,
+          column: err.column,
+        }
+      : {};
+
+  if (!isProd) {
+    return res.status(status).json({
+      ok: false,
+      error: 'Internal Server Error',
+      message: String(err?.message || err || 'Error'),
+      status,
+      ...pg,
+    });
+  }
+
+  // In production, still surface the message for deliberate 4xx errors
+  // (e.g. "this nickname is already taken") — those are safe,
+  // user-facing validation text, not internal details. Only 500s stay
+  // generic, since those may originate from a raw unhandled exception.
+  return res.status(status).json({
+    ok: false,
+    error: status === 500 ? 'Internal Server Error' : String(err?.message || 'Error'),
+    ...(status !== 500 ? { message: String(err?.message || 'Error') } : {}),
+  });
+});
+
 // SSR (or stub) LAST
 if (process.env.TEMPASI_SKIP_SSR) {
   app.use(makeSsrStubRouter());
 } else {
   const webApp = createWebApp({ db });
 
-  // ✅ Protect Cabinet (Overview + Cases) via ONE router mounted under /cabinet
+  // ✅ Protect Cabinet pages, but allow tokenized public Case Preview links.
   webApp.use(
     '/cabinet',
-    requireAuthWeb({ loginPath: '/login', defaultNext: '/cabinet' }),
+    requireCabinetAuthExceptPublicCasePreview({ loginPath: '/login', defaultNext: '/cabinet' }),
     createCabinetPagesRouter({ db }),
   );
 
@@ -332,6 +423,51 @@ if (process.env.TEMPASI_SKIP_SSR) {
     requireAuthWeb({ loginPath: '/login', defaultNext: '/profile' }),
     profileRouter,
   );
+
+  // ✅ Protect Community pages (registered users only)
+  webApp.use(
+    '/community',
+    requireAuthWeb({ loginPath: '/login', defaultNext: '/community' }),
+    createCommunityPagesRouter({ db }),
+  );
+
+  // ✅ Protect Admin pages (role admin/superadmin only)
+  webApp.use('/admin', requireAdminWeb({ loginPath: '/login' }), createAdminPagesRouter({ db }));
+
+  webApp.use('/checkout', checkoutRouter);
+
+  // TEMPASI_404_PAGE (2026-08-15)
+  // Must be webApp.use(), not app.use() — webApp is a full Express
+  // app with its own 'view engine'/'views' settings (set inside
+  // createWebApp()), and Express only swaps req.app to point at the
+  // currently-executing mounted sub-app while its OWN middleware
+  // runs. A catch-all registered on the OUTER app instead would have
+  // req.app pointing at that outer app, which never had the view
+  // engine configured — res.render() inside it fails with "No
+  // default engine was specified" (confirmed by hitting this exact
+  // error before moving it here). Must also be the LAST webApp.use()
+  // call — registered after every other route webApp gets, so it
+  // only catches requests nothing earlier matched.
+  webApp.use((req, res) => {
+    return renderStandalonePage(req, res, {
+      statusCode: 404,
+      title: 'Page not found — Tempasi',
+      bodyHtml: `
+        <h1>404 — Page not found</h1>
+        <p>The page <code>${escapeHtmlForNotFound(req.originalUrl)}</code> doesn't exist.</p>
+        <p><a class="c-btn c-btn--primary" href="/templates">Back to catalog</a></p>
+      `,
+    });
+  });
+
+  // TEMPASI_TEMPLATES_ORIGIN_REDIRECT (2026-10-04)
+  // Reverses TEMPASI_PREVIEW_PROXY_PRIORITY (2026-08-05): /t/* is no
+  // longer proxied onto the app origin. With PREVIEW_ORIGIN set, it is
+  // 302-redirected to that separate origin, so seller-uploaded HTML/JS
+  // never runs same-origin with the app (see templates-redirect.routes.js).
+  // Unset PREVIEW_ORIGIN -> falls through to webApp's local /t routes.
+  // Must stay mounted on `app`, BEFORE `app.use(webApp)`.
+  app.use(createTemplatesRedirectRouter());
 
   app.use(webApp);
 }

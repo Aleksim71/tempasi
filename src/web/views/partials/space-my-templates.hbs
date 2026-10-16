@@ -1,13 +1,13 @@
 <section class="cabinet-workspace">
 
   <nav class="mt-tabs" aria-label="My Templates">
-    <a class="mt-tab {{#if isMyTemplatesAdd}}is-active{{/if}}" href="/cabinet/my-templates/add">
+    <a class="mt-tab {{#if isMyTemplatesAdd}}is-active{{/if}} tp-control tp-tab tp-tab--main" href="/cabinet/my-templates/add" data-tempasi-main-tab="add">
       Add
     </a>
-    <a class="mt-tab {{#if isMyTemplatesList}}is-active{{/if}}" href="/cabinet/my-templates">
+    <a class="mt-tab {{#if isMyTemplatesList}}is-active{{/if}} tp-control tp-tab tp-tab--main" href="/cabinet/my-templates" data-tempasi-main-tab="list">
       List
     </a>
-    <a class="mt-tab {{#if isMyTemplatesAnalytics}}is-active{{/if}}" href="/cabinet/my-templates/analytics">
+    <a class="mt-tab {{#if isMyTemplatesAnalytics}}is-active{{/if}} tp-control tp-tab tp-tab--main" href="/cabinet/my-templates/analytics" data-tempasi-main-tab="analytics">
       Analytics
     </a>
   </nav>
@@ -32,7 +32,7 @@
 
             <div class="seller-card__preview">
               <img
-                src="/uploads/previews/{{id}}.png?t={{updated_ts}}"
+                src="/t/{{slug}}/preview/preview.png"
                 alt="{{title}}"
                 onerror="this.onerror=null;this.src='/img/preview-placeholder.svg';"
               >
@@ -42,7 +42,8 @@
               <h3 class="seller-card__title">{{title}}</h3>
 
               <div class="seller-card__meta">
-                <div><strong>Slug:</strong> {{slug}}</div>
+                <div><strong>Article:</strong> TMP-{{id}}<br>
+                  <strong>Slug:</strong> {{slug}}</div>
 
                 {{#if price_buy_eur}}
                   <div><strong>Buy:</strong> €{{price_buy_eur}}</div>
@@ -50,6 +51,17 @@
 
                 {{#if price_rent_eur}}
                   <div><strong>Rent:</strong> €{{price_rent_eur}}</div>
+                {{/if}}
+
+                {{#if is_admin_blocked}}
+                  <div><strong>Status:</strong> <span class="badge badge--blocked">BLOCKED BY ADMIN</span></div>
+                {{/if}}
+
+                {{#if is_sold}}
+                  <div><strong>Status:</strong> <span class="badge badge--sold">SOLD</span></div>
+                  {{#if sold_at_str}}
+                    <div><strong>Sold at:</strong> {{sold_at_str}}</div>
+                  {{/if}}
                 {{/if}}
               </div>
 
@@ -67,12 +79,23 @@
                     </button>
                   </form>
                 {{else}}
-                  <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
-                    <input type="hidden" name="status" value="published" />
-                    <button type="submit" class="button button--primary">
-                      Publish
-                    </button>
-                  </form>
+                  {{#if is_admin_blocked}}
+                    <span
+                      class="button"
+                      aria-disabled="true"
+                      style="opacity:0.5; cursor:not-allowed;"
+                      title="This template was blocked by an admin and cannot be republished right now."
+                    >
+                      Publish (blocked)
+                    </span>
+                  {{else}}
+                    <form method="post" action="/cabinet/my-templates/{{id}}/status" style="display:inline;">
+                      <input type="hidden" name="status" value="published" />
+                      <button type="submit" class="button button--primary">
+                        Publish
+                      </button>
+                    </form>
+                  {{/if}}
                 {{/if}}
 
                 <form method="post" action="/cabinet/my-templates/{{id}}/delete" style="display:inline;">
@@ -130,12 +153,6 @@
           {{#if formErrors.title}}
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
-        </div>
-
-        <div class="form__row">
-          <label class="form__label" for="slug">Slug *</label>
-          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
-          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
           {{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
@@ -148,16 +165,35 @@
 
         <div class="form__grid">
           <div class="form__row">
-            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
-            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            <label class="form__label" for="category">Category *</label>
+            <select class="input" id="category" name="category" required>
+              {{#each categoryOptions}}
+                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="tags">Tags</label>
+            <input class="input" id="tags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
+            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
+          </div>
+        </div>
+
+
+        
+        <div class="form__grid form__grid--prices">
+          <div class="form__row">
+            <label class="form__label" for="priceBuy">Buy price (EUR) *</label>
+            <input class="input" id="editPriceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" required />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
           <div class="form__row">
-            <label class="form__label" for="priceRent">Rent price (EUR)</label>
-            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+            <label class="form__label" for="priceRent">Rent price (EUR) *</label>
+            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" required />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
             {{/if}}
@@ -191,19 +227,27 @@
     <div class="cabinet__panel">
       <div class="cabinet__panelTitle">Edit Template</div>
 
-      <form class="form" method="post" action="/cabinet/my-templates/{{form.id}}/edit" enctype="multipart/form-data">
+      <form class="form" method="post" action="" enctype="multipart/form-data">
+        <div class="form__row">
+          <label class="form__label" for="status">Status *</label>
+          <div class="form__radios">
+            <label class="radio">
+              <input type="radio" name="status" value="draft" {{#if formIsDraft}}checked{{/if}}>
+              Draft
+            </label>
+            <label class="radio">
+              <input type="radio" name="status" value="published" {{#if formIsPublished}}checked{{/if}}>
+              Published
+            </label>
+          </div>
+          <div class="form__hint">Draft is visible only to you. Published is visible in the public catalog.</div>
+        </div>
         <div class="form__row">
           <label class="form__label" for="title">Title *</label>
           <input class="input" id="title" name="title" type="text" value="{{form.title}}" autocomplete="off" />
           {{#if formErrors.title}}
             <div class="form__error">{{formErrors.title}}</div>
           {{/if}}
-        </div>
-
-        <div class="form__row">
-          <label class="form__label" for="slug">Slug *</label>
-          <input class="input" id="slug" name="slug" type="text" value="{{form.slug}}" autocomplete="off" />
-          <div class="form__hint">letters/numbers/dashes, e.g. <code>dentist-landing</code></div>
           {{#if formErrors.slug}}
             <div class="form__error">{{formErrors.slug}}</div>
           {{/if}}
@@ -216,16 +260,35 @@
 
         <div class="form__grid">
           <div class="form__row">
-            <label class="form__label" for="priceBuy">Buy price (EUR)</label>
-            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" />
+            <label class="form__label" for="editCategory">Category *</label>
+            <select class="input" id="editCategory" name="category" required>
+              {{#each categoryOptions}}
+                <option value="{{this.slug}}" {{#if (eq this.slug ../form.category)}}selected{{/if}}>{{this.label}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="editTags">Tags</label>
+            <input class="input" id="editTags" name="tags" type="text" value="{{form.tags}}" placeholder="hotel, villa, luxury, booking" autocomplete="off" />
+            <div class="form__hint">Use comma-separated tags. Example: hotel, villa, luxury.</div>
+          </div>
+        </div>
+
+
+        
+<div class="form__grid form__grid--prices">
+          <div class="form__row">
+            <label class="form__label" for="editPriceBuy">Buy price (EUR) *</label>
+            <input class="input" id="priceBuy" name="priceBuy" type="text" value="{{form.priceBuy}}" inputmode="decimal" required />
             {{#if formErrors.priceBuy}}
               <div class="form__error">{{formErrors.priceBuy}}</div>
             {{/if}}
           </div>
 
           <div class="form__row">
-            <label class="form__label" for="priceRent">Rent price (EUR)</label>
-            <input class="input" id="priceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" />
+            <label class="form__label" for="editPriceRent">Rent price (EUR) *</label>
+            <input class="input" id="editPriceRent" name="priceRent" type="text" value="{{form.priceRent}}" inputmode="decimal" required />
             {{#if formErrors.priceRent}}
               <div class="form__error">{{formErrors.priceRent}}</div>
             {{/if}}
@@ -233,7 +296,7 @@
         </div>
 
         <div class="form__row">
-          <div class="form__hint"><strong>Current ZIP:</strong> {{form.currentZipName}}</div>
+          <div class="form__hint"><strong>Current ZIP:</strong> {{#if form.currentZipName}}{{form.currentZipName}}{{else}}No ZIP uploaded{{/if}}</div>
         </div>
 
         <div class="form__row">
@@ -261,11 +324,232 @@
   ========================== --}}
   {{#if isMyTemplatesAnalytics}}
     <div class="cabinet__panel">
-      <div class="cabinet__panelTitle">Analytics</div>
-      <p class="cabinet__panelText">
-        Sales / rentals analytics will be wired later (MVP).
-      </p>
+
+      {{!-- MVP view switch: 3 subtabs --}}
+      <nav class="mt-view-switch" aria-label="Analytics view">
+        <a
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "overview")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=overview"
+          {{#if (eq workspaceData.analytics.tab "overview")}}aria-current="page"{{/if}}
+        >
+          Overview
+        </a>
+
+        <a
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "table")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=table"
+          {{#if (eq workspaceData.analytics.tab "table")}}aria-current="page"{{/if}}
+        >
+          Table
+        </a>
+
+        <a
+          class="tp-control tp-tab tp-tab--sub {{#if (eq workspaceData.analytics.tab "advanced")}}is-active{{/if}}"
+          href="/cabinet/my-templates/analytics?tab=advanced"
+          {{#if (eq workspaceData.analytics.tab "advanced")}}aria-current="page"{{/if}}
+        >
+          Advanced
+        </a>
+      </nav>
+
+      {{!-- OVERVIEW TAB: personal KPIs + platform-wide market stats.
+           No chart here anymore — the 30-day revenue chart moved to
+           Finance (separate task). --}}
+      {{#if (eq workspaceData.analytics.tab "overview")}}
+        <div data-analytics-tab="overview">
+
+          <div class="mt-kpis__section-title">My templates</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">All</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.myTemplatesCount}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Active</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. template price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rent price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
+          {{!-- TEMPASI_ANALYTICS_PLATFORM_STATS (2026-08-16): market-wide
+               pricing benchmarks (not this seller's own numbers) — helps
+               with deciding what to charge. Kept in its own labeled row so
+               it doesn't get confused with the personal KPIs above. --}}
+          <div class="mt-kpis__section-title">Market</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total users</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalUsers}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. template price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rent price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
+        </div>
+      {{/if}}
+
+      {{!-- TABLE TAB: platform-wide, per-category breakdown (confirmed
+           with Alex: fully replaces the old per-template sortable
+           table, and is platform-wide like Market/Advanced, not
+           scoped to this seller). --}}
+      {{#if (eq workspaceData.analytics.tab "table")}}
+        <div data-analytics-tab="table">
+          <div class="mt-analytics-wrap">
+            <table class="mt-analytics">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Templates</th>
+                  <th>Avg. sale price</th>
+                  <th>Avg. rent price</th>
+                  <th>Avg. sale price (sold)</th>
+                  <th>Avg. rent price (rented)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#if workspaceData.analytics.categoryStats.length}}
+                  {{#each workspaceData.analytics.categoryStats}}
+                    <tr>
+                      <td>{{category}}</td>
+                      <td>{{templateCount}}</td>
+                      <td>€{{avgListBuyEur}}</td>
+                      <td>€{{avgListRentEur}}</td>
+                      <td>€{{avgSoldEur}}</td>
+                      <td>€{{avgRentedEur}}</td>
+                    </tr>
+                  {{/each}}
+                {{else}}
+                  <tr class="mt-analytics__emptyRow">
+                    <td colspan="6" class="mt-analytics__empty">
+                      No templates in the catalog yet.
+                    </td>
+                  </tr>
+                {{/if}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {{/if}}
+
+
+      {{!-- ADVANCED TAB: same layout as Overview, but the two "Avg."
+           cards (both My templates and Market) are based on prices of
+           templates that ACTUALLY sold / were actually rented, not
+           what's currently listed. All/Active counts are the same
+           numbers as Overview — only the price basis differs. --}}
+      {{#if (eq workspaceData.analytics.tab "advanced")}}
+        <div data-analytics-tab="advanced">
+
+          <div class="mt-kpis__section-title">My templates (sold / rented)</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">All</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.myTemplatesCount}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Active</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.kpis.activeTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. sold price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rented price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.kpis.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
+          <div class="mt-kpis__section-title">Market (sold / rented)</div>
+          <div class="mt-kpis">
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total users</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalUsers}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Total templates</div>
+              <div class="mt-kpi__value">{{workspaceData.analytics.platformStats.totalTemplates}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. sold price</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgTemplatePriceEur}}</div>
+            </div>
+            <div class="mt-kpi">
+              <div class="mt-kpi__label">Avg. rented price / day</div>
+              <div class="mt-kpi__value">€{{workspaceData.analytics.platformStats.avgRentPricePerDayEur}}</div>
+            </div>
+          </div>
+
+        </div>
+      {{/if}}
+
     </div>
   {{/if}}
 
+  <script>
+    (() => {
+      // TEMPASI_FORM_ERRORS_MODAL (2026-08-12)
+      // Server-rendered form errors (the top "Error: ..." banner and
+      // the small red text under individual fields) are easy to miss
+      // — reads whatever's already in the DOM and re-shows it
+      // prominently via the shared modal shell (core.js), instead of
+      // duplicating the error data/logic in a second place. Works for
+      // both the Add and Edit forms, since both use the same
+      // .badge--danger / .form__error markup.
+      const banner = document.querySelector('.cabinet-workspace > .badge--danger');
+      const fieldErrors = Array.from(document.querySelectorAll('.form__error'))
+        .map((el) => el.textContent.trim())
+        .filter(Boolean);
+
+      const messages = [];
+      if (banner && banner.textContent.trim()) messages.push(banner.textContent.trim());
+      messages.push(...fieldErrors);
+
+      if (!messages.length) return;
+
+      const html =
+        '<div style="padding:4px 4px 0;">' +
+        '<h3 style="margin:0 0 12px;font-size:18px;color:var(--c-danger, #fb7185);">' +
+        'Error!' +
+        '</h3>' +
+        '<ul style="margin:0 0 20px;padding-left:20px;display:grid;gap:8px;">' +
+        messages.map((m) => '<li>' + m.replace(/</g, '&lt;') + '</li>').join('') +
+        '</ul>' +
+        '<button type="button" id="tps-form-error-close" style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#fff;cursor:pointer;">Close</button>' +
+        '</div>';
+
+      const show = () => {
+        if (window.TempasiModal && typeof window.TempasiModal.show === 'function') {
+          window.TempasiModal.show(html);
+          const closeBtn = document.getElementById('tps-form-error-close');
+          if (closeBtn) closeBtn.addEventListener('click', () => window.TempasiModal.hide());
+        }
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', show);
+      } else {
+        show();
+      }
+    })();
+  </script>
+
 </section>
+

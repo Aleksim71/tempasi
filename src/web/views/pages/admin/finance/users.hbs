@@ -1,0 +1,70 @@
+<div class="admin-finance">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Finance</h1>
+  </div>
+
+  <nav class="admin-subnav" aria-label="Finance sections">
+    <a href="/admin/finance/catalog" class="admin-subnav__link{{#if (eq financeTab 'catalog')}} admin-subnav__link--active{{/if}}">Catalog</a>
+    <a href="/admin/finance/users" class="admin-subnav__link{{#if (eq financeTab 'users')}} admin-subnav__link--active{{/if}}">Users</a>
+  </nav>
+
+  <form class="admin-filters" method="get" action="/admin/finance/users">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="regFrom">From</label>
+        <input class="input" type="date" id="regFrom" name="regFrom" value="{{filters.regFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="regTo">to</label>
+        <input class="input" type="date" id="regTo" name="regTo" value="{{filters.regTo}}" />
+      </div>
+    </div>
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Apply</button>
+      <a class="c-btn" href="/admin/finance/users">Reset</a>
+    </div>
+  </form>
+
+  <section class="admin-table-card">
+    {{#if users.length}}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Rent revenue</th>
+            <th>Sale revenue</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each users}}
+            <tr>
+              <td>{{this.displayName}}</td>
+              <td>{{this.email}}</td>
+              <td>&euro;{{this.rentLabel}}</td>
+              <td>&euro;{{this.saleLabel}}</td>
+              <td>&euro;{{this.totalLabel}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="admin-pagination">
+        <span class="admin-pagination__summary">{{total}} users &middot; page {{page}} of {{totalPages}}</span>
+        <div class="admin-pagination__links">
+          {{#if hasPrev}}
+            <a class="c-btn" href="{{prevHref}}">Previous</a>
+          {{/if}}
+          {{#if hasNext}}
+            <a class="c-btn" href="{{nextHref}}">Next</a>
+          {{/if}}
+        </div>
+      </div>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>No users yet</h2>
+      </div>
+    {{/if}}
+  </section>
+</div>

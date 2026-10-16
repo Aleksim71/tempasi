@@ -1,0 +1,64 @@
+<div class="admin-dashboard">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Dashboard</h1>
+
+    <nav class="admin-period-switch" aria-label="Period">
+      {{#each periods}}
+        <a
+          class="admin-period-switch__link{{#if this.active}} admin-period-switch__link--active{{/if}}"
+          href="/admin?period={{this.days}}"
+        >{{this.label}}</a>
+      {{/each}}
+    </nav>
+  </div>
+
+  <div class="admin-kpi-grid">
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.users.label}}</div>
+      <div class="admin-kpi-card__value">{{kpis.users.total}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.users.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.users.delta}}</span> over period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.templates.label}}</div>
+      <div class="admin-kpi-card__value">{{kpis.templates.total}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.templates.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.templates.delta}}</span> over period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.rent.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.rent.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.rent.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.rent.delta}}€</span> vs previous period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.buy.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.buy.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.buy.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.buy.delta}}€</span> vs previous period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.avgRent.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.avgRent.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.avgRent.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.avgRent.delta}}€</span> vs previous period
+      </div>
+    </div>
+
+    <div class="admin-kpi-card">
+      <div class="admin-kpi-card__label">{{kpis.avgSale.label}}</div>
+      <div class="admin-kpi-card__value">€{{kpis.avgSale.totalEur}}</div>
+      <div class="admin-kpi-delta admin-kpi-delta--{{kpis.avgSale.deltaSign}}">
+        <span class="admin-kpi-delta__value">{{kpis.avgSale.delta}}€</span> vs previous period
+      </div>
+    </div>
+  </div>
+</div>

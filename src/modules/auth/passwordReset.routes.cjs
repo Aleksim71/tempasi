@@ -32,21 +32,7 @@ try {
   }
 }
 
-// bcrypt (prefer bcrypt, fallback bcryptjs)
-function getBcrypt() {
-  try {
-    return require('bcrypt');
-  } catch (_) {
-    try {
-      return require('bcryptjs');
-    } catch (e2) {
-      const err = new Error('PASSWORD_HASHER_NOT_FOUND');
-      err.cause = e2;
-      throw err;
-    }
-  }
-}
-const bcrypt = getBcrypt();
+const { hashPassword } = require('../../lib/password.cjs');
 
 const router = express.Router();
 
@@ -56,7 +42,6 @@ const router = express.Router();
 
 const OP_TIMEOUT_MS = Number(process.env.AUTH_OP_TIMEOUT_MS || 4000);
 const RESET_TOKEN_TTL_SECONDS = Number(process.env.RESET_TOKEN_TTL_SECONDS || 60 * 60); // 1 hour
-const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS || 12);
 
 // If set, used to build reset link in logs.
 // Otherwise falls back to req headers (host).
@@ -405,7 +390,7 @@ async function updateUserPasswordAndRevokeSessions(userId, newPassword) {
   const pool = getPool();
 
   const hash = await withTimeout(
-    bcrypt.hash(newPassword, BCRYPT_ROUNDS),
+    hashPassword(newPassword),
     OP_TIMEOUT_MS,
     'bcrypt:hash new password',
   );
@@ -472,7 +457,6 @@ router.post('/forgot-password', parseBody, async (req, res, next) => {
       // MVP: log link (replace with email sender later)
       // Avoid noisy prod logs
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
         console.log(`[auth] password reset link (${storage}) for ${email}: ${link}`);
       }
     }

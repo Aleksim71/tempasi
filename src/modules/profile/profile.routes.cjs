@@ -1,13 +1,13 @@
+// src/modules/profile/profile.routes.cjs
 'use strict';
 
 const express = require('express');
+const { requireAuth } = require('../../middlewares/auth.middleware.cjs');
 
 function profileRoutes() {
   const router = express.Router();
 
-  // SSR страница профиля (минимальная заглушка)
-  router.get('/', (req, res) => {
-    // если у тебя есть реальный шаблон — подключишь позже
+  router.get('/', requireAuth, (req, res) => {
     return res.status(200).send('Profile page');
   });
 

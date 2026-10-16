@@ -1,0 +1,23 @@
+{{!-- src/web/views/pages/standalone-message.hbs
+
+  TEMPASI_STANDALONE_PAGE_LAYOUT (2026-08-15)
+
+  Shared view for small, one-off confirmation/status pages that used
+  to be built as bare `<!doctype html>` strings sent directly via
+  res.send() — no site header/footer, just a floating block of text
+  on an otherwise blank page. Route handlers now call
+  renderStandalonePage(req, res, { title, bodyHtml, ... }) instead,
+  which renders THIS view through the normal layout (same one every
+  other page on the site uses), so header/footer/nav show up
+  automatically.
+
+  bodyHtml is raw, pre-built HTML (already escaped by the caller where
+  it includes user data) — rendered with triple-stache since it's
+  trusted server-generated markup, not user input passed through
+  unescaped.
+--}}
+<section class="standalone-page">
+  <div class="standalone-page__panel">
+    {{{bodyHtml}}}
+  </div>
+</section>

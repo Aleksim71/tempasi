@@ -12,8 +12,17 @@ uploads/
 # Environment files
 # ==========================
 .env
+.env.guard
 .env.*
 !.env.example
+
+# runtime flag: Admin > Settings > Backup automatic-backup toggle
+.backup-automatic-disabled
+
+# runtime: written by src/server.js on startup, used by
+# scripts/restore-full.sh to find and stop the running server
+.server.pid
+
 
 # ==========================
 # Builds / Coverage
@@ -21,6 +30,7 @@ uploads/
 dist/
 build/
 coverage/
+tools/**/node_modules/
 
 # ==========================
 # Editors / OS
@@ -67,3 +77,14 @@ seed-*.zip
 # public build artifacts
 public/icons/
 public/js/
+artifacts/
+
+# local tools
+.uri/
+.runner-work/
+outbox/
+*.bak_*
+outgoing/
+
+# local build / diagnostic output (scripts/build-outbox.sh)
+artifacts/

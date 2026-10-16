@@ -1,0 +1,51 @@
+<div class="community-page-inner">
+  <header class="community-header">
+    <h1>Community</h1>
+    <p class="community-subtitle">{{total}} members</p>
+  </header>
+
+  {{#if members.length}}
+    <div class="community-grid">
+      {{#each members}}
+        <a class="community-card" href="/community/{{this.id}}">
+          <div class="community-card__avatar">
+            {{#if this.avatarUrl}}
+              <img src="{{this.avatarUrl}}" alt="{{this.displayName}}" loading="lazy" />
+            {{else}}
+              <div class="community-card__avatar-placeholder" aria-hidden="true"></div>
+            {{/if}}
+          </div>
+          <div class="community-card__body">
+            <div class="community-card__name">{{this.displayName}}</div>
+            {{#if this.about}}
+              <p class="community-card__about">{{this.about}}</p>
+            {{/if}}
+            <div class="community-card__stats">
+              <span>{{this.buyCount}} for sale</span>
+              <span>{{this.rentCount}} for rent</span>
+            </div>
+          </div>
+        </a>
+      {{/each}}
+    </div>
+
+    <div class="community-pagination">
+      <span class="community-pagination__summary">{{total}} members &middot; page {{page}} of {{totalPages}}</span>
+      <div class="community-pagination__links">
+        {{#if hasPrev}}
+          <a class="c-btn" href="{{prevHref}}">Previous</a>
+        {{/if}}
+        {{#if hasNext}}
+          <a class="c-btn" href="{{nextHref}}">Next</a>
+        {{/if}}
+      </div>
+    </div>
+  {{else}}
+    <div class="community-empty">
+      <h2>No public profiles yet</h2>
+      <p class="community-empty__hint">
+        Enable "Show my profile in Community" in Cabinet &gt; Profile &amp; Security to be the first.
+      </p>
+    </div>
+  {{/if}}
+</div>

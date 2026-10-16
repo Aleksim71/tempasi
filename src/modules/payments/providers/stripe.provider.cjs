@@ -31,6 +31,22 @@ async function createCheckoutSession(req, { order }) {
   const successUrl = `${APP_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${APP_BASE_URL}/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`;
 
+  const unitAmountCents = Number(
+    order.payable_amount_cents ?? order.payableAmountCents ?? order.amount_cents ?? 0
+  );
+
+  if (!Number.isFinite(unitAmountCents) || unitAmountCents < 0) {
+    const err = new Error('INVALID_CHECKOUT_AMOUNT');
+    err.status = 500;
+    throw err;
+  }
+
+  if (unitAmountCents === 0) {
+    const err = new Error('ZERO_AMOUNT_CHECKOUT_REQUIRES_INTERNAL_COMPLETION_FLOW');
+    err.status = 409;
+    throw err;
+  }
+
   // NOTE: You can enrich with product name/preview later.
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -40,7 +56,7 @@ async function createCheckoutSession(req, { order }) {
         quantity: 1,
         price_data: {
           currency: (order.currency || 'EUR').toLowerCase(),
-          unit_amount: order.amount_cents,
+          unit_amount: unitAmountCents,
           product_data: {
             name: `Template ${order.template_slug} (${order.deal_type})`,
           },

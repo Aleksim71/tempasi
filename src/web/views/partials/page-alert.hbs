@@ -1,0 +1,19 @@
+{{!-- src/web/views/partials/page-alert.hbs --}}
+{{!-- TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16) --}}
+{{!-- Renders pageAlertMessage (set by pickPageAlertMessage() in --}}
+{{!-- templates.routes.js — combines ?cart=CODE and ?buy_error=CODE) --}}
+{{!-- via the shared tempasiAlert() modal. Was duplicated verbatim in --}}
+{{!-- templates/index.hbs and template-details.hbs as cartErrorMessage --}}
+{{!-- before this extraction; kept the same DOM id/script shape so no --}}
+{{!-- other code needs to change. --}}
+{{#if pageAlertMessage}}
+  <div id="tcmAutoAlertMessage" hidden>{{pageAlertMessage}}</div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var el = document.getElementById('tcmAutoAlertMessage');
+      if (el && window.tempasiAlert) {
+        window.tempasiAlert({ title: 'Heads up', message: el.textContent, danger: true });
+      }
+    });
+  </script>
+{{/if}}

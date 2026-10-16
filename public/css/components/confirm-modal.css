@@ -1,0 +1,98 @@
+/* public/css/components/confirm-modal.css
+ *
+ * TEMPASI_CUSTOM_CONFIRM_MODAL (2026-08-15)
+ *
+ * Styles for the shared confirm/prompt modal (public/js/confirm-modal.js).
+ * Same visual language as the catalog page's Rent modal
+ * (public/css/pages/templates.css .rent-modal*), reimplemented under
+ * its own .tcm-* namespace because this needs to work on pages that
+ * don't load templates.css (admin, cart) — this file is loaded
+ * globally instead (src/web/views/layouts/main.hbs).
+ */
+
+.tcm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tcm-overlay[hidden] {
+  display: none;
+}
+
+.tcm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.72);
+}
+
+.tcm-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-surface, #0f141b);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.tcm-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tcm-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: var(--c-text, rgba(255, 255, 255, 0.94));
+}
+
+.tcm-message {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-muted, rgba(255, 255, 255, 0.72));
+  white-space: pre-line;
+}
+
+.tcm-input-wrap {
+  margin-bottom: 4px;
+}
+
+.tcm-input-wrap[hidden] {
+  display: none;
+}
+
+.tcm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+}
+
+.tcm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}

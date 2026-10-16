@@ -1,0 +1,443 @@
+// tests/rentReservation.service.test.cjs
+/* eslint-env node */
+'use strict';
+
+if (process.env.DATABASE_URL_TEST && !process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
+}
+
+const { withDb } = require('./helpers/db.cjs');
+const { createTestUser } = require('./helpers/user.cjs');
+
+const OrdersService = require('../src/modules/orders/orders.service.cjs');
+const EntitlementsRepo = require('../src/modules/payments/repos/entitlements.repo.cjs');
+
+async function createPaidRentOrder(db, { userId, templateSlug }) {
+  const result = await db.query(
+    `
+    INSERT INTO public.orders (
+      user_id,
+      template_slug,
+      deal_type,
+      license,
+      amount_cents,
+      currency,
+      provider,
+      provider_session_id,
+      provider_payment_intent_id,
+      status
+    )
+    VALUES ($1, $2, 'RENT', 'PU', 100, 'EUR', 'fake', $3, $4, 'paid')
+    RETURNING *
+    `,
+    [
+      userId,
+      templateSlug,
+      `rent_sess_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      `rent_pi_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    ],
+  );
+
+  return result.rows[0];
+}
+
+describe('rent reservation business rules', () => {
+  test('active RENT blocks BUY by another user', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const otherUserId = await createTestUser(db);
+      const templateSlug = `rent-reserved-${Date.now()}-1`;
+
+      const rentOrder = await createPaidRentOrder(db, {
+        userId: renterUserId,
+        templateSlug,
+      });
+
+      const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(rentOrder);
+
+      expect(entitlement).toBeTruthy();
+      expect(String(entitlement.kind).toLowerCase()).toBe('rent');
+      expect(String(entitlement.deal_type).toUpperCase()).toBe('RENT');
+      expect(entitlement.ends_at).toBeTruthy();
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId: otherUserId,
+          templateSlug,
+          payload: { license: 'PU', dealType: 'BUY' },
+        }),
+      ).rejects.toMatchObject({
+        code: 'TEMPLATE_RENT_RESERVED',
+        status: 409,
+      });
+    });
+  });
+
+  test('active RENT allows BUY by the current renter', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const templateSlug = `rent-reserved-${Date.now()}-2`;
+
+      const rentOrder = await createPaidRentOrder(db, {
+        userId: renterUserId,
+        templateSlug,
+      });
+
+      await EntitlementsRepo.ensureEntitlementForOrder(rentOrder);
+
+      const buyOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: { license: 'PU', dealType: 'BUY' },
+      });
+
+      expect(buyOrder).toBeTruthy();
+      expect(buyOrder.user_id).toBe(renterUserId);
+      expect(buyOrder.template_slug).toBe(templateSlug);
+      expect(String(buyOrder.deal_type).toUpperCase()).toBe('BUY');
+      expect(String(buyOrder.status).toLowerCase()).toBe('pending');
+    });
+  });
+  test('RENT order requires selected rent days and owned case ids before payment', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const otherUserId = await createTestUser(db);
+      const templateSlug = `rent-selection-${Date.now()}-1`;
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: { license: 'PU', dealType: 'RENT', caseIds: ['missing-days'] },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_DAYS_REQUIRED',
+        status: 400,
+      });
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: { license: 'PU', dealType: 'RENT', rentDays: 3 },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_CASE_IDS_REQUIRED',
+        status: 400,
+      });
+
+      await OrdersService.createPendingOrder({
+        userId: otherUserId,
+        templateSlug: `${templateSlug}-other`,
+        payload: { license: 'PU', dealType: 'RENT', rentDays: 3, caseIds: [] },
+      }).catch(() => null);
+
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      await casesService.ensureDefaultCaseForUser(otherUserId, db);
+      const otherCases = await casesService.getOwnerCases(otherUserId, db);
+
+      await expect(
+        OrdersService.createPendingOrder({
+          userId,
+          templateSlug,
+          payload: {
+            license: 'PU',
+            dealType: 'RENT',
+            rentDays: 3,
+            caseIds: [otherCases[0].id],
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: 'RENT_CASE_NOT_OWNED',
+        status: 403,
+      });
+    });
+  });
+
+  test('pending RENT stores rent days and case ids but entitlement starts only after payment', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const templateSlug = `rent-selection-${Date.now()}-2`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(userId, db);
+      const cases = await casesService.getOwnerCases(userId, db);
+
+      const order = await OrdersService.createPendingOrder({
+        userId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 3,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      expect(order).toBeTruthy();
+      expect(String(order.status).toLowerCase()).toBe('pending');
+      expect(String(order.deal_type).toUpperCase()).toBe('RENT');
+      expect(Number(order.rent_days)).toBe(3);
+
+      const beforeEntitlement = await db.query(
+        `SELECT * FROM public.entitlements WHERE order_id = $1`,
+        [order.id],
+      );
+      expect(beforeEntitlement.rows).toHaveLength(0);
+
+      const assignments = await db.query(
+        `SELECT * FROM public.order_case_assignments WHERE order_id = $1`,
+        [order.id],
+      );
+      expect(assignments.rows).toHaveLength(1);
+      expect(String(assignments.rows[0].case_id)).toBe(String(cases[0].id));
+
+      const paidOrder = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [order.id, `rent_sess_${Date.now()}`, `rent_pi_${Date.now()}`],
+      );
+
+      const entitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidOrder.rows[0]);
+      expect(entitlement).toBeTruthy();
+      expect(String(entitlement.kind).toLowerCase()).toBe('rent');
+      expect(String(entitlement.deal_type).toUpperCase()).toBe('RENT');
+      expect(entitlement.starts_at).toBeTruthy();
+      expect(entitlement.ends_at).toBeTruthy();
+
+      const startsAt = new Date(entitlement.starts_at).getTime();
+      const endsAt = new Date(entitlement.ends_at).getTime();
+      const diffDays = Math.round((endsAt - startsAt) / (24 * 60 * 60 * 1000));
+      expect(diffDays).toBe(3);
+    });
+  });
+
+  test('active RENT assignments can be added and removed but not removed from the last case', async () => {
+    await withDb(async (db) => {
+      const userId = await createTestUser(db);
+      const templateSlug = `rent-assignment-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const rentAssignmentsService = require('../src/modules/cases/rentAssignments.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(userId, db);
+      const firstCase = (await casesService.getOwnerCases(userId, db))[0];
+      const secondCase = await casesService.create(userId, { title: 'Second presentation case' }, db);
+
+      const order = await OrdersService.createPendingOrder({
+        userId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 2,
+          caseIds: [firstCase.id],
+        },
+      });
+
+      const paidOrder = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [order.id, `rent_assign_sess_${Date.now()}`, `rent_assign_pi_${Date.now()}`],
+      );
+
+      await EntitlementsRepo.ensureEntitlementForOrder(paidOrder.rows[0]);
+
+      let assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String)).toEqual([String(firstCase.id)]);
+
+      await expect(
+        rentAssignmentsService.removeAssignment({
+          userId,
+          orderId: order.id,
+          caseId: firstCase.id,
+        }, db),
+      ).rejects.toMatchObject({
+        code: 'LAST_RENT_CASE_ASSIGNMENT_BLOCKED',
+        status: 409,
+      });
+
+      await rentAssignmentsService.addAssignment({
+        userId,
+        orderId: order.id,
+        caseId: secondCase.id,
+      }, db);
+
+      assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String).sort()).toEqual(
+        [String(firstCase.id), String(secondCase.id)].sort(),
+      );
+
+      await rentAssignmentsService.removeAssignment({
+        userId,
+        orderId: order.id,
+        caseId: firstCase.id,
+      }, db);
+
+      assignments = await rentAssignmentsService.listAssignments(order.id, db);
+      expect(assignments.map(String)).toEqual([String(secondCase.id)]);
+    });
+  });
+
+  test('early BUY by renter closes active RENT as converted_to_buy', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const templateSlug = `rent-converted-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const paymentCompletion = require('../src/modules/payments/paymentCompletion.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(renterUserId, db);
+      const cases = await casesService.getOwnerCases(renterUserId, db);
+
+      const rentOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 5,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        `,
+        [rentOrder.id, `rent_convert_sess_${Date.now()}`, `rent_convert_pi_${Date.now()}`],
+      );
+
+      const paidRent = await db.query(`SELECT * FROM public.orders WHERE id = $1`, [rentOrder.id]);
+      const rentEntitlement = await EntitlementsRepo.ensureEntitlementForOrder(paidRent.rows[0]);
+
+      expect(rentEntitlement).toBeTruthy();
+      expect(String(rentEntitlement.deal_type).toUpperCase()).toBe('RENT');
+
+      const buyOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: { license: 'PU', dealType: 'BUY' },
+      });
+
+      const paidBuy = await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [buyOrder.id, `buy_convert_sess_${Date.now()}`, `buy_convert_pi_${Date.now()}`],
+      );
+
+      const completed = await paymentCompletion.completePaidOrder({
+        orderId: paidBuy.rows[0].id,
+        providerSessionId: paidBuy.rows[0].provider_session_id,
+        providerPaymentIntentId: paidBuy.rows[0].provider_payment_intent_id,
+      });
+
+      expect(completed.entitlement).toBeTruthy();
+      expect(String(completed.entitlement.deal_type).toUpperCase()).toBe('BUY');
+      expect(completed.closedRentEntitlements.length).toBeGreaterThanOrEqual(1);
+
+      const closedRent = await db.query(
+        `
+        SELECT *
+        FROM public.entitlements
+        WHERE order_id = $1
+        LIMIT 1
+        `,
+        [rentOrder.id],
+      );
+
+      expect(closedRent.rows[0]).toBeTruthy();
+      expect(String(closedRent.rows[0].closed_reason)).toBe('converted_to_buy');
+      expect(closedRent.rows[0].closed_at).toBeTruthy();
+      expect(new Date(closedRent.rows[0].ends_at).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+  });
+
+  test('early BUY creates internal credit for unused prepaid rent value', async () => {
+    await withDb(async (db) => {
+      const renterUserId = await createTestUser(db);
+      const templateSlug = `rent-credit-${Date.now()}-1`;
+      const casesService = require('../src/modules/cases/cases.service.cjs');
+      const paymentCompletion = require('../src/modules/payments/paymentCompletion.service.cjs');
+      const accountCreditsService = require('../src/modules/payments/accountCredits.service.cjs');
+
+      await casesService.ensureDefaultCaseForUser(renterUserId, db);
+      const cases = await casesService.getOwnerCases(renterUserId, db);
+
+      const rentOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: {
+          license: 'PU',
+          dealType: 'RENT',
+          rentDays: 5,
+          amountCents: 1000,
+          caseIds: [cases[0].id],
+        },
+      });
+
+      await db.query(
+        `
+        UPDATE public.orders
+        SET status = 'paid',
+            provider_session_id = $2,
+            provider_payment_intent_id = $3,
+            updated_at = now()
+        WHERE id = $1
+        `,
+        [rentOrder.id, `rent_credit_sess_${Date.now()}`, `rent_credit_pi_${Date.now()}`],
+      );
+
+      const paidRent = await db.query(`SELECT * FROM public.orders WHERE id = $1`, [rentOrder.id]);
+      await EntitlementsRepo.ensureEntitlementForOrder(paidRent.rows[0]);
+
+      const buyOrder = await OrdersService.createPendingOrder({
+        userId: renterUserId,
+        templateSlug,
+        payload: { license: 'PU', dealType: 'BUY', amountCents: 5000 },
+      });
+
+      const completed = await paymentCompletion.completePaidOrder({
+        orderId: buyOrder.id,
+        providerSessionId: `buy_credit_sess_${Date.now()}`,
+        providerPaymentIntentId: `buy_credit_pi_${Date.now()}`,
+      });
+
+      expect(completed.createdCredits).toBeTruthy();
+      expect(completed.createdCredits.length).toBe(1);
+      expect(completed.createdCredits[0].source_type).toBe('rent_converted_to_buy');
+      expect(Number(completed.createdCredits[0].amount_cents)).toBeGreaterThan(900);
+      expect(Number(completed.createdCredits[0].amount_cents)).toBeLessThanOrEqual(1000);
+      expect(String(completed.createdCredits[0].status)).toBe('active');
+      expect(completed.createdCredits[0].expires_at).toBeTruthy();
+
+      const balance = await accountCreditsService.getActiveCreditBalance({ userId: renterUserId });
+      expect(balance.amountCents).toBe(Number(completed.createdCredits[0].amount_cents));
+    });
+  });
+
+});

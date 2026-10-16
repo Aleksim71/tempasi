@@ -8,16 +8,30 @@ const multer = require('multer');
 
 const sellerTemplatesService = require('../../modules/templates/sellerTemplates.service.cjs');
 const sellerTemplatesRepo = require('../../modules/templates/sellerTemplates.repo.cjs');
+const analyticsService = require('../modules/analytics/analytics.cabinet.service.cjs');
+const casesService = require('../../modules/cases/cases.service.cjs');
+const rentAssignmentsService = require('../../modules/cases/rentAssignments.service.cjs');
+const accountCreditsService = require('../../modules/payments/accountCredits.service.cjs');
 
 const { getPool } = require('../../../scripts/db.pool.cjs');
+const { clearSessionCookie } = require('../../middlewares/auth.middleware.cjs');
+const CreditLedgerController = require("../../modules/finance/creditLedger.controller.cjs");
+const OrdersExportController = require("../../modules/finance/ordersExport.controller.cjs");
+const ordersQueryService = require("../../modules/finance/ordersQuery.service.cjs");
 
 function requireAuthPage(req, res, next) {
-  if (req.user && (req.user.id || req.user.user_id || req.user.userId)) return next();
+  if (
+    req.userId ||
+    (req.user && (req.user.id || req.user.user_id || req.user.userId))
+  ) {
+    return next();
+  }
+
   return res.redirect('/login');
 }
 
 function getUserId(req) {
-  return req?.user?.id || req?.user?.user_id || req?.user?.userId || null;
+  return req?.user?.id || req?.user?.user_id || req?.user?.userId || req?.userId || null;
 }
 
 function formatMoneyEurFromCents(cents) {
@@ -25,6 +39,13 @@ function formatMoneyEurFromCents(cents) {
   const n = Number(cents);
   if (!Number.isFinite(n)) return '';
   return (n / 100).toFixed(2);
+}
+
+function formatDateYMD(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
 }
 
 // =========================
@@ -56,8 +77,56 @@ if (configuredUploadDir) {
 console.log('[UPLOAD] TEMPLATE_UPLOAD_DIR =', process.env.TEMPLATE_UPLOAD_DIR || '(not set)');
 console.log('[UPLOAD] Using UPLOAD_DIR =', UPLOAD_DIR);
 
+// TEMPASI_MOUNT_POINT_GUARD (2026-08-04)
+// fs.existsSync() only proves the directory exists — it says nothing
+// about WHETHER it's actually the mounted remote filesystem (e.g. an
+// sshfs mount to a physically separate "old laptop as server", used
+// deliberately as an isolation boundary for uploaded template
+// content) versus a plain local directory that happens to sit at the
+// same path because the real mount silently dropped (network blip,
+// the remote machine sleeping/rebooting, sshfs not set to
+// auto-remount). If that happens, uploads would keep "succeeding"
+// but land on the local disk instead — exactly the case this project
+// is trying to avoid, and the failure would be invisible unless
+// something actively checks for it.
+//
+// A mounted directory has a different device id (st_dev) than its
+// parent directory; a plain subdirectory shares the same device id
+// as its parent. This is the same check the `mountpoint` Unix
+// command uses under the hood. Checked at UPLOAD TIME (inside
+// multer's destination callback below), not just once at server
+// boot, since the mount can drop mid-session.
+function isMountPoint(dirPath) {
+  try {
+    const resolved = path.resolve(dirPath);
+    const parent = path.dirname(resolved);
+    const dirStat = fs.statSync(resolved);
+    const parentStat = fs.statSync(parent);
+    return dirStat.dev !== parentStat.dev;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Only enforce this for a configured (non-default) upload dir. The
+// fallback local uploads/templates/ dir (used when TEMPLATE_UPLOAD_DIR
+// isn't set at all) is *meant* to be local — nothing to guard there.
+// Only enforce this for a configured (non-default) upload dir, and
+// never in tests: integration tests deliberately point
+// TEMPLATE_UPLOAD_DIR at a plain local temp directory (see e.g.
+// tests/myTemplatesPublishedVisibleInCatalog.integration.test.cjs),
+// which is correct there and would otherwise be indistinguishable
+// from the exact "silently local" failure this guard exists to
+// catch. Jest sets NODE_ENV=test automatically when it isn't already
+// set (this project's npm test script doesn't set it explicitly).
+const ENFORCE_UPLOAD_DIR_MOUNT_CHECK =
+  Boolean(configuredUploadDir) && process.env.NODE_ENV !== 'test';
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    if (ENFORCE_UPLOAD_DIR_MOUNT_CHECK && !isMountPoint(UPLOAD_DIR)) {
+      return cb(new Error('TEMPLATE_UPLOAD_DIR_NOT_MOUNTED'));
+    }
     cb(null, UPLOAD_DIR);
   },
   filename: function (req, file, cb) {
@@ -82,15 +151,137 @@ const upload = multer({
   },
 });
 
+
+function displayZipName(row) {
+  const original = String(row?.zip_original_name || '').trim();
+  if (original) return original;
+
+  const stored = String(row?.zip_path || '').trim();
+  if (!stored) return 'No ZIP uploaded';
+
+  return stored.split(/[\\/]/).filter(Boolean).pop() || stored;
+}
+
+function inferSellingOptionFromRow(row) {
+  const rentCents = Number(row?.price_rent_cents || 0);
+  return rentCents > 0 ? 'buy_rent' : 'buy_only';
+}
+
+
+// TEMPASI_CATALOG_CATEGORIES_FROM_DB (2026-07-20)
+// Categories used to be a hardcoded Set duplicated across this file and
+// two <select> blocks in space-my-templates.hbs. They are now managed by
+// the admin (Settings > Catalog, catalog_categories table) so both the
+// dropdown options AND this validation must read from the DB, not a
+// static list — otherwise an admin-added category would show up in the
+// dropdown but silently get rejected back to 'other' on save.
+const FALLBACK_CATEGORY_OPTIONS = [
+  { slug: 'other', label: 'Other' },
+];
+
+async function getCatalogCategoryOptions(pool) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT slug, label FROM catalog_categories ORDER BY label ASC',
+    );
+    return rows.length ? rows : FALLBACK_CATEGORY_OPTIONS;
+  } catch (e) {
+    // catalog_categories missing (e.g. migration not applied yet) —
+    // degrade gracefully instead of breaking template add/edit entirely.
+    console.error('[cabinet] failed to load catalog_categories, falling back:', e.message);
+    return FALLBACK_CATEGORY_OPTIONS;
+  }
+}
+
+function normalizeTemplateCategoryForRoute(value, allowedSlugs) {
+  const category = String(value || '').trim().toLowerCase();
+  const allowed = allowedSlugs instanceof Set ? allowedSlugs : new Set(['other']);
+  return allowed.has(category) ? category : 'other';
+}
+
+function normalizeTemplateTagsForRoute(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const seen = new Set();
+
+  return raw
+    .split(',')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean)
+    .map((tag) => tag.replace(/\s+/g, ' '))
+    .filter((tag) => tag.length <= 30)
+    .filter((tag) => {
+      if (seen.has(tag)) return false;
+      seen.add(tag);
+      return true;
+    })
+    .slice(0, 15)
+    .join(', ');
+}
+
+
+
 function createCabinetPagesRouter() {
   const router = express.Router();
 
   router.use((req, res, next) => {
     res.locals.isCabinet = true;
-    res.locals.metrics = {
-      today: { revenue: 0, invested: 0 },
-    };
+    res.locals.activePage = 'cabinet';
     next();
+  });
+
+
+  // Public, tokenized client preview. Keep this route before requireAuthPage.
+  router.get('/cases/:id/preview/public', async (req, res) => {
+    const pool = getPool();
+    const caseId = String(req.params.id || '').trim();
+    const token = String(req.query.token || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getPublicPreviewCase(caseId, token, pool);
+
+      if (!selectedCase) {
+        return res.status(404).render('pages/case-preview-public', {
+          styles: ['/css/pages/cabinet.css'],
+          bodyClass: 'case-public-preview',
+          pageTitle: 'Case Preview Not Found',
+          pageSubtitle: 'This public preview link is missing, expired, or invalid.',
+          workspaceError: null,
+          workspaceData: {
+            cases: {
+              selectedCase: null,
+              templates: [],
+              isNotFound: true,
+            },
+          },
+        });
+      }
+
+      const rows = await casesService.listPublicPreviewTemplates(caseId, token, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+    } catch (err) {
+      console.error('[cabinet] public cases/:id/preview error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/case-preview-public', {
+      styles: ['/css/pages/cabinet.css'],
+      bodyClass: 'case-public-preview',
+      pageTitle: selectedCase ? `${selectedCase.title} — Case Preview` : 'Case Preview',
+      pageSubtitle: 'Selected website concepts for client review.',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          selectedCase,
+          templates,
+        },
+      },
+    });
   });
 
   router.use(requireAuthPage);
@@ -105,6 +296,7 @@ function createCabinetPagesRouter() {
     const pool = getPool();
     let workspaceError = null;
     let items = [];
+    const categoryOptions = await getCatalogCategoryOptions(pool);
 
     try {
       const rows = await sellerTemplatesService.listMyTemplates({ pool, user: req.user });
@@ -115,6 +307,10 @@ function createCabinetPagesRouter() {
         slug: r.slug,
         status: r.status,
         is_published: r.status === 'published',
+        is_admin_blocked: Boolean(r.admin_blocked_at),
+        is_sold: Number(r.sold_count || 0) > 0,
+        sold_at: r.sold_at || null,
+        sold_at_str: r.sold_at ? formatDateYMD(r.sold_at) : '',
         price_buy_eur:
           r.price_buy_cents !== null && r.price_buy_cents !== undefined
             ? formatMoneyEurFromCents(r.price_buy_cents)
@@ -123,7 +319,6 @@ function createCabinetPagesRouter() {
           r.price_rent_cents !== null && r.price_rent_cents !== undefined
             ? formatMoneyEurFromCents(r.price_rent_cents)
             : '',
-        // for cache-busting preview on updates
         updated_ts: r.updated_at ? new Date(r.updated_at).getTime() : Date.now(),
       }));
     } catch (e) {
@@ -140,6 +335,8 @@ function createCabinetPagesRouter() {
 
       workspaceData: { items },
       workspaceError,
+      categoryOptions,
+      form: { category: 'other' },
 
       pageTitle: 'My Templates',
       pageSubtitle: 'Your templates for sale and rent.',
@@ -148,7 +345,10 @@ function createCabinetPagesRouter() {
     });
   });
 
-  router.get('/my-templates/add', (req, res) => {
+  router.get('/my-templates/add', async (req, res) => {
+    const pool = getPool();
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
 
@@ -159,26 +359,31 @@ function createCabinetPagesRouter() {
 
       workspaceData: { items: [] },
       workspaceError: null,
+      categoryOptions,
 
-      form: { title: '', slug: '', shortDescription: '', priceBuy: '', priceRent: '', status: 'draft' },
+      form: { title: '', shortDescription: '', category: 'other', tags: '', priceBuy: '', priceRent: '', sellingOption: 'buy_rent', status: 'draft' },
       formErrors: {},
       formIsDraft: true,
       formIsPublished: false,
 
       pageTitle: 'Add Template',
-      pageSubtitle: 'Create a template record (MVP).',
+      pageSubtitle: 'Create a template record. Slug is generated automatically by the system.',
       panelTitle: 'Add Template',
       panelText: '',
     });
   });
 
   router.post('/my-templates/add', upload.single('templateZip'), async (req, res) => {
+    const pool = getPool();
+
     const form = {
       title: String(req.body?.title || ''),
-      slug: String(req.body?.slug || ''),
       shortDescription: String(req.body?.shortDescription || ''),
+      category: String(req.body?.category || 'other'),
+      tags: String(req.body?.tags || ''),
       priceBuy: String(req.body?.priceBuy || ''),
       priceRent: String(req.body?.priceRent || ''),
+      sellingOption: String(req.body?.sellingOption || req.body?.license || 'buy_rent'),
       status: String(req.body?.status || 'draft'),
     };
 
@@ -192,7 +397,6 @@ function createCabinetPagesRouter() {
         throw new Error('ZIP_REQUIRED');
       }
 
-      const pool = getPool();
       await sellerTemplatesService.addSellerTemplate({
         pool,
         user: req.user,
@@ -202,12 +406,268 @@ function createCabinetPagesRouter() {
 
       return res.redirect('/cabinet/my-templates');
     } catch (e) {
-      if (e && e.message === 'ONLY_ZIP_ALLOWED') {
+      if (e && e.message === 'TEMPLATE_UPLOAD_DIR_NOT_MOUNTED') {
+        formErrors.templateZip =
+          'Upload storage is not connected right now (the storage machine appears to be off or unreachable). Turn it on and try again.';
+      } else if (e && e.message === 'ONLY_ZIP_ALLOWED') {
         formErrors.templateZip = 'Only .zip files are allowed.';
       } else if (e && e.code === 'LIMIT_FILE_SIZE') {
         formErrors.templateZip = 'ZIP is too large (max 50MB).';
       } else if (e && e.message === 'ZIP_REQUIRED') {
-        // already set
+      } else if (e && e.code === 'VALIDATION_FAILED' && e.details && e.details.errors) {
+        formErrors = { ...formErrors, ...e.details.errors };
+      } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
+        formErrors.slug = 'This slug is already used. Choose another one.';
+      } else if (e && (e.code === 'SLUG_ALREADY_EXISTS' || e.message === 'SLUG_ALREADY_EXISTS')) {
+        // TEMPASI_SLUG_COLLISION_RETRY_FIX (2026-08-12): addSellerTemplate
+        // already retries a few times on this exact error internally —
+        // reaching here means every retry still collided, which should be
+        // rare. Give a clear, actionable message instead of falling
+        // through to the generic workspaceError banner.
+        workspaceError = new Error(
+          'A template with that name was just created a moment ago (likely a duplicate submission). Try Add again, or change the title slightly.',
+        );
+      } else {
+        workspaceError = e;
+      }
+    }
+
+    const status = String(req.body?.status || 'draft');
+    // TEMPASI_ADD_TEMPLATE_CATEGORY_OPTIONS_FIX (2026-08-12): the GET
+    // handler above passes categoryOptions to populate the <select>,
+    // but this error-path re-render (e.g. "ZIP file is required")
+    // never did — {{#each categoryOptions}} rendered zero <option>
+    // elements, making the category dropdown look empty/reset even
+    // though form.category (and the view's `selected` logic) were
+    // both actually fine.
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+    return res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+
+      isMyTemplatesList: false,
+      isMyTemplatesAdd: true,
+      isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: false,
+
+      workspaceData: { items: [] },
+      workspaceError,
+      categoryOptions,
+
+      form,
+      formErrors,
+      formIsDraft: status === 'draft',
+      formIsPublished: status === 'published',
+      formIsBuyOnly: String(form.sellingOption || 'buy_rent') === 'buy_only',
+      formIsBuyRent: String(form.sellingOption || '') === 'buy_rent',
+
+      pageTitle: 'Add Template',
+      pageSubtitle: 'Create a template record. Slug is generated automatically by the system.',
+      panelTitle: 'Add Template',
+      panelText: '',
+    });
+  });
+
+  router.post('/my-templates/:id/status', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    try {
+      const id = Number(req.params.id);
+      const nextStatus = String(req.body?.status || '').trim();
+      await sellerTemplatesService.updateMyTemplateStatus({
+        pool,
+        user: req.user,
+        id,
+        status: nextStatus,
+      });
+    } catch (e) {
+      console.error('[cabinet] my-templates/:id/status error:', e);
+    }
+    return res.redirect('/cabinet/my-templates');
+  });
+
+  // TEMPASI_MY_TEMPLATES_DELETE_ROUTE (2026-08-11): the "Delete" button
+  // in space-my-templates.hbs has always posted to this exact path, and
+  // sellerTemplatesService.deleteMyTemplate() (soft-delete + zip/preview
+  // file cleanup) was already fully built — this route just wasn't
+  // wired up, so every delete attempt hit Express's default 404
+  // ("Cannot POST ...").
+  router.post('/my-templates/:id/delete', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    try {
+      const id = Number(req.params.id);
+      await sellerTemplatesService.deleteMyTemplate({
+        pool,
+        user: req.user,
+        id,
+      });
+    } catch (e) {
+      console.error('[cabinet] my-templates/:id/delete error:', e);
+    }
+    return res.redirect('/cabinet/my-templates');
+  });
+
+  router.get('/my-templates/:id/edit', async (req, res) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+    const allowedSlugs = new Set(categoryOptions.map((c) => c.slug));
+
+    let row = null;
+    let workspaceError = null;
+
+    try {
+      row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
+        pool,
+        ownerUserId: getUserId(req),
+        id,
+      });
+    } catch (e) {
+      workspaceError = e;
+    }
+
+    if (!row && !workspaceError) {
+      workspaceError = new Error('Template not found');
+    }
+
+    
+    // TEMPASI_EDIT_GET_CATEGORY_TAGS_META_FETCH_CURRENT
+    // Force-load saved catalog metadata for the edit form from DB.
+    let editCategory = normalizeTemplateCategoryForRoute(row?.category || 'other', allowedSlugs);
+    let editTags = String(row?.tags || '');
+
+    if (row && row.id) {
+      const metaResult = await pool.query(
+        `
+          SELECT category, tags
+          FROM seller_templates
+          WHERE id = $1
+            AND deleted_at IS NULL
+          LIMIT 1
+        `,
+        [row.id],
+      );
+
+      const meta = metaResult.rows[0] || {};
+      editCategory = normalizeTemplateCategoryForRoute(meta.category || row.category || 'other', allowedSlugs);
+      editTags = String(meta.tags || row.tags || '');
+    }
+
+res.render('pages/cabinet', {
+      activeSpace: 'my-templates',
+      isMyTemplatesList: false,
+      isMyTemplatesAdd: false,
+      isMyTemplatesAnalytics: false,
+      isMyTemplatesEdit: true,
+      workspaceData: { items: [] },
+      workspaceError,
+      categoryOptions,
+      form: row
+        ? {
+            title: row.title || '',
+            slug: row.slug || '',
+            shortDescription: row.short_description || '',
+            category: editCategory,
+            tags: editTags,
+            priceBuy:
+              row.price_buy_cents !== null && row.price_buy_cents !== undefined
+                ? formatMoneyEurFromCents(row.price_buy_cents)
+                : '',
+            priceRent:
+              row.price_rent_cents !== null && row.price_rent_cents !== undefined
+                ? formatMoneyEurFromCents(row.price_rent_cents)
+                : '',
+            sellingOption: inferSellingOptionFromRow(row),
+            status: row.status || 'draft',
+            currentZipName: displayZipName(row),
+          }
+        : { title: '', shortDescription: '', category: editCategory, tags: editTags, priceBuy: '', priceRent: '', sellingOption: 'buy_rent', status: 'draft', currentZipName: 'No ZIP uploaded' },
+      formErrors: {},
+      formIsDraft: row ? row.status === 'draft' : true,
+      formIsPublished: row ? row.status === 'published' : false,
+      formIsBuyOnly: row ? inferSellingOptionFromRow(row) === 'buy_only' : false,
+      formIsBuyRent: row ? inferSellingOptionFromRow(row) === 'buy_rent' : true,
+      pageTitle: 'Edit Template',
+      pageSubtitle: 'Update template details.',
+      panelTitle: 'Edit Template',
+      panelText: '',
+      editId: id,
+    });
+  });
+
+  router.post('/my-templates/:id/edit', upload.single('templateZip'), async (req, res) => {
+    const pool = getPool();
+    const id = Number(req.params.id);
+    const categoryOptions = await getCatalogCategoryOptions(pool);
+    const allowedSlugs = new Set(categoryOptions.map((c) => c.slug));
+
+    const form = {
+      title: String(req.body?.title || ''),
+      shortDescription: String(req.body?.shortDescription || ''),
+      category: String(req.body?.category || 'other'),
+      tags: String(req.body?.tags || ''),
+      priceBuy: String(req.body?.priceBuy || ''),
+      priceRent: String(req.body?.priceRent || ''),
+      sellingOption: String(req.body?.sellingOption || req.body?.license || 'buy_rent'),
+      status: String(req.body?.status || 'draft'),
+    };
+
+    let workspaceError = null;
+    let formErrors = {};
+
+    try {
+      await sellerTemplatesService.updateSellerTemplate({
+        pool,
+        user: req.user,
+        id,
+        body: req.body,
+        file: req.file || null,
+      });
+
+  
+    // TEMPASI_FORCE_SAVE_CATEGORY_TAGS_FROM_EDIT_ROUTE
+    // Category and tags are catalog metadata from the edit form.
+    // Persist them here explicitly so they cannot be lost in older repo/service update paths.
+    try {
+      const ownerUserId =
+        req.user?.id ||
+        req.user?.user_id ||
+        req.user?.userId ||
+        req.session?.user?.id ||
+        req.session?.userId ||
+        null;
+
+      if (ownerUserId) {
+        await pool.query(
+          `
+            UPDATE seller_templates
+            SET
+              category = $1,
+              tags = $2,
+              updated_at = NOW()
+            WHERE id = $3
+              AND owner_user_id = $4
+              AND deleted_at IS NULL
+          `,
+          [
+            normalizeTemplateCategoryForRoute(req.body?.category, allowedSlugs),
+            normalizeTemplateTagsForRoute(req.body?.tags),
+            id,
+            ownerUserId,
+          ],
+        );
+      }
+    } catch (metaError) {
+      console.error('[cabinet] failed to persist template category/tags:', metaError);
+    }
+
+    return res.redirect('/cabinet/my-templates');
+    } catch (e) {
+      if (e && e.message === 'TEMPLATE_UPLOAD_DIR_NOT_MOUNTED') {
+        formErrors.templateZip =
+          'Upload storage is not connected right now (the storage machine appears to be off or unreachable). Turn it on and try again.';
+      } else if (e && e.message === 'ONLY_ZIP_ALLOWED') {
+        formErrors.templateZip = 'Only .zip files are allowed.';
+      } else if (e && e.code === 'LIMIT_FILE_SIZE') {
+        formErrors.templateZip = 'ZIP is too large (max 50MB).';
       } else if (e && e.code === 'VALIDATION_FAILED' && e.details && e.details.errors) {
         formErrors = { ...formErrors, ...e.details.errors };
       } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
@@ -220,310 +680,1151 @@ function createCabinetPagesRouter() {
     const status = String(req.body?.status || 'draft');
     return res.render('pages/cabinet', {
       activeSpace: 'my-templates',
-
       isMyTemplatesList: false,
-      isMyTemplatesAdd: true,
+      isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: false,
-      isMyTemplatesEdit: false,
-
+      isMyTemplatesEdit: true,
       workspaceData: { items: [] },
       workspaceError,
-
+      categoryOptions,
       form,
       formErrors,
       formIsDraft: status === 'draft',
       formIsPublished: status === 'published',
-
-      pageTitle: 'Add Template',
-      pageSubtitle: 'Create a template record (MVP).',
-      panelTitle: 'Add Template',
+      formIsBuyOnly: String(form.sellingOption || 'buy_rent') === 'buy_only',
+      formIsBuyRent: String(form.sellingOption || '') === 'buy_rent',
+      pageTitle: 'Edit Template',
+      pageSubtitle: 'Update template details.',
+      panelTitle: 'Edit Template',
       panelText: '',
+      editId: id,
     });
   });
 
-  // =========================
-  // Status toggle (Publish/Unpublish)
-  // =========================
-  router.post('/my-templates/:id/status', async (req, res) => {
-    const pool = getPool();
+  router.get('/my-templates/analytics', async (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['overview', 'table', 'advanced']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
+
+    const sort = String(req.query.sort || 'total_revenue').trim();
+    const dir = String(req.query.dir || 'desc').trim().toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const ownerUserId = getUserId(req);
-    const id = String(req.params.id || '').trim();
-
-    if (!ownerUserId) return res.redirect('/login');
-    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
-
-    const nextStatus = String(req.body?.status || '').trim();
-    if (!['draft', 'published'].includes(nextStatus)) {
-      return res.status(400).send('Bad status');
-    }
-
-    try {
-      await sellerTemplatesService.updateMyTemplateStatus({
-        pool,
-        user: req.user,
-        id: Number(id),
-        status: nextStatus,
-      });
-
-      return res.redirect('/cabinet/my-templates');
-    } catch (e) {
-      // If publish blocked by requirements -> redirect to edit
-      if (e && (e.code === 'PUBLISH_VALIDATION_FAILED' || e.code === 'PUBLISH_ZIP_INVALID')) {
-        return res.redirect(`/cabinet/my-templates/${Number(id)}/edit`);
-      }
-      return res.status(500).send(`Status error: ${e.message}`);
-    }
-  });
-
-  // =========================
-  // Edit (MVP) + Replace ZIP
-  // =========================
-  router.get('/my-templates/:id/edit', async (req, res) => {
-    const pool = getPool();
-    const ownerUserId = getUserId(req);
-    const id = String(req.params.id || '').trim();
-
-    if (!ownerUserId) return res.redirect('/login');
-    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
-
     let workspaceError = null;
-    let row = null;
+
+    const empty = {
+      analytics: {
+        tab,
+        sort,
+        dir,
+        kpis: {
+          myTemplatesCount: 0,
+          activeTemplates: 0,
+          avgTemplatePriceEur: '0.00',
+          avgRentPricePerDayEur: '0.00',
+        },
+        platformStats: {
+          totalUsers: 0,
+          totalTemplates: 0,
+          avgTemplatePriceEur: '0.00',
+          avgRentPricePerDayEur: '0.00',
+        },
+        summary: {
+          templatesCount: 0,
+          publishedCount: 0,
+          soldTemplatesCount: 0,
+          buyOrdersCount: 0,
+          rentOrdersCount: 0,
+          revenueBuyEur: '0.00',
+          revenueRentEur: '0.00',
+          revenueTotalEur: '0.00',
+        },
+        categoryStats: [],
+      },
+    };
+
+    let analyticsPayload = empty.analytics;
 
     try {
-      row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
-        pool,
+      const analytics = await analyticsService.getCabinetAnalytics({
         ownerUserId,
-        id: Number(id),
+        months: 6,
+        sort,
+        dir,
       });
-      if (!row) return res.status(404).send('Not found');
+
+      analyticsPayload = {
+        tab,
+        sort,
+        dir,
+        kpis: empty.analytics.kpis,
+        platformStats: empty.analytics.platformStats,
+        summary: analytics.summary || empty.analytics.summary,
+        categoryStats: empty.analytics.categoryStats,
+      };
+
+      // TEMPASI_ANALYTICS_OVERVIEW_KPIS (2026-08-16): the Overview tab
+      // needs a different shape than Table/Advanced (kpis +
+      // platform-wide pricing benchmarks, not the sortable
+      // per-template table). Only fetched for that tab to avoid
+      // extra queries on every Table/Advanced view.
+      //
+      // TEMPASI_OVERVIEW_POLISH (2026-08-16): the 30-day revenue
+      // chart moved out of Overview — it'll live in the Finance
+      // section instead (separate task) — so
+      // getMyTemplatesRevenueSeries30d() is no longer called here.
+      // Sold templates / Rent revenue / Total revenue cards were also
+      // dropped from this tab (still computed by getMyTemplatesKpis()
+      // for whatever else might use them; simply not surfaced here
+      // anymore) in favor of two new personal pricing averages.
+      if (tab === 'overview') {
+        const [kpis, avgPrices, platformStats] = await Promise.all([
+          analyticsService.getMyTemplatesKpis({ ownerUserId }),
+          analyticsService.getMyTemplatesAvgPrices({ ownerUserId }),
+          analyticsService.getPlatformStats(),
+        ]);
+
+        analyticsPayload.kpis = {
+          myTemplatesCount: analytics.summary?.templatesCount ?? 0,
+          activeTemplates: kpis.activeTemplates,
+          avgTemplatePriceEur: avgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: avgPrices.avgRentPricePerDayEur,
+        };
+        analyticsPayload.platformStats = platformStats;
+      }
+
+      // TEMPASI_ADVANCED_REALIZED_AVG_PRICES (2026-08-16): same
+      // layout as Overview (All / Active counts unchanged, reused
+      // as-is from getMyTemplatesKpis()), but the two "Avg." cards
+      // switch basis from "currently listed price" to "price of
+      // templates that actually sold / were actually rented" — both
+      // for this seller (My templates) and platform-wide (Market).
+      // Reuses the SAME analyticsPayload.kpis/platformStats field
+      // names as Overview — safe since only one tab's branch ever
+      // runs per request, so there's no risk of the two tabs'
+      // numbers colliding in the same response.
+      if (tab === 'advanced') {
+        const [kpis, realizedAvgPrices, platformStats, platformRealizedAvgPrices] = await Promise.all([
+          analyticsService.getMyTemplatesKpis({ ownerUserId }),
+          analyticsService.getMyTemplatesRealizedAvgPrices({ ownerUserId }),
+          analyticsService.getPlatformStats(),
+          analyticsService.getPlatformRealizedAvgPrices(),
+        ]);
+
+        analyticsPayload.kpis = {
+          myTemplatesCount: analytics.summary?.templatesCount ?? 0,
+          activeTemplates: kpis.activeTemplates,
+          avgTemplatePriceEur: realizedAvgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: realizedAvgPrices.avgRentPricePerDayEur,
+        };
+        analyticsPayload.platformStats = {
+          totalUsers: platformStats.totalUsers,
+          totalTemplates: platformStats.totalTemplates,
+          avgTemplatePriceEur: platformRealizedAvgPrices.avgTemplatePriceEur,
+          avgRentPricePerDayEur: platformRealizedAvgPrices.avgRentPricePerDayEur,
+        };
+      }
+
+      // TEMPASI_CATEGORY_TABLE (2026-08-16): the Table tab now shows a
+      // platform-wide, per-category breakdown instead of a
+      // per-template sortable list — confirmed with Alex: fully
+      // replaces the old table, and is platform-wide like
+      // Market/Advanced, not scoped to this seller.
+      if (tab === 'table') {
+        analyticsPayload.categoryStats = await analyticsService.getPlatformStatsByCategory();
+      }
     } catch (e) {
       workspaceError = e;
     }
 
-    const form = {
-      id: row ? row.id : id,
-      title: row ? row.title : '',
-      slug: row ? row.slug : '',
-      shortDescription: row ? row.short_description || '' : '',
-      priceBuy:
-        row && row.price_buy_cents !== null && row.price_buy_cents !== undefined
-          ? formatMoneyEurFromCents(row.price_buy_cents)
-          : '',
-      priceRent:
-        row && row.price_rent_cents !== null && row.price_rent_cents !== undefined
-          ? formatMoneyEurFromCents(row.price_rent_cents)
-          : '',
-      status: row ? row.status : 'draft',
-      currentZipName: row ? row.zip_original_name || '' : '',
-    };
-
     res.render('pages/cabinet', {
       activeSpace: 'my-templates',
-
-      isMyTemplatesList: false,
-      isMyTemplatesAdd: false,
-      isMyTemplatesAnalytics: false,
-      isMyTemplatesEdit: true,
-
-      workspaceData: { items: [] },
-      workspaceError,
-
-      form,
-      formErrors: {},
-      formIsDraft: form.status === 'draft',
-      formIsPublished: form.status === 'published',
-
-      pageTitle: 'Edit Template',
-      pageSubtitle: 'Update your template.',
-      panelTitle: 'Edit Template',
-      panelText: '',
-    });
-  });
-
-  router.post('/my-templates/:id/edit', upload.single('templateZip'), async (req, res) => {
-    const pool = getPool();
-    const ownerUserId = getUserId(req);
-    const id = String(req.params.id || '').trim();
-
-    if (!ownerUserId) return res.redirect('/login');
-    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
-
-    const form = {
-      id,
-      title: String(req.body?.title || '').trim(),
-      slug: String(req.body?.slug || '').trim(),
-      shortDescription: String(req.body?.shortDescription || '').trim(),
-      priceBuy: String(req.body?.priceBuy || '').trim(),
-      priceRent: String(req.body?.priceRent || '').trim(),
-      status: String(req.body?.status || 'draft').trim(),
-      currentZipName: '',
-    };
-
-    let workspaceError = null;
-    let formErrors = {};
-
-    try {
-      // fetch current zip name to show in form on error
-      const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
-        pool,
-        ownerUserId,
-        id: Number(id),
-      });
-      if (!row) return res.status(404).send('Not found');
-      form.currentZipName = row.zip_original_name || '';
-
-      await sellerTemplatesService.updateSellerTemplate({
-        pool,
-        user: req.user,
-        id: Number(id),
-        body: req.body,
-        file: req.file || null,
-      });
-
-      return res.redirect('/cabinet/my-templates');
-    } catch (e) {
-      if (e && e.code === 'VALIDATION_FAILED' && e.details && e.details.errors) {
-        formErrors = { ...formErrors, ...e.details.errors };
-      } else if (e && (e.code === 'SLUG_TAKEN' || e.message === 'SLUG_TAKEN')) {
-        formErrors.slug = 'This slug is already used. Choose another one.';
-      } else if (e && e.code === 'PREVIEW_NOT_PNG') {
-        workspaceError = new Error('PREVIEW_NOT_PNG');
-      } else {
-        workspaceError = e;
-      }
-    }
-
-    res.render('pages/cabinet', {
-      activeSpace: 'my-templates',
-
-      isMyTemplatesList: false,
-      isMyTemplatesAdd: false,
-      isMyTemplatesAnalytics: false,
-      isMyTemplatesEdit: true,
-
-      workspaceData: { items: [] },
-      workspaceError,
-
-      form,
-      formErrors,
-      formIsDraft: form.status === 'draft',
-      formIsPublished: form.status === 'published',
-
-      pageTitle: 'Edit Template',
-      pageSubtitle: 'Update your template.',
-      panelTitle: 'Edit Template',
-      panelText: '',
-    });
-  });
-
-  // =========================
-  // Delete
-  // =========================
-  router.post('/my-templates/:id/delete', async (req, res) => {
-    const pool = getPool();
-    const ownerUserId = getUserId(req);
-    const id = String(req.params.id || '').trim();
-
-    if (!ownerUserId) return res.redirect('/login');
-    if (!id || !/^\d+$/.test(id)) return res.status(400).send('Bad template id');
-
-    try {
-      const row = await sellerTemplatesRepo.getSellerTemplateForOwnerById({
-        pool,
-        ownerUserId,
-        id: Number(id),
-      });
-      if (!row) return res.status(404).send('Not found');
-
-      await sellerTemplatesService.deleteMyTemplate({
-        pool,
-        user: req.user,
-        id: Number(id),
-      });
-
-      // Best effort: remove ZIP and preview
-      if (row.zip_path && fs.existsSync(row.zip_path)) {
-        try {
-          fs.unlinkSync(row.zip_path);
-        } catch (_) {}
-      }
-
-      const previewPath = path.join(process.cwd(), 'public/uploads/previews', `${Number(id)}.png`);
-      if (fs.existsSync(previewPath)) {
-        try {
-          fs.unlinkSync(previewPath);
-        } catch (_) {}
-      }
-
-      return res.redirect('/cabinet/my-templates');
-    } catch (e) {
-      return res.status(500).send(`Delete error: ${e.message}`);
-    }
-  });
-
-  router.get('/my-templates/analytics', (req, res) => {
-    res.render('pages/cabinet', {
-      activeSpace: 'my-templates',
-
       isMyTemplatesList: false,
       isMyTemplatesAdd: false,
       isMyTemplatesAnalytics: true,
       isMyTemplatesEdit: false,
-
-      workspaceData: { items: [] },
-      workspaceError: null,
-
+      workspaceData: {
+        analytics: analyticsPayload,
+      },
+      workspaceError,
       pageTitle: 'Analytics',
-      pageSubtitle: 'Sales, rentals and performance.',
+      pageSubtitle: 'Performance of your templates.',
       panelTitle: 'Analytics',
       panelText: '',
     });
   });
 
-  // =========================
-  // Other Cabinet Spaces
-  // =========================
-  router.get('/cases', (req, res) => {
+  router.get('/cases', async (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['list', 'create', 'rents', 'analytics']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'list';
+
+    const pool = getPool();
+    const userId = getUserId(req);
+
+    let workspaceError = null;
+
+    let caseItems = [];
+
+    let rents = [];
+    let analytics = {
+      activeCases: 2,
+      heldTemplates: 0,
+      activeRentCostEur: '0.00',
+      myCases: { avgTemplates: '0.0', avgRentCostEur: '0.00', nonEmptyCaseCount: 0 },
+      marketCases: { avgTemplates: '0.0', avgRentCostEur: '0.00', nonEmptyCaseCount: 0 },
+    };
+
+    try {
+      await casesService.ensureDefaultCaseForUser(userId, pool);
+
+      const ownerCases = await casesService.getOwnerCases(userId, pool);
+      caseItems = (ownerCases || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        clientName: item.client_name || '',
+        status: 'open',
+        templatesCount: Number(item.templates_count || 0),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        publicPreviewToken: item.public_preview_token || '',
+        publicPreviewUrl: item.public_preview_token
+          ? `/cabinet/cases/${encodeURIComponent(item.id)}/preview/public?token=${encodeURIComponent(item.public_preview_token)}`
+          : '',
+      }));
+
+      const rentsResult = await pool.query(
+        `
+          SELECT
+            e.id,
+            e.order_id,
+            e.template_slug,
+            e.starts_at,
+            e.ends_at,
+            e.created_at,
+            o.amount_cents,
+            o.currency,
+            COALESCE(st.title, e.template_slug) AS template_title,
+            st.price_rent_cents,
+            COUNT(oca.case_id)::int AS cases_count
+          FROM public.entitlements e
+          LEFT JOIN public.orders o
+            ON o.id = e.order_id
+          LEFT JOIN public.seller_templates st
+            ON st.slug = e.template_slug
+          LEFT JOIN public.order_case_assignments oca
+            ON oca.order_id = e.order_id
+          WHERE e.user_id = $1
+            AND UPPER(COALESCE(e.deal_type, e.kind, '')) = 'RENT'
+            AND e.closed_at IS NULL
+            AND (e.ends_at IS NULL OR e.ends_at > NOW())
+          GROUP BY e.id, o.id, st.title, st.price_rent_cents
+          ORDER BY e.ends_at ASC NULLS LAST, e.created_at DESC, e.id DESC
+        `,
+        [userId],
+      );
+
+      let activeRentCostCents = 0;
+
+      const caseTitleById = new Map(caseItems.map((item) => [String(item.id), item.title]));
+
+      rents = [];
+      for (const row of rentsResult.rows || []) {
+        const assignedIds = await rentAssignmentsService.listAssignments(row.order_id, pool);
+        const assignedSet = new Set(assignedIds.map(String));
+        const assignedCases = assignedIds.map((caseId) => ({
+          id: caseId,
+          title: caseTitleById.get(String(caseId)) || `Case ${caseId}`,
+        }));
+        const availableCases = caseItems
+          .filter((item) => !assignedSet.has(String(item.id)))
+          .map((item) => ({ id: item.id, title: item.title }));
+
+        // TEMPASI_RENTS_TAB_REAL_PRICE (2026-08-17)
+        // row.price_rent_cents (the template's actual per-day rate,
+        // now selected above) is what "Rent cost: €X / 24h" and
+        // "Active rent cost" are meant to show. Before this fix
+        // neither was ever added up here, so both always rendered
+        // €0.00 regardless of the template's real price.
+        activeRentCostCents += Number(row.price_rent_cents || 0);
+
+        rents.push(normalizeCaseRentRow({
+          ...row,
+          assignedCases,
+          availableCases,
+          cases_count: assignedCases.length,
+          canRemoveAssignments: assignedCases.length > 1,
+          lastAssignmentMessage: rentAssignmentsService.LAST_RENT_CASE_ASSIGNMENT_MESSAGE,
+        }));
+      }
+
+      const caseMarketMetrics = await computeCaseMarketMetrics(
+        pool,
+        caseItems.map((item) => item.id),
+      );
+
+      analytics = {
+        activeCases: caseItems.length,
+        heldTemplates: rents.length,
+        activeRentCostEur: formatMoneyEurFromCents(activeRentCostCents),
+        myCases: caseMarketMetrics.myCases,
+        marketCases: caseMarketMetrics.marketCases,
+      };
+    } catch (e) {
+      workspaceError = e;
+    }
+
     res.render('pages/cabinet', {
       activeSpace: 'cases',
-      pageTitle: 'Cases',
-      pageSubtitle: 'Client shortlists and presentations.',
+      pageTitle: '',
+      pageSubtitle: '',
       panelTitle: 'Cases',
       panelText: '',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          tab,
+          tabs: getCaseTabs(tab),
+          items: caseItems,
+          lastCaseDeleteMessage: casesService.LAST_CASE_DELETE_MESSAGE,
+          rents,
+          analytics,
+        },
+      },
     });
   });
 
-  router.get('/finance', (req, res) => {
+
+  router.get('/cases/:id', async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getOwnedCase(userId, caseId, pool);
+
+      if (!selectedCase) {
+        return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
+      }
+
+      selectedCase.publicPreviewUrl = selectedCase.public_preview_token
+        ? `/cabinet/cases/${encodeURIComponent(selectedCase.id)}/preview/public?token=${encodeURIComponent(selectedCase.public_preview_token)}`
+        : '';
+
+      const rows = await casesService.listCaseTemplates(userId, caseId, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+
+      for (const item of templates) {
+        const availableCases = await casesService.listAvailableCasesForOrder(userId, item.orderId, pool);
+        item.availableCases = (availableCases || []).map((row) => ({
+          id: row.id,
+          title: row.title || `Case ${row.id}`,
+        }));
+      }
+    } catch (err) {
+      console.error('[cabinet] cases/:id view error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: '',
+      pageSubtitle: '',
+      panelTitle: 'Case View',
+      panelText: '',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          tab: 'view',
+          tabs: getCaseTabs(''),
+          selectedCase,
+          templates,
+        },
+      },
+    });
+  });
+
+  router.get('/cases/:id/preview', async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    let workspaceError = null;
+    let selectedCase = null;
+    let templates = [];
+
+    try {
+      selectedCase = await casesService.getOwnedCase(userId, caseId, pool);
+
+      if (!selectedCase) {
+        return res.redirect('/cabinet/cases?tab=list&error=case_not_found');
+      }
+
+      selectedCase.publicPreviewUrl = selectedCase.public_preview_token
+        ? `/cabinet/cases/${encodeURIComponent(selectedCase.id)}/preview/public?token=${encodeURIComponent(selectedCase.public_preview_token)}`
+        : '';
+
+      const rows = await casesService.listCaseTemplates(userId, caseId, pool);
+      templates = (rows || []).map(normalizeCaseTemplateRow);
+    } catch (err) {
+      console.error('[cabinet] cases/:id/preview error:', err);
+      workspaceError = err;
+    }
+
+    return res.render('pages/cabinet', {
+      activeSpace: 'cases',
+      pageTitle: 'Case Preview',
+      pageSubtitle: 'Presentation preview for the selected client case.',
+      panelTitle: 'Case Preview',
+      panelText: '',
+      workspaceError,
+      workspaceData: {
+        cases: {
+          tab: 'preview',
+          tabs: getCaseTabs(''),
+          selectedCase,
+          templates,
+        },
+      },
+    });
+  });
+
+  router.post('/cases/:id/clear', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    try {
+      await casesService.clearCase(userId, caseId, pool);
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      console.error('[cabinet] cases/:id/clear error:', err);
+      return res.redirect('/cabinet/cases?tab=list&error=case_clear_failed');
+    }
+  });
+
+  router.post('/cases/:caseId/templates/:orderId/exclude', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.caseId || '').trim();
+    const orderId = Number(req.params.orderId);
+
+    try {
+      await rentAssignmentsService.removeAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(caseId)}`);
+    } catch (err) {
+      console.error('[cabinet] cases/:caseId/templates/:orderId/exclude error:', err);
+      const code = err && err.code ? String(err.code) : 'template_exclude_failed';
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(caseId)}?error=${encodeURIComponent(code)}`);
+    }
+  });
+
+  router.post('/cases/:caseId/templates/:orderId/copy', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const currentCaseId = String(req.params.caseId || '').trim();
+    const orderId = Number(req.params.orderId);
+    const targetCaseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.addAssignment({ userId, orderId, caseId: targetCaseId }, pool);
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(currentCaseId)}`);
+    } catch (err) {
+      console.error('[cabinet] cases/:caseId/templates/:orderId/copy error:', err);
+      const code = err && err.code ? String(err.code) : 'template_copy_failed';
+      return res.redirect(`/cabinet/cases/${encodeURIComponent(currentCaseId)}?error=${encodeURIComponent(code)}`);
+    }
+  });
+
+
+  router.post('/cases', express.urlencoded({ extended: false }), async (req, res, next) => {
+    try {
+      const pool = getPool();
+      const userId = getUserId(req);
+      const title = String(req.body?.title || '').trim() || 'New client case';
+      const clientName = String(req.body?.clientName || '').trim();
+
+      await casesService.create(
+        userId,
+        {
+          title,
+          clientName,
+          note: '',
+        },
+        pool
+      );
+
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/cases/:id/delete', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const caseId = String(req.params.id || '').trim();
+
+    try {
+      await casesService.deleteCase(userId, caseId, pool);
+      return res.redirect('/cabinet/cases?tab=list');
+    } catch (err) {
+      if (err && err.code === 'LAST_CASE_DELETE_BLOCKED') {
+        return res.redirect(
+          '/cabinet/cases?tab=list&error=last_case_delete_blocked'
+        );
+      }
+
+      console.error('[cabinet] cases/:id/delete error:', err);
+      return res.redirect('/cabinet/cases?tab=list&error=case_delete_failed');
+    }
+  });
+
+  router.post('/cases/rents/:orderId/assign', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const orderId = Number(req.params.orderId);
+    const caseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.addAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect('/cabinet/cases?tab=rents');
+    } catch (err) {
+      console.error('[cabinet] cases/rents/:orderId/assign error:', err);
+      const code = err && err.code ? String(err.code) : 'rent_assignment_failed';
+      return res.redirect(`/cabinet/cases?tab=rents&error=${encodeURIComponent(code)}`);
+    }
+  });
+
+  router.post('/cases/rents/:orderId/remove-case', express.urlencoded({ extended: false }), async (req, res) => {
+    const pool = getPool();
+    const userId = getUserId(req);
+    const orderId = Number(req.params.orderId);
+    const caseId = String(req.body?.caseId || req.body?.case_id || '').trim();
+
+    try {
+      await rentAssignmentsService.removeAssignment({ userId, orderId, caseId }, pool);
+      return res.redirect('/cabinet/cases?tab=rents');
+    } catch (err) {
+      console.error('[cabinet] cases/rents/:orderId/remove-case error:', err);
+      const code = err && err.code ? String(err.code) : 'rent_assignment_remove_failed';
+      return res.redirect(`/cabinet/cases?tab=rents&error=${encodeURIComponent(code)}`);
+    }
+  });
+
+  router.get('/finance/credit-ledger/export.csv', requireAuthPage, CreditLedgerController.handleCreditLedgerCsv);
+  router.get('/finance/orders/export.csv', requireAuthPage, OrdersExportController.handleOrdersCsv);
+  router.get('/finance/credit-ledger', requireAuthPage, CreditLedgerController.handleCreditLedger);
+
+  router.get('/finance', async (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['overview', 'orders']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'overview';
+
+    // TEMPASI_FINANCE_OVERVIEW_PERIOD (2026-08-17): Overview's BUY/RENT
+    // summary is scoped to a rolling window, picked via ?period=1|7|28
+    // (days). Defaults to 28. Only meaningful for the Overview tab, but
+    // parsed unconditionally to keep this route's existing non-tab-gated
+    // style (it already always computes `orders`/`overview` regardless
+    // of which tab is active).
+    const requestedPeriod = String(req.query.period || '').trim();
+    const allowedPeriods = new Set(['1', '7', '28']);
+    const period = allowedPeriods.has(requestedPeriod) ? requestedPeriod : '28';
+    const periodDays = Number(period);
+
+    // TEMPASI_FINANCE_OVERVIEW_ROLE (2026-08-18): Overview tab now has the
+    // same "Bought/Rented" vs "Sold/Rented out" role switch already
+    // shipped for Orders (same query param name `role`, same default
+    // 'buyer' — each tab's own nav links don't carry the param over to
+    // the other tab, so in normal navigation they don't collide).
+    const requestedOverviewRole = String(req.query.role || '').trim();
+    const allowedOverviewRoles = new Set(['buyer', 'seller']);
+    const overviewRole = allowedOverviewRoles.has(requestedOverviewRole) ? requestedOverviewRole : 'buyer';
+
+    // TEMPASI_FINANCE_ORDERS_ROLE (2026-08-18): Orders tab now distinguishes
+    // orders the user placed as a buyer/renter ("buyer") from orders on
+    // templates the user owns/sells ("seller"). Real filters (q/type/date)
+    // are wired to the SQL for real now — they used to be decorative.
+    const requestedRole = String(req.query.role || '').trim();
+    const allowedRoles = new Set(['buyer', 'seller']);
+    const ordersRole = allowedRoles.has(requestedRole) ? requestedRole : 'buyer';
+
+    const ordersFilters = {
+      q: String(req.query.q || '').trim(),
+      type: String(req.query.type || '').trim(),
+      dateFrom: String(req.query.date_from || '').trim(),
+      dateTo: String(req.query.date_to || '').trim(),
+    };
+
+    const pool = getPool();
+    let workspaceError = null;
+    let overview = {
+      creditBalanceEur: '0.00',
+    };
+    let buyRent = {
+      buyCount: 0,
+      buySumEur: '0.00',
+      rentCount: 0,
+      rentSumEur: '0.00',
+      buyCountLabel: overviewRole === 'seller' ? 'Templates sold' : 'Templates bought',
+      rentCountLabel: overviewRole === 'seller' ? 'Rentals' : 'Rentals (as renter)',
+    };
+    let orders = [];
+    let ordersSummary = {
+      role: ordersRole,
+      counterpartyLabel: ordersRole === 'seller' ? 'Buyer' : 'Seller',
+      sumLabel: ordersRole === 'seller' ? 'Income (paid)' : 'Procurement (paid)',
+      totalOrders: 0,
+      buyCount: 0,
+      rentCount: 0,
+      sumEur: '0.00',
+    };
+
+    try {
+      const userId = getUserId(req);
+
+      const ordersResult = await ordersQueryService.loadOrdersForUser(pool, {
+        userId,
+        role: ordersRole,
+        filters: ordersFilters,
+      });
+      orders = ordersResult.orders;
+      ordersSummary = ordersResult.summary;
+
+      const creditBalance = await accountCreditsService.getActiveCreditBalance({ userId });
+
+      const buyRentSummary = overviewRole === 'seller'
+        ? await analyticsService.getMyTemplatesBuyRentSummary({
+            ownerUserId: userId,
+            days: periodDays,
+          })
+        : await analyticsService.getMyOrdersBuyRentSummary({
+            userId,
+            days: periodDays,
+          });
+      buyRent = {
+        buyCount: buyRentSummary.buyCount,
+        buySumEur: buyRentSummary.buySumEur,
+        rentCount: buyRentSummary.rentCount,
+        rentSumEur: buyRentSummary.rentSumEur,
+        buyCountLabel: overviewRole === 'seller' ? 'Templates sold' : 'Templates bought',
+        rentCountLabel: overviewRole === 'seller' ? 'Rentals' : 'Rentals (as renter)',
+      };
+
+      overview = {
+        creditBalanceEur: formatMoneyEurFromCents(creditBalance.amountCents),
+      };
+    } catch (e) {
+      workspaceError = e;
+    }
+
     res.render('pages/cabinet', {
       activeSpace: 'finance',
       pageTitle: 'Finance',
-      pageSubtitle: 'Orders and transactions overview.',
+      pageSubtitle: 'Your orders, payments and downloads.',
       panelTitle: 'Finance',
       panelText: '',
+      workspaceError,
+      workspaceData: {
+        finance: {
+          tab,
+          tabs: [
+            { key: 'overview', label: 'Overview', href: '/cabinet/finance?tab=overview', isActive: tab === 'overview' },
+            { key: 'orders', label: 'Orders', href: '/cabinet/finance?tab=orders', isActive: tab === 'orders' },
+          ],
+          period,
+          periods: [
+            { key: '1', label: '1 day', href: `/cabinet/finance?tab=overview&period=1&role=${overviewRole}`, isActive: period === '1' },
+            { key: '7', label: '7 days', href: `/cabinet/finance?tab=overview&period=7&role=${overviewRole}`, isActive: period === '7' },
+            { key: '28', label: '28 days', href: `/cabinet/finance?tab=overview&period=28&role=${overviewRole}`, isActive: period === '28' },
+          ],
+          overviewRole,
+          overviewRoles: [
+            {
+              key: 'buyer',
+              label: 'Bought / Rented',
+              href: `/cabinet/finance?tab=overview&role=buyer&period=${period}`,
+              isActive: overviewRole === 'buyer',
+            },
+            {
+              key: 'seller',
+              label: 'Sold / Rented out',
+              href: `/cabinet/finance?tab=overview&role=seller&period=${period}`,
+              isActive: overviewRole === 'seller',
+            },
+          ],
+          buyRent,
+          overview,
+          ordersRole,
+          ordersRoles: [
+            {
+              key: 'buyer',
+              label: 'Bought / Rented',
+              href: `/cabinet/finance?tab=orders&role=buyer`,
+              isActive: ordersRole === 'buyer',
+            },
+            {
+              key: 'seller',
+              label: 'Sold / Rented out',
+              href: `/cabinet/finance?tab=orders&role=seller`,
+              isActive: ordersRole === 'seller',
+            },
+          ],
+          ordersFilters,
+          ordersSummary,
+          orders,
+        },
+      },
     });
   });
 
-  router.get('/profile', (req, res) => {
+  router.get('/profile', async (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['profile', 'security']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'profile';
+
+    const pool = getPool();
+    const userId = getUserId(req);
+
+    let profileRow = null;
+    let downloads = [];
+    let workspaceError = null;
+
+    try {
+      const profileResult = await pool.query(
+        `
+          SELECT
+            user_id,
+            full_name,
+            nickname,
+            about,
+            avatar_url,
+            public_email,
+            website_url,
+            public_profile,
+            updated_at
+          FROM user_profiles
+          WHERE user_id = $1
+          LIMIT 1
+        `,
+        [userId],
+      );
+
+      profileRow = profileResult.rows[0] || null;
+
+      const downloadsResult = await pool.query(
+        `
+          SELECT
+            e.template_slug,
+            e.created_at,
+            o.license,
+            COALESCE(t.title, e.template_slug) AS template_title
+          FROM entitlements e
+          LEFT JOIN orders o
+            ON o.id = e.order_id
+          LEFT JOIN templates t
+            ON t.slug = e.template_slug
+          WHERE e.user_id = $1
+            AND UPPER(COALESCE(e.deal_type, 'BUY')) = 'BUY'
+          ORDER BY e.created_at DESC, e.id DESC
+        `,
+        [userId],
+      );
+
+      downloads = (downloadsResult.rows || []).map((row) => ({
+        template_slug: row.template_slug || '',
+        template_title: row.template_title || row.template_slug || '',
+        license: row.license || '—',
+        created_at_str: formatDateYMD(row.created_at),
+        download_href: `/downloads/${encodeURIComponent(row.template_slug || '')}`,
+      }));
+    } catch (e) {
+      workspaceError = e;
+    }
+
     res.render('pages/cabinet', {
       activeSpace: 'profile',
       pageTitle: 'Profile & Security',
-      pageSubtitle: 'Account settings.',
+      pageSubtitle: 'Account settings and security.',
       panelTitle: 'Profile',
       panelText: '',
+      workspaceError,
+      workspaceData: {
+        profile: {
+          tab,
+          tabs: [
+            { key: 'profile', label: 'Profile', href: '/cabinet/profile?tab=profile', isActive: tab === 'profile' },
+            { key: 'security', label: 'Security', href: '/cabinet/profile?tab=security', isActive: tab === 'security' },
+          ],
+          form: {
+            full_name: profileRow?.full_name || '',
+            nickname: profileRow?.nickname || '',
+            about: profileRow?.about || '',
+            public_email: profileRow?.public_email || '',
+            email: req?.user?.email || '',
+            avatarUrl: profileRow?.avatar_url || '',
+            publicProfile: Boolean(profileRow?.public_profile),
+          },
+          downloads,
+        },
+      },
     });
   });
 
+  router.post('/profile/delete-account', async (req, res, next) => {
+    // TEMPASI_ACCOUNT_SELF_DELETE (2026-08-16)
+    //
+    // No physical deletion — sets status='deleted' + self_deleted_at,
+    // exactly mirroring the login route's existing (previously
+    // dormant) `status !== 'active'` rejection in
+    // auth.pages.routes.js. Every place that lists templates/profiles
+    // publicly additionally checks the owner's self_deleted_at, so
+    // this account's listings disappear without touching a single
+    // seller_templates row. Existing buyers keep their
+    // entitlements/downloads — this doesn't touch orders/entitlements
+    // at all.
+    //
+    // Revokes ALL sessions for this user (same pattern already used
+    // by passwordReset.routes.cjs after a password change), then
+    // clears this browser's own cookie and redirects to /login.
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.redirect(302, '/login');
+
+      const pool = getPool();
+      await pool.query(
+        `UPDATE users SET status = 'deleted', self_deleted_at = NOW(), updated_at = NOW() WHERE id = $1::bigint`,
+        [userId],
+      );
+      await pool.query(`DELETE FROM sessions WHERE user_id = $1::bigint`, [userId]);
+
+      clearSessionCookie(req, res);
+
+      return res.redirect(302, '/login?account=deleted');
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.get('/support', (req, res) => {
+    const requestedTab = String(req.query.tab || '').trim();
+    const allowedTabs = new Set(['help', 'contact', 'faq']);
+    const tab = allowedTabs.has(requestedTab) ? requestedTab : 'help';
+
+    const tabs = [
+      { key: 'help', label: 'Help', href: '/cabinet/support?tab=help', isActive: tab === 'help' },
+      { key: 'contact', label: 'Contact', href: '/cabinet/support?tab=contact', isActive: tab === 'contact' },
+      { key: 'faq', label: 'FAQ', href: '/cabinet/support?tab=faq', isActive: tab === 'faq' },
+    ];
+
     res.render('pages/cabinet', {
       activeSpace: 'support',
       pageTitle: 'Support',
       pageSubtitle: 'Help and documentation.',
       panelTitle: 'Support',
       panelText: '',
+      workspaceData: {
+        support: {
+          tab,
+          tabs,
+        },
+      },
     });
   });
 
   return router;
 }
+
+
+function formatCaseRentDateTime(value) {
+  if (!value) return 'Not set yet';
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not set yet';
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function formatCaseRentMoneyEur(value) {
+  const number = Number(value || 0);
+  return number.toFixed(2);
+}
+
+function formatCaseRentTimeLeft(value) {
+  if (!value) return 'No deadline';
+
+  const expiresAt = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(expiresAt.getTime())) return 'No deadline';
+
+  const diffMs = expiresAt.getTime() - Date.now();
+  if (diffMs <= 0) return 'Expired';
+
+  const totalMinutes = Math.ceil(diffMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+}
+
+function getCaseTabs(activeKey) {
+  return [
+    { key: 'list', label: 'List', href: '/cabinet/cases?tab=list', isActive: activeKey === 'list' },
+    { key: 'create', label: 'Create', href: '/cabinet/cases?tab=create', isActive: activeKey === 'create' },
+    { key: 'rents', label: 'Rents', href: '/cabinet/cases?tab=rents', isActive: activeKey === 'rents' },
+    { key: 'analytics', label: 'Analytics', href: '/cabinet/cases?tab=analytics', isActive: activeKey === 'analytics' },
+  ];
+}
+
+function formatCaseTemplateMoneyEur(cents) {
+  if (cents === null || cents === undefined || cents === '') return '';
+  const n = Number(cents);
+  if (!Number.isFinite(n)) return '';
+  return (n / 100).toFixed(2);
+}
+
+function resolveCaseTemplatePreviewUrl(row, slug) {
+  const normalizedSlug = String(slug || '').trim();
+  const direct = String(
+    row.preview_url ||
+      row.preview_image ||
+      row.previewUrl ||
+      row.previewPath ||
+      row.preview_path ||
+      ''
+  ).trim();
+
+  if (direct) {
+    if (direct.startsWith('/')) return direct;
+
+    const previewFile = direct.match(/preview\.(png|jpg|jpeg|webp|svg)$/i);
+    if (normalizedSlug && previewFile) {
+      return `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.${previewFile[1].toLowerCase()}`;
+    }
+
+    return `/${direct.replace(/^\/+/, '')}`;
+  }
+
+  if (normalizedSlug && row.zip_path) {
+    return `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.png`;
+  }
+
+  return normalizedSlug ? `/t/${encodeURIComponent(normalizedSlug)}/preview/preview.png` : '';
+}
+
+
+function withBackParam(url, backUrl) {
+  const target = String(url || '').trim();
+  const back = String(backUrl || '').trim();
+
+  if (!target || !back) return target;
+
+  const separator = target.includes('?') ? '&' : '?';
+  return `${target}${separator}back=${encodeURIComponent(back)}`;
+}
+
+function normalizeCaseTemplateTags(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+
+  if (raw.startsWith('{') && raw.endsWith('}')) {
+    return raw
+      .slice(1, -1)
+      .split(',')
+      .map((tag) => tag.replace(/^"|"$/g, '').trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  return raw
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function normalizeCaseTemplateRow(row) {
+  const slug = String(row.template_slug || '').trim();
+  const endsAt = row.ends_at || null;
+  const casesCount = Number(row.cases_count || 0);
+  const buyPriceEur = formatCaseTemplateMoneyEur(row.price_buy_cents);
+  const rentPriceEur = formatCaseTemplateMoneyEur(row.price_rent_cents);
+  const demoUrl = String(row.demo_url || '').trim();
+  const templateDetailsUrl = slug ? `/templates/${encodeURIComponent(slug)}` : '/templates';
+  const templateDemoUrl = slug ? `/templates/${encodeURIComponent(slug)}/demo` : demoUrl || '/templates';
+
+  return {
+    orderId: row.order_id,
+    entitlementId: row.entitlement_id,
+    templateId: row.template_id,
+    slug,
+    title: row.title || slug || 'Untitled template',
+    shortDescription: row.short_description || 'No description added yet.',
+    description: row.description || row.short_description || '',
+    category: row.category || 'other',
+    tags: row.tags || '',
+    tagItems: normalizeCaseTemplateTags(row.tags),
+    templateStatus: row.template_status || '',
+    startsAt: row.starts_at || null,
+    endsAt,
+    endsAtLabel: formatCaseRentDateTime(endsAt),
+    timeLeftLabel: formatCaseRentTimeLeft(endsAt),
+    casesCount,
+    canExclude: casesCount > 1,
+    priceBuyCents: row.price_buy_cents,
+    priceRentCents: row.price_rent_cents,
+    buyPriceEur,
+    rentPriceEur,
+    buyPriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
+    rentPerDayLabel: rentPriceEur ? `€${rentPriceEur}` : '',
+    rentPriceLabel: rentPriceEur ? `€${rentPriceEur}` : '',
+    purchasePriceLabel: buyPriceEur ? `€${buyPriceEur}` : '',
+    priceLabel: rentPriceEur ? `Rent €${rentPriceEur}` : buyPriceEur ? `Buy €${buyPriceEur}` : '',
+    detailsUrl: slug ? `/templates/${encodeURIComponent(slug)}` : '/templates',
+    liveDemoUrl: templateDemoUrl,
+    previewUrl: resolveCaseTemplatePreviewUrl(row, slug),
+    availableCases: [],
+  };
+}
+
+
+function formatAvgNumber(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0.0';
+  return n.toFixed(1);
+}
+
+// TEMPASI_CASES_MARKET_ANALYTICS (2026-08-17)
+// "Non-empty case" here counts BOTH BUY and RENT assignments (per
+// product request — earlier metrics in this file, like the Rents tab,
+// only ever considered RENT since that's the only deal type that
+// currently produces order_case_assignments rows in practice; this
+// query intentionally doesn't restrict to RENT, so it keeps working
+// unchanged if BUY-into-case assignment is ever added later).
+// Avoids needing to know cases' owner column name (it varies —
+// owner_user_id vs user_id, see cases.repo.cjs#getCasesSchema) by
+// filtering "my cases" through the case IDs the route already loaded
+// via casesService.getOwnerCases(), rather than re-deriving ownership
+// here.
+async function computeCaseMarketMetrics(pool, myCaseIds) {
+  // TEMPASI_CASES_MARKET_ANALYTICS (2026-08-17)
+  // Non-empty case = at least one active, paid RENT template
+  // assignment — matches the same definition already used by
+  // listCaseTemplates() and the Rents tab (RENT + paid + entitlement
+  // not closed/expired). BUY was considered in an earlier draft of
+  // this metric and explicitly walked back — kept scoped to RENT only,
+  // matching every other "what's in this case" query in the codebase.
+  const metricsSql = `
+    WITH case_metrics AS (
+      SELECT
+        c.id AS case_id,
+        COUNT(DISTINCT oca.order_id) AS template_count,
+        COALESCE(SUM(COALESCE(st.price_rent_cents, 0)), 0) AS rent_cost_cents
+      FROM public.cases c
+      JOIN public.order_case_assignments oca ON oca.case_id::text = c.id::text
+      JOIN public.orders o ON o.id = oca.order_id
+      JOIN public.entitlements e ON e.order_id = o.id
+      LEFT JOIN public.seller_templates st ON st.slug = o.template_slug
+      WHERE UPPER(COALESCE(o.deal_type, '')) = 'RENT'
+        AND LOWER(COALESCE(o.status, '')) = 'paid'
+        AND e.closed_at IS NULL
+        AND (e.ends_at IS NULL OR e.ends_at > NOW())
+      GROUP BY c.id
+      HAVING COUNT(DISTINCT oca.order_id) > 0
+    )
+    SELECT
+      COALESCE(AVG(template_count), 0) AS avg_templates,
+      COALESCE(AVG(rent_cost_cents), 0) AS avg_rent_cost_cents,
+      COUNT(*)::int AS nonempty_case_count
+    FROM case_metrics
+  `;
+
+  const [marketResult, myResult] = await Promise.all([
+    pool.query(metricsSql),
+    myCaseIds.length > 0
+      ? pool.query(
+          `${metricsSql.replace('FROM case_metrics', 'FROM case_metrics WHERE case_id::text = ANY($1::text[])')}`,
+          [myCaseIds.map(String)],
+        )
+      : Promise.resolve({ rows: [{ avg_templates: 0, avg_rent_cost_cents: 0, nonempty_case_count: 0 }] }),
+  ]);
+
+  const marketRow = marketResult.rows[0] || {};
+  const myRow = myResult.rows[0] || {};
+
+  return {
+    myCases: {
+      avgTemplates: formatAvgNumber(myRow.avg_templates),
+      avgRentCostEur: formatMoneyEurFromCents(myRow.avg_rent_cost_cents),
+      nonEmptyCaseCount: Number(myRow.nonempty_case_count || 0),
+    },
+    marketCases: {
+      avgTemplates: formatAvgNumber(marketRow.avg_templates),
+      avgRentCostEur: formatMoneyEurFromCents(marketRow.avg_rent_cost_cents),
+      nonEmptyCaseCount: Number(marketRow.nonempty_case_count || 0),
+    },
+  };
+}
+
+function normalizeCaseRentRow(row) {
+  const source = String(row.source || row.hold_source || row.reservation_source || 'rent').toLowerCase();
+  const isActiveRent = source.includes('rent');
+
+  const expiresAt =
+    row.rent_expires_at ||
+    row.expires_at ||
+    row.reserved_until ||
+    row.rented_until ||
+    row.ends_at ||
+    row.hold_until ||
+    null;
+
+  // TEMPASI_RENTS_TAB_REAL_PRICE (2026-08-17)
+  // Previously looked for active_rent_price_eur/daily_rent_price_eur/
+  // rent_price_eur/price_eur/rentPriceEur — none of which the SQL
+  // query above (or anything else) ever actually produced, so this
+  // always fell through to the `|| 0` default and rendered €0.00
+  // regardless of the template's real rent price. The real column is
+  // seller_templates.price_rent_cents (now selected in the query),
+  // in cents, not euros — formatMoneyEurFromCents() handles the
+  // conversion, matching how every other €-per-day price in this
+  // codebase (catalog cards, template details, case template cards)
+  // is derived from the same column.
+  const dailyRentPriceCents = Number(row.price_rent_cents ?? row.priceRentCents ?? 0);
+
+  return {
+    ...row,
+    id: row.id || row.template_id,
+    title: row.title || row.template_title || 'Untitled template',
+    source,
+    sourceLabel: isActiveRent ? 'RENT' : 'RESERVE',
+    reservationLabel: isActiveRent ? 'Active rent reservation' : 'Owner reserve',
+    reservationText: isActiveRent
+      ? 'Reserved for this user. Hidden from the public catalog while the rent is active.'
+      : 'Held by owner-reserve workflow.',
+    casesCount: Number(row.cases_count || row.casesCount || 0),
+    assignedCases: Array.isArray(row.assignedCases) ? row.assignedCases : [],
+    availableCases: Array.isArray(row.availableCases) ? row.availableCases : [],
+    canRemoveAssignments: Boolean(row.canRemoveAssignments),
+    lastAssignmentMessage: row.lastAssignmentMessage || '',
+    orderId: row.order_id || row.orderId || null,
+    rentExpiresAt: expiresAt,
+    expiresAtLabel: formatCaseRentDateTime(expiresAt),
+    timeLeftLabel: formatCaseRentTimeLeft(expiresAt),
+    dailyRentPriceEur: formatMoneyEurFromCents(dailyRentPriceCents),
+    priceEur: dailyRentPriceCents / 100,
+    isActiveRent,
+  };
+}
+
 
 module.exports = { createCabinetPagesRouter };

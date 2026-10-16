@@ -2,7 +2,7 @@
 
 const PAYMENTS_PROVIDER = (process.env.PAYMENTS_PROVIDER || 'fake').toLowerCase();
 
-// базовый URL приложения (нужен для callback/redirect)
+// the app's base URL (needed for callback/redirect)
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 
 // Stripe
@@ -15,7 +15,7 @@ const STRIPE_CANCEL_URL = process.env.STRIPE_CANCEL_URL || `${APP_BASE_URL}/temp
 const FAKE_PAYMENTS_ENABLED = (process.env.FAKE_PAYMENTS_ENABLED || '1') !== '0';
 
 module.exports = {
-  // то, что ждёт текущий CJS-код
+  // what the current CJS code expects
   PAYMENTS_PROVIDER,
   APP_BASE_URL,
   STRIPE_SECRET_KEY,
@@ -23,7 +23,7 @@ module.exports = {
   STRIPE_SUCCESS_URL,
   STRIPE_CANCEL_URL,
 
-  // структурный доступ (если где-то используется)
+  // structured access (in case it's used anywhere)
   provider: PAYMENTS_PROVIDER,
   stripe: {
     secretKey: STRIPE_SECRET_KEY,

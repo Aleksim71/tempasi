@@ -1,0 +1,228 @@
+// src/web/routes/community.pages.routes.cjs
+// Community directory (/community/*). Follows the admin/cabinet pages
+// router convention: no-arg factory, own pool via scripts/db.pool.cjs.
+// Mounted with requireAuthWeb in app.js — visible to registered users
+// only. Only shows members who opted in via user_profiles.public_profile
+// (toggle lives in Cabinet > Profile & Security > Basic Information).
+'use strict';
+
+const express = require('express');
+
+const { getPool } = require('../../../scripts/db.pool.cjs');
+
+const COMMUNITY_PAGE_SIZE = 24;
+
+function formatEurOrDash(cents) {
+  if (cents === null || cents === undefined) return null;
+  return (Number(cents) / 100).toFixed(2);
+}
+
+// TEMPASI_COMMUNITY_PREVIEW_FALLBACK_FIX (2026-08-12): mirrors
+// resolveStoredTemplatePreviewUrl() in src/server/catalog/templates.repo.js
+// (kept as a small local copy since that file is ESM and this route is
+// CJS). The public catalog/details pages never rely on
+// seller_templates.preview_image/preview_url being set directly — those
+// columns are frequently empty — they fall back to the working
+// /t/<slug>/preview/preview.png proxy route (backed by zip_path) instead.
+// This route previously used only the raw DB columns with no fallback,
+// so templates with empty preview_image/preview_url rendered no image
+// at all on a member's Community profile page, even though the exact
+// same templates showed a preview fine on /templates.
+function resolveCommunityTemplatePreviewUrl(row) {
+  const slug = String(row?.slug || '').trim();
+
+  const directPreview = String(row?.preview_url || row?.preview_image || '').trim();
+
+  if (directPreview) {
+    if (directPreview.startsWith('/')) return directPreview;
+
+    const previewFile = directPreview.match(/preview\.(png|jpg|jpeg|webp|svg)$/i);
+    if (slug && previewFile) {
+      return `/t/${encodeURIComponent(slug)}/preview/preview.${previewFile[1].toLowerCase()}`;
+    }
+
+    return `/${directPreview.replace(/^\/+/, '')}`;
+  }
+
+  const zipPath = String(row?.zip_path || '').trim();
+  if (slug && zipPath) {
+    return `/t/${encodeURIComponent(slug)}/preview/preview.png`;
+  }
+
+  return null;
+}
+
+function parsePage(raw) {
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function createCommunityPagesRouter() {
+  const router = express.Router();
+
+  router.get('/', async (req, res, next) => {
+    const pool = getPool();
+    try {
+      const page = parsePage(req.query.page);
+
+      const countRes = await pool.query(
+        `
+        SELECT COUNT(*)::int AS n
+        FROM user_profiles up
+        JOIN users u ON u.id = up.user_id
+        WHERE up.public_profile = true AND u.self_deleted_at IS NULL
+        `,
+      );
+      const total = countRes.rows[0]?.n || 0;
+      const totalPages = Math.max(1, Math.ceil(total / COMMUNITY_PAGE_SIZE));
+      const limit = COMMUNITY_PAGE_SIZE;
+      const offset = (page - 1) * limit;
+
+      const { rows } = await pool.query(
+        `
+        SELECT
+          u.id,
+          COALESCE(NULLIF(TRIM(up.nickname), ''), NULLIF(TRIM(up.full_name), ''), u.email) AS display_name,
+          up.avatar_url,
+          up.about,
+          (
+            SELECT COUNT(*) FROM seller_templates st
+            WHERE st.owner_user_id = u.id AND st.status = 'published' AND st.deleted_at IS NULL
+              AND st.price_buy_cents IS NOT NULL
+          )::int AS buy_count,
+          (
+            SELECT COUNT(*) FROM seller_templates st
+            WHERE st.owner_user_id = u.id AND st.status = 'published' AND st.deleted_at IS NULL
+              AND st.price_rent_cents IS NOT NULL
+          )::int AS rent_count
+        FROM users u
+        JOIN user_profiles up ON up.user_id = u.id
+        WHERE up.public_profile = true AND u.self_deleted_at IS NULL
+        ORDER BY up.updated_at DESC, u.id DESC
+        LIMIT $1 OFFSET $2
+        `,
+        [limit, offset],
+      );
+
+      const members = rows.map((r) => ({
+        id: r.id,
+        displayName: r.display_name,
+        avatarUrl: r.avatar_url || null,
+        about: r.about || '',
+        buyCount: r.buy_count,
+        rentCount: r.rent_count,
+      }));
+
+      return res.status(200).render('pages/community/index', {
+        title: 'Community — Tempasi',
+        bodyClass: 'community-page',
+        activePage: 'community',
+        styles: ['/css/pages/community.css'],
+        members,
+        total,
+        page,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+        prevHref: `/community?page=${Math.max(1, page - 1)}`,
+        nextHref: `/community?page=${Math.min(totalPages, page + 1)}`,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.get('/:userId', async (req, res, next) => {
+    const pool = getPool();
+    const userId = Number(req.params.userId);
+
+    if (!Number.isFinite(userId)) {
+      return res.status(404).render('pages/errors/404');
+    }
+
+    try {
+      const { rows } = await pool.query(
+        `
+        SELECT
+          u.id,
+          up.full_name,
+          up.nickname,
+          up.about,
+          up.avatar_url,
+          up.public_email,
+          up.website_url,
+          up.role_title,
+          up.location
+        FROM users u
+        JOIN user_profiles up ON up.user_id = u.id
+        WHERE u.id = $1 AND up.public_profile = true AND u.self_deleted_at IS NULL
+        LIMIT 1
+        `,
+        [userId],
+      );
+
+      const profileRow = rows[0];
+      if (!profileRow) {
+        return res.status(404).render('pages/errors/404');
+      }
+
+      const templatesRes = await pool.query(
+        `
+        SELECT slug, title, preview_image, preview_url, zip_path, price_buy_cents, price_rent_cents
+        FROM seller_templates st
+        WHERE owner_user_id = $1
+          AND status = 'published'
+          AND deleted_at IS NULL
+          AND owner_withdrawn_at IS NULL
+          AND admin_blocked_at IS NULL
+          AND (owner_hold_until IS NULL OR owner_hold_until <= NOW())
+          -- Once sold, the details page 404s for everyone except the
+          -- buyer (see templates.repo.js's getTemplateBySlug) — don't
+          -- list something here that would be a dead link even for
+          -- the seller who owns this profile.
+          AND NOT EXISTS (
+            SELECT 1 FROM orders o
+            WHERE o.template_slug = st.slug AND o.deal_type = 'BUY' AND o.status = 'paid'
+          )
+        ORDER BY created_at DESC
+        `,
+        [userId],
+      );
+
+      const templates = templatesRes.rows.map((t) => ({
+        slug: t.slug,
+        title: t.title,
+        previewSrc: resolveCommunityTemplatePreviewUrl(t),
+        priceBuyLabel: formatEurOrDash(t.price_buy_cents),
+        priceRentLabel: formatEurOrDash(t.price_rent_cents),
+      }));
+
+      const displayName = profileRow.nickname || profileRow.full_name || 'Tempasi member';
+
+      return res.status(200).render('pages/community/user', {
+        title: `${displayName} — Tempasi Community`,
+        bodyClass: 'community-page',
+        activePage: 'community',
+        styles: ['/css/pages/community.css'],
+        member: {
+          displayName,
+          fullName: profileRow.full_name || '',
+          nickname: profileRow.nickname || '',
+          about: profileRow.about || '',
+          avatarUrl: profileRow.avatar_url || null,
+          publicEmail: profileRow.public_email || '',
+          websiteUrl: profileRow.website_url || '',
+          roleTitle: profileRow.role_title || '',
+          location: profileRow.location || '',
+        },
+        templates,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  return router;
+}
+
+module.exports = { createCommunityPagesRouter };

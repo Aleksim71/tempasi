@@ -2,7 +2,10 @@
 // ESM middleware for SSR pages: redirects to /login when user is not authenticated.
 //
 // Dev toggle:
-//   TEMPASI_SKIP_AUTH=1  -> bypass this guard (useful for SSR development)
+//   TEMPASI_SKIP_AUTH=1  -> bypass this guard (useful for SSR development;
+//                           refused in production, see config/devFlags.js)
+
+import { isAuthSkipped } from '../../config/devFlags.js';
 
 function safeNextPath(input) {
   const raw = String(input || '').trim();
@@ -23,8 +26,8 @@ export function requireAuthWeb(options = {}) {
   const defaultNext = options.defaultNext || '/templates';
 
   return function requireAuthWebMiddleware(req, res, next) {
-    // ✅ DEV BYPASS (critical for local SSR work)
-    if (process.env.TEMPASI_SKIP_AUTH) return next();
+    // Dev bypass for local SSR work (never active in production)
+    if (isAuthSkipped()) return next();
 
     // "Logged in" heuristics (supports multiple auth setups)
     const isAuthed = Boolean(
@@ -51,7 +54,7 @@ export function requireAuthWeb(options = {}) {
         ok: false,
         error: {
           code: 'AUTH_REQUIRED',
-          message: 'Нужна авторизация.',
+          message: 'Authorization required.',
           field: null,
           meta: {},
         },

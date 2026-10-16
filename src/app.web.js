@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createWebRouter } from './web/routes/web.routes.js';
 
+import cartCheckoutPassRoutes from './web/routes/cart.checkout-pass.routes.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -36,6 +38,157 @@ function readFirstExisting(paths) {
 export function createWebApp({ db }) {
   const app = express();
 
+  // TEMPASI_TEMPLATE_STORED_PREVIEW_ROUTE
+  // Serve real stored template preview extracted from template upload storage.
+  app.get('/t/:slug/preview/preview.:ext', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    const ext = String(req.params.ext || '')
+      .trim()
+      .toLowerCase();
+
+    if (!/^[a-z0-9][a-z0-9-]*$/i.test(slug)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!/^(png|jpg|jpeg|webp|svg)$/.test(ext)) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.TEMPLATE_UPLOAD_DIR,
+      process.env.UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'templates'),
+      path.join(process.cwd(), 'public', 'uploads', 'templates'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const candidate = path.resolve(resolvedRoot, slug, 'preview', `preview.${ext}`);
+
+      if (!candidate.startsWith(resolvedRoot + path.sep)) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate)) {
+        if (ext === 'svg') {
+          res.type('image/svg+xml');
+        }
+
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
+  // TEMPASI_TEMPLATES_DEMO_STATIC_ROUTE (2026-08-04)
+  // Serves "Live Demo" content (src/index.html, assets/*.css,
+  // src/*.js, etc.) directly from TEMPLATE_UPLOAD_DIR/<slug>/ —
+  // the same directory the preview route above already reads from,
+  // and the same directory the seller upload flow now extracts the
+  // FULL zip contents into (see extractFullTemplateToUploadDir in
+  // templateZip.contract.cjs), not just the preview PNG.
+  //
+  // This REPLACES the previous design (a separate, isolated
+  // templates-demo.server.js process on its own port, proxied here
+  // via http-proxy-middleware). That process/proxy is gone —
+  // decided together with the user: template files are already
+  // isolated by living on a physically separate machine
+  // (TEMPLATE_UPLOAD_DIR is an sshfs-style mount to that machine),
+  // so a second local process added no real isolation, just extra
+  // moving parts (a port to remember to start, a proxy to keep in
+  // sync). The files are static HTML/CSS/JS — nothing here ever
+  // executes server-side, so serving them directly is not a
+  // code-execution risk the way running the process was framed to
+  // guard against.
+  //
+  // Path-traversal guarded the same way as the preview route: resolve
+  // and confirm the final path is still inside
+  // TEMPLATE_UPLOAD_DIR/<slug>/ before sending. The uploaded .zip
+  // itself is NEVER reachable through this route — it's stored as a
+  // flat, randomly-named file directly under TEMPLATE_UPLOAD_DIR
+  // (not inside any <slug>/ folder), so it can never match this
+  // route's /t/:slug/* shape.
+  app.get('/t/:slug/*rest', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    // Express 5 / path-to-regexp v7+: a named wildcard like *rest
+    // gives an ARRAY of path segments (e.g. ['src','assets',
+    // 'style.css']), not a single string — join it back into a path.
+    const restParam = req.params.rest;
+    const rest = (Array.isArray(restParam) ? restParam.join('/') : String(restParam || '')).trim();
+
+    if (!/^[a-z0-9][a-z0-9-]*$/i.test(slug)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!rest || rest.includes('..')) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.TEMPLATE_UPLOAD_DIR,
+      process.env.UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'templates'),
+      path.join(process.cwd(), 'public', 'uploads', 'templates'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const slugRoot = path.resolve(resolvedRoot, slug);
+      const candidate = path.resolve(slugRoot, rest);
+
+      if (!candidate.startsWith(slugRoot + path.sep) && candidate !== slugRoot) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
+  // TEMPASI_USER_AVATAR_ROUTE (2026-08-04)
+  // Serve uploaded profile avatars. Same pattern as the template
+  // preview route above (dedicated route + path-traversal guard,
+  // not express.static — matches this codebase's existing convention
+  // for user-uploaded files).
+  app.get('/u/:userId/avatar.:ext', (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const ext = String(req.params.ext || '')
+      .trim()
+      .toLowerCase();
+
+    if (!/^[0-9]+$/.test(userId)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!/^(png|jpg|jpeg|webp)$/.test(ext)) {
+      return res.status(404).send('Not found');
+    }
+
+    const uploadRoots = [
+      process.env.AVATAR_UPLOAD_DIR,
+      path.join(process.cwd(), 'uploads', 'avatars'),
+    ].filter(Boolean);
+
+    for (const root of uploadRoots) {
+      const resolvedRoot = path.resolve(root);
+      const candidate = path.resolve(resolvedRoot, userId, `avatar.${ext}`);
+
+      if (!candidate.startsWith(resolvedRoot + path.sep)) {
+        continue;
+      }
+
+      if (fs.existsSync(candidate)) {
+        return res.sendFile(candidate);
+      }
+    }
+
+    return res.status(404).send('Not found');
+  });
+
   app.locals.db = db;
 
   const viewsRoot = path.join(__dirname, 'web', 'views');
@@ -56,6 +209,7 @@ export function createWebApp({ db }) {
   const pIconsDash = path.join(partialsRoot, 'icons-sprite.hbs');
   const pIconsUnd = path.join(partialsRoot, 'icons_sprite.hbs');
   const pHeader = path.join(partialsRoot, 'site-header.hbs');
+  const pAdminHeader = path.join(partialsRoot, 'admin-header.hbs');
   const pFooter = path.join(partialsRoot, 'footer.hbs');
 
   // header icons
@@ -66,6 +220,14 @@ export function createWebApp({ db }) {
 
   // Template card v2
   const pTemplateCardV2 = path.join(partialsRoot, 'template-card.v2.hbs');
+
+  // TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16): registerPartials()'s default
+  // rename() replaces every "-" with "_" (confirmed empirically — the
+  // auto-scan above registers this file as "page_alert", not
+  // "page-alert"), so — same as template-card.v2/site-header/icon-* below
+  // — it needs an explicit re-registration under its real hyphenated
+  // name for {{> page-alert}} in the views to resolve.
+  const pPageAlert = path.join(partialsRoot, 'page-alert.hbs');
 
   // --- Cabinet space partials (with fallback to old root-level files) ---
   // New preferred location:
@@ -89,7 +251,7 @@ export function createWebApp({ db }) {
 
   const cabinetProfileSecurity = readFirstExisting([
     path.join(partialsRoot, 'cabinet', 'space-profile-security.hbs'),
-    // если у тебя пока нет отдельного файла — fallback не сработает, но мы хотя бы не сломаем cases/finance/etc.
+    // if you don't have a separate file yet, this fallback won't fire, but at least we won't break cases/finance/etc.
     path.join(partialsRoot, 'space-profile-security.hbs'),
   ]);
 
@@ -101,6 +263,7 @@ export function createWebApp({ db }) {
   const iconsDash = safeRead(pIconsDash);
   const iconsUnd = safeRead(pIconsUnd);
   const header = safeRead(pHeader);
+  const adminHeader = safeRead(pAdminHeader);
   const footer = safeRead(pFooter);
 
   const iconSearch = safeRead(pIconSearch);
@@ -109,6 +272,7 @@ export function createWebApp({ db }) {
   const iconLogout = safeRead(pIconLogout);
 
   const templateCardV2 = safeRead(pTemplateCardV2);
+  const pageAlert = safeRead(pPageAlert);
 
   // sprite (both names supported)
   if (iconsDash) registerPartialSafe('icons-sprite', iconsDash);
@@ -117,6 +281,7 @@ export function createWebApp({ db }) {
 
   // layout partials
   registerPartialSafe('site-header', header);
+  registerPartialSafe('admin-header', adminHeader);
   registerPartialSafe('footer', footer);
 
   // icon partials (dash + underscore)
@@ -132,6 +297,9 @@ export function createWebApp({ db }) {
 
   // v2 partial name (with dot)
   registerPartialSafe('template-card.v2', templateCardV2);
+
+  // TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16)
+  registerPartialSafe('page-alert', pageAlert);
 
   // ✅ Cabinet partial aliases (REGISTER BOTH styles)
   // cases
@@ -161,21 +329,119 @@ export function createWebApp({ db }) {
 
   // Helpers
   hbs.registerHelper('eq', (a, b) => a === b);
+  hbs.registerHelper('and', (...args) => {
+    const values = args.slice(0, -1);
+    return values.every(Boolean);
+  });
+  hbs.registerHelper('or', (...args) => {
+    const values = args.slice(0, -1);
+    return values.some(Boolean);
+  });
+  hbs.registerHelper('not', (value) => !value);
 
-  // Header state middleware
+  // Header state middleware + cart counter + avatar
+  const AVATAR_COLORS = ['#6aa7ff', '#2dd4bf', '#fbbf24', '#fb7185', '#a78bfa', '#34d399'];
+
+  function computeAvatarInitials(name) {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return '?';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+
+  function computeAvatarColor(seed) {
+    const n = Number(seed) || 0;
+    return AVATAR_COLORS[Math.abs(n) % AVATAR_COLORS.length];
+  }
+
   app.use((req, res, next) => {
     const user = req.user || (req.session && req.session.user) || null;
     res.locals.user = user;
-    res.locals.isAuthed = Boolean(user);
-    next();
+    res.locals.isAuthed = Boolean(
+      user ||
+      req?.userId ||
+      req?.session?.userId ||
+      req?.session?.user_id ||
+      req?.user?.id ||
+      req?.user?.user_id ||
+      req?.user?.userId,
+    );
+    res.locals.cartCount = 0;
+    res.locals.headerAvatarUrl = '';
+    res.locals.headerAvatarInitials = '';
+    res.locals.headerAvatarColor = '';
+
+    const rawUserId =
+      req?.user?.id ??
+      req?.user?.user_id ??
+      req?.user?.userId ??
+      req?.session?.userId ??
+      req?.session?.user_id ??
+      req?.userId ??
+      null;
+
+    const userId = Number(rawUserId);
+    if (!Number.isFinite(userId) || userId <= 0) return next();
+
+    // Fallback initials source if user_profiles has no nickname/full_name yet.
+    res.locals.headerAvatarInitials = computeAvatarInitials(req?.user?.email);
+    res.locals.headerAvatarColor = computeAvatarColor(userId);
+
+    const db = app.locals?.db;
+    if (!db || typeof db.query !== 'function') return next();
+
+    db.query(
+      `
+        SELECT
+          (SELECT COUNT(*)::int FROM cart_items WHERE user_id = $1) AS cart_count,
+          up.nickname,
+          up.full_name,
+          up.avatar_url
+        FROM (SELECT $1::int AS uid) base
+        LEFT JOIN user_profiles up ON up.user_id = base.uid
+      `,
+      [userId],
+    )
+      .then(({ rows }) => {
+        const row = rows?.[0] || {};
+        res.locals.cartCount = Number(row.cart_count || 0);
+        res.locals.headerAvatarUrl = row.avatar_url || '';
+        res.locals.headerAvatarInitials = computeAvatarInitials(
+          row.nickname || row.full_name || req?.user?.email,
+        );
+        next();
+      })
+      .catch(() => {
+        res.locals.cartCount = 0;
+        next();
+      });
   });
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   app.get('/__health', (_req, res) => res.json({ ok: true }));
+  // Backward-compatible legacy preview URL.
+  // Old: /preview/:slug
+  // New: /templates/:slug/demo
+  app.get('/preview/:slug', (req, res) => {
+    const slug = String(req.params.slug || '').trim();
+    if (!slug) return res.redirect(302, '/templates');
+    return res.redirect(302, `/templates/${encodeURIComponent(slug)}/demo`);
+  });
+
   app.get('/', (_req, res) => res.redirect(302, '/templates'));
 
   app.use(createWebRouter());
+
+  if (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.TEMPASI_ENABLE_CART_CHECKOUT_PASS === '1'
+  ) {
+    app.use(cartCheckoutPassRoutes);
+  }
 
   return app;
 }

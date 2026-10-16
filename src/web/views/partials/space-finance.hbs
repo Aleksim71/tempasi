@@ -1,10 +1,229 @@
-{{!-- src/web/views/partials/cabinet/space-finance.hbs --}}
-<div class="cabinet__workspace-title">Finance</div>
-<div class="cabinet__workspace-text">
-  Orders and billing overview. Next: connect Orders table and show stats.
-</div>
+{{!-- src/web/views/partials/space-finance.hbs --}}
+<section class="finance-shell">
+  <nav class="finance-tabs" aria-label="Finance sections">
+    {{#each workspaceData.finance.tabs}}
+      <a
+        class="tp-control tp-tab tp-tab--main {{#if isActive}}is-active{{/if}}"
+        href="{{href}}"
+        {{#if isActive}}aria-current="page"{{/if}}
+      >
+        {{label}}
+      </a>
+    {{/each}}
+  </nav>
 
-<div class="cabinet__workspace-actions">
-  <a class="cabinet__btn" href="/cabinet/finance">Open Finance</a>
-  <a class="cabinet__btn cabinet__btn--ghost" href="/templates">Browse Templates</a>
-</div>
+  {{!-- OVERVIEW --}}
+  {{#if (eq workspaceData.finance.tab "overview")}}
+    <div class="finance-panel">
+      <nav class="finance-period-switch" aria-label="Overview role">
+        {{#each workspaceData.finance.overviewRoles}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <nav class="finance-period-switch" aria-label="Period">
+        {{#each workspaceData.finance.periods}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <div class="finance-summary-grid">
+        <div class="finance-summary-card">
+          <div class="finance-summary-card__title">Buy</div>
+          <div class="finance-kpis finance-kpis--compact">
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">{{workspaceData.finance.buyRent.buyCountLabel}}</div>
+              <div class="finance-kpi__value">{{workspaceData.finance.buyRent.buyCount}}</div>
+            </div>
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Total amount</div>
+              <div class="finance-kpi__value">€{{workspaceData.finance.buyRent.buySumEur}}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finance-summary-card">
+          <div class="finance-summary-card__title">Rent</div>
+          <div class="finance-kpis finance-kpis--compact">
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">{{workspaceData.finance.buyRent.rentCountLabel}}</div>
+              <div class="finance-kpi__value">{{workspaceData.finance.buyRent.rentCount}}</div>
+            </div>
+            <div class="finance-kpi">
+              <div class="finance-kpi__label">Total amount</div>
+              <div class="finance-kpi__value">€{{workspaceData.finance.buyRent.rentSumEur}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="finance-summary-card finance-summary-card--balance">
+        <div class="finance-summary-card__title">Balance</div>
+        <div class="finance-kpis finance-kpis--compact">
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">Tempasi credit</div>
+            <div class="finance-kpi__value">€{{workspaceData.finance.overview.creditBalanceEur}}</div>
+            <div class="finance-kpi__hint">Reserved, applied, and released credit movements.</div>
+          </div>
+        </div>
+
+        <div class="finance-credit-ledger-cta card">
+          <div>
+            <h4 class="finance-credit-ledger-cta__title">Credit ledger</h4>
+            <p class="finance-credit-ledger-cta__text">
+              Review Tempasi credit created from unused rent value and follow every checkout reservation,
+              payment application, and release.
+            </p>
+          </div>
+          <a class="button button--primary" href="/cabinet/finance/credit-ledger">Open credit ledger</a>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- ORDERS --}}
+  {{#if (eq workspaceData.finance.tab "orders")}}
+    <div class="finance-panel">
+      <nav class="finance-period-switch" aria-label="Orders role">
+        {{#each workspaceData.finance.ordersRoles}}
+          <a
+            class="tp-control tp-tab tp-tab--sub {{#if isActive}}is-active{{/if}}"
+            href="{{href}}"
+            {{#if isActive}}aria-current="page"{{/if}}
+          >
+            {{label}}
+          </a>
+        {{/each}}
+      </nav>
+
+      <div class="finance-summary-card">
+        <div class="finance-summary-card__title">{{workspaceData.finance.ordersSummary.sumLabel}}</div>
+        <div class="finance-kpis finance-kpis--compact">
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">Orders</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.totalOrders}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">BUY</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.buyCount}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">RENT</div>
+            <div class="finance-kpi__value">{{workspaceData.finance.ordersSummary.rentCount}}</div>
+          </div>
+          <div class="finance-kpi">
+            <div class="finance-kpi__label">{{workspaceData.finance.ordersSummary.sumLabel}}</div>
+            <div class="finance-kpi__value">€{{workspaceData.finance.ordersSummary.sumEur}}</div>
+          </div>
+        </div>
+      </div>
+
+      <form class="finance-filters" method="get" action="/cabinet/finance">
+        <input type="hidden" name="tab" value="orders" />
+        <input type="hidden" name="role" value="{{workspaceData.finance.ordersRole}}" />
+
+        <div class="finance-filters__grid">
+          <div class="form__row">
+            <label class="form__label" for="financeQuery">Search</label>
+            <input
+              class="input"
+              id="financeQuery"
+              name="q"
+              type="text"
+              placeholder="Template, seller, author..."
+              value="{{workspaceData.finance.ordersFilters.q}}"
+            />
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="financeType">Type</label>
+            <select class="input" id="financeType" name="type">
+              <option value="" {{#unless workspaceData.finance.ordersFilters.type}}selected{{/unless}}>All</option>
+              <option value="BUY" {{#if (eq workspaceData.finance.ordersFilters.type "BUY")}}selected{{/if}}>BUY</option>
+              <option value="RENT" {{#if (eq workspaceData.finance.ordersFilters.type "RENT")}}selected{{/if}}>RENT</option>
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="financeDateFrom">Date from</label>
+            <input
+              class="input"
+              id="financeDateFrom"
+              name="date_from"
+              type="date"
+              value="{{workspaceData.finance.ordersFilters.dateFrom}}"
+            />
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="financeDateTo">Date to</label>
+            <input
+              class="input"
+              id="financeDateTo"
+              name="date_to"
+              type="date"
+              value="{{workspaceData.finance.ordersFilters.dateTo}}"
+            />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="button button--primary" type="submit">Apply filters</button>
+          <a class="button" href="/cabinet/finance?tab=orders&role={{workspaceData.finance.ordersRole}}">Reset</a>
+          <button class="button button--secondary" type="submit" formaction="/cabinet/finance/orders/export.csv">
+            Download CSV
+          </button>
+        </div>
+      </form>
+
+      <div class="finance-table-wrap">
+        <table class="finance-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Type</th>
+              <th>Template</th>
+              <th>{{workspaceData.finance.ordersSummary.counterpartyLabel}}</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Case</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#if workspaceData.finance.orders.length}}
+              {{#each workspaceData.finance.orders}}
+                <tr>
+                  <td>{{id}}</td>
+                  <td>{{type}}</td>
+                  <td>{{templateTitle}}</td>
+                  <td>{{counterparty}}</td>
+                  <td>€{{amountEur}}</td>
+                  <td>{{date}}</td>
+                  <td>{{caseTitle}}</td>
+                </tr>
+              {{/each}}
+            {{else}}
+              <tr>
+                <td colspan="7" class="finance-table__empty">
+                  No orders found for the selected filters.
+                </td>
+              </tr>
+            {{/if}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {{/if}}
+</section>

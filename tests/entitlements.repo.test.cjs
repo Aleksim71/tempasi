@@ -55,7 +55,7 @@ describe('entitlements.repo (canonical)', () => {
       const paid = await createPaidOrderViaDb(db, {
         userId,
         templateSlug: 'seed-001',
-        dealType: 'BUY',
+        dealType: 'RENT',
       });
 
       const ent = await EntitlementsRepo.ensureEntitlementForOrder(paid);
@@ -73,7 +73,7 @@ describe('entitlements.repo (canonical)', () => {
       const paid = await createPaidOrderViaDb(db, {
         userId,
         templateSlug: 'seed-001',
-        dealType: 'BUY',
+        dealType: 'RENT',
       });
 
       await EntitlementsRepo.ensureEntitlementForOrder(paid);
@@ -94,7 +94,7 @@ describe('entitlements.repo (canonical)', () => {
       const paid = await createPaidOrderViaDb(db, {
         userId,
         templateSlug: 'seed-001',
-        dealType: 'BUY',
+        dealType: 'RENT',
       });
 
       // Call twice (simulate duplicate webhook / retry)

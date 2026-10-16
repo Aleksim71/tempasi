@@ -2,7 +2,7 @@ export const templates = [
   {
     id: 1,
     name: 'SaaS Dashboard',
-    desc: 'Современный шаблон панели управления для SaaS',
+    desc: 'A modern dashboard template for SaaS',
     img: '/icons/template1.png',
     category: 'saas',
     price: 29,
@@ -10,7 +10,7 @@ export const templates = [
   {
     id: 2,
     name: 'E-Commerce Store',
-    desc: 'Шаблон интернет-магазина с корзиной',
+    desc: 'An e-commerce store template with a cart',
     img: '/icons/template2.png',
     category: 'ecommerce',
     price: 39,
@@ -18,7 +18,7 @@ export const templates = [
   {
     id: 3,
     name: 'Portfolio UX/UI',
-    desc: 'Портфолио для дизайнеров и разработчиков',
+    desc: 'A portfolio for designers and developers',
     img: '/icons/template3.png',
     category: 'portfolio',
     price: 19,
@@ -26,15 +26,15 @@ export const templates = [
   {
     id: 4,
     name: 'Landing Page',
-    desc: 'Минималистичный лендинг для стартапов',
+    desc: 'A minimalist landing page for startups',
     img: '/icons/template4.png',
     category: 'landing',
     price: 14,
   },
   {
     id: 5,
-    name: 'Mobilе App UI Kit',
-    desc: 'UI-кит мобильного приложения (iOS/Android)',
+    name: 'Mobile App UI Kit',
+    desc: 'A mobile app UI kit (iOS/Android)',
     img: '/icons/template5.png',
     category: 'mobile',
     price: 25,
@@ -42,7 +42,7 @@ export const templates = [
   {
     id: 6,
     name: 'Dashboard Light',
-    desc: 'Лёгкий white-label dashboard',
+    desc: 'A lightweight white-label dashboard',
     img: '/icons/template6.png',
     category: 'dashboard',
     price: 17,
@@ -50,7 +50,7 @@ export const templates = [
   {
     id: 7,
     name: 'Dark SaaS UI',
-    desc: 'Тёмная версия SaaS интерфейса',
+    desc: 'A dark version of the SaaS interface',
     img: '/icons/template7.png',
     category: 'saas',
     price: 32,
@@ -58,7 +58,7 @@ export const templates = [
   {
     id: 8,
     name: 'Marketing Website',
-    desc: 'Готовый корпоративный сайт для агентств',
+    desc: 'A ready-made corporate website for agencies',
     img: '/icons/template8.png',
     category: 'marketing',
     price: 22,

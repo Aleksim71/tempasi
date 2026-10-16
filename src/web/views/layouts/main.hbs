@@ -15,10 +15,16 @@
     <link rel="stylesheet" href="/css/components/chips.css" />
     <link rel="stylesheet" href="/css/components/sidebar.css" />
     <link rel="stylesheet" href="/css/components/form.css" />
+    <link rel="stylesheet" href="/css/components/confirm-modal.css" />
 
     {{!-- Cabinet page styles (always) --}}
     {{#if isCabinet}}
       <link rel="stylesheet" href="/css/pages/cabinet.css" />
+    {{/if}}
+
+    {{!-- Admin page styles (always) --}}
+    {{#if isAdmin}}
+      <link rel="stylesheet" href="/css/pages/admin.css" />
     {{/if}}
 
     {{!-- Page-specific styles --}}
@@ -27,7 +33,8 @@
         <link rel="stylesheet" href="{{this}}" />
       {{/each}}
     {{/if}}
-  </head>
+      <link rel="stylesheet" href="/css/components/ui-controls-contract.css">
+</head>
 
   <body class="{{bodyClass}}">
     {{!-- SVG sprite: MUST be inside BODY --}}
@@ -35,7 +42,11 @@
 
     {{!-- GLOBAL HEADER (can be disabled per page) --}}
     {{#unless hideHeader}}
-      {{> site-header}}
+      {{#if isAdmin}}
+        {{> admin-header}}
+      {{else}}
+        {{> site-header}}
+      {{/if}}
     {{/unless}}
 
     <main class="l-page">
@@ -58,5 +69,6 @@
 
     {{!-- core JS (safe, page-aware) --}}
     <script defer src="/js/core.js"></script>
+    <script defer src="/js/confirm-modal.js"></script>
   </body>
 </html>

@@ -119,6 +119,13 @@
     if (overlay) overlay.style.display = 'none';
   }
 
+  // TEMPASI_FORM_ERRORS_MODAL (2026-08-12): expose the existing modal
+  // shell so other pages (e.g. the Add/Edit Template forms) can reuse
+  // the exact same look and behaviour, instead of building a second
+  // modal implementation. showModal/hideModal themselves are
+  // unchanged — just no longer private to this file.
+  window.TempasiModal = { show: showModal, hide: hideModal };
+
   // =============================
   // Checkout flow (safe)
   // =============================
@@ -331,5 +338,50 @@
     document.addEventListener('DOMContentLoaded', boot, { once: true });
   } else {
     boot();
+  }
+})();
+
+
+/* TEMPASI_SELLING_OPTION_RENT_PRICE_TOGGLE */
+(function () {
+  function syncSellingOptionForm(form) {
+    if (!form) return;
+
+    var checked = form.querySelector('input[name="sellingOption"]:checked');
+    var rentRow = form.querySelector('[data-rent-price-row]');
+    var rentInput = form.querySelector('input[name="priceRent"]');
+
+    if (!checked || !rentRow || !rentInput) return;
+
+    var isBuyOnly = checked.value === 'buy_only';
+
+    rentRow.style.display = isBuyOnly ? 'none' : '';
+    rentInput.disabled = isBuyOnly;
+
+    if (isBuyOnly) {
+      rentInput.value = '';
+    }
+  }
+
+  function syncAllSellingOptionForms() {
+    document.querySelectorAll('form').forEach(function (form) {
+      if (form.querySelector('input[name="sellingOption"]')) {
+        syncSellingOptionForm(form);
+      }
+    });
+  }
+
+  document.addEventListener('change', function (event) {
+    var target = event.target;
+
+    if (!target || target.name !== 'sellingOption') return;
+
+    syncSellingOptionForm(target.closest('form'));
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncAllSellingOptionForms);
+  } else {
+    syncAllSellingOptionForms();
   }
 })();

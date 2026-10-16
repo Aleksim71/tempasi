@@ -10,7 +10,8 @@ const { APP_BASE_URL } = require('../../../config/payments.cjs');
  */
 async function createCheckoutSession(_req, { order }) {
   const sessionId = `fake_${crypto.randomBytes(12).toString('hex')}`;
-  const url = `${APP_BASE_URL}/checkout/success?session_id=${encodeURIComponent(sessionId)}&order_id=${order.id}`;
+  const payableAmountCents = Number(order.payable_amount_cents ?? order.payableAmountCents ?? order.amount_cents ?? 0);
+  const url = `${APP_BASE_URL}/checkout/success?session_id=${encodeURIComponent(sessionId)}&order_id=${order.id}&payable_amount_cents=${payableAmountCents}`;
   return { id: sessionId, url };
 }
 

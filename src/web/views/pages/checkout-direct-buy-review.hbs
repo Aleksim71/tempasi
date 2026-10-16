@@ -1,0 +1,55 @@
+<main class="checkout-direct-shell">
+  <section class="checkout-direct-card">
+    {{#if error}}
+      <div class="checkout-direct-error">{{error}}</div>
+    {{/if}}
+
+    <div class="checkout-direct-preview">
+      {{#if directBuy.previewUrl}}
+        <img src="{{directBuy.previewUrl}}" alt="{{directBuy.title}} preview" />
+      {{else}}
+        <div class="checkout-direct-placeholder">{{directBuy.title}}</div>
+      {{/if}}
+    </div>
+
+    <div class="checkout-direct-content">
+      <p class="checkout-direct-eyebrow">Exclusive BUY confirmation</p>
+      <h1>{{directBuy.title}}</h1>
+
+      {{#if directBuy.shortDescription}}
+        <p class="checkout-direct-description">{{directBuy.shortDescription}}</p>
+      {{/if}}
+
+      <div class="checkout-direct-prices">
+        <span><strong>Buy:</strong> {{directBuy.buyPriceLabel}}</span>
+        {{#if directBuy.rentPerDayLabel}}
+          <span><strong>Rent/day:</strong> {{directBuy.rentPerDayLabel}}</span>
+        {{/if}}
+      </div>
+
+      <div class="checkout-direct-warning">
+        After payment, this template becomes an exclusive purchase and is removed from public sale/rent.
+      </div>
+
+      <div class="checkout-direct-actions">
+        {{#unless blockPurchase}}
+          <form method="post" action="/checkout/direct/buy/{{directBuy.slug}}/pay">
+            <input type="hidden" name="caseId" value="{{directBuy.caseId}}">
+            <input type="hidden" name="returnTo" value="{{directBuy.returnTo}}">
+            <label class="checkout-direct-consent">
+              <input type="checkbox" name="withdrawal_waiver_ack" value="1" required>
+              I understand this purchase is completed immediately and I
+              waive my 14-day right of withdrawal for this digital
+              content (<a href="/license" target="_blank">license</a>).
+            </label>
+            <button class="checkout-direct-pay" type="submit">Pay</button>
+          </form>
+        {{/unless}}
+
+        <a class="checkout-direct-link" href="{{directBuy.returnTo}}">Back</a>
+        <a class="checkout-direct-link" href="/templates/{{directBuy.slug}}">Details</a>
+        <a class="checkout-direct-link" href="{{directBuy.demoUrl}}">Live Demo</a>
+      </div>
+    </div>
+  </section>
+</main>

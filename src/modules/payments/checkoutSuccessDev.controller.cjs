@@ -1,8 +1,8 @@
 // src/modules/payments/checkoutSuccessDev.controller.cjs
 'use strict';
 
-const OrdersRepo = require('../orders/orders.repo.cjs');
-const EntitlementsRepo = require('./repos/entitlements.repo.cjs');
+const paymentCompletion = require('./paymentCompletion.service.cjs');
+const { renderStandalonePage } = require('../../web/helpers/renderStandalonePage.cjs');
 
 function toStr(v) {
   if (v === null || v === undefined) return '';
@@ -23,7 +23,7 @@ function escapeHtml(s) {
  *
  * Stage 0.5 rule:
  * - MUST NOT directly INSERT entitlements here.
- * - MUST reuse canonical pipeline: markOrderPaid -> ensureEntitlementForOrder
+ * - MUST reuse canonical payment completion pipeline.
  *
  * Accepts:
  * - ?order_id=123 (preferred)
@@ -67,44 +67,29 @@ async function handleCheckoutSuccessDev(req, res) {
       throw err;
     }
 
-    // 2) mark order paid (idempotent) using the same repo method as webhook
-    // IMPORTANT: OrdersRepo currently uses its own db/pool internally.
-    // We still wrap in a transaction here for the "find order" read, but the repo
-    // update is idempotent, and entitlement creation is also idempotent.
-    const paid = await OrdersRepo.markOrderPaid({
-      orderId: order.id,
-      providerPaymentIntentId: order.provider_payment_intent_id || 'pi_dev',
-    });
-
-    // If markOrderPaid returns something truthy, ensure entitlement
-    if (paid) {
-      await EntitlementsRepo.ensureEntitlementForOrder(paid);
-    }
-
     await client.query('COMMIT');
 
-    // 3) success HTML + CTA
-    const slug = encodeURIComponent(order.template_slug);
-    const downloadUrl = `/download/${slug}`;
+    // 2) canonical payment completion: mark paid + ensure entitlement.
+    const completed = await paymentCompletion.completePaidOrder({
+      orderId: order.id,
+      providerSessionId: sessionId || order.provider_session_id || null,
+      providerPaymentIntentId: order.provider_payment_intent_id || 'pi_dev',
+    });
+    const completedOrder = completed?.order || order;
 
-    return res.type('html').send(`<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Оплата успешна — Tempasi</title>
-  <link rel="stylesheet" href="/css/core.css"/>
-  <link rel="stylesheet" href="/css/custom.css"/>
-</head>
-<body>
-  <main class="page">
-    <h1>✅ Оплата успешна</h1>
-    <p>Заказ #${escapeHtml(order.id)} — шаблон <b>${escapeHtml(order.template_slug)}</b> активирован.</p>
-    <p><a class="btn primary" href="${downloadUrl}">Скачать ZIP</a></p>
-    <p style="opacity:.7;font-size:12px">session_id: ${escapeHtml(sessionId || order.provider_session_id || '')}</p>
-  </main>
-</body>
-</html>`);
+    // 3) success page (rendered inside the normal site layout)
+    const slug = encodeURIComponent(completedOrder.template_slug);
+    const downloadUrl = `/downloads/${slug}`;
+
+    return renderStandalonePage(req, res, {
+      title: 'Payment successful — Tempasi',
+      bodyHtml: `
+        <h1>✅ Payment successful</h1>
+        <p>Order #${escapeHtml(completedOrder.id)} — template <b>${escapeHtml(completedOrder.template_slug)}</b> activated.</p>
+        <p><a class="c-btn c-btn--primary" href="${downloadUrl}">Download ZIP</a></p>
+        <p style="opacity:.7;font-size:12px">session_id: ${escapeHtml(sessionId || completedOrder.provider_session_id || '')}</p>
+      `,
+    });
   } catch (e) {
     try {
       await client.query('ROLLBACK');

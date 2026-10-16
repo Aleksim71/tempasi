@@ -1,0 +1,152 @@
+/* public/css/pages/cart.css */
+.cart-page {
+  padding: 32px 0 56px;
+}
+
+.cart-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.cart-head {
+  display: grid;
+  gap: 6px;
+}
+
+.cart-title {
+  margin: 0;
+}
+
+.cart-subtitle {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.cart-notice {
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cart-panel {
+  display: grid;
+  gap: 16px;
+}
+
+/* TEMPASI_CART_BUY_RENT_SPLIT (2026-08-21) */
+.cart-group {
+  display: grid;
+  gap: 10px;
+}
+
+.cart-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cart-group__title {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.cart-group__subtotal {
+  opacity: 0.72;
+}
+
+/* Visual separation between the Buy and Rent groups: extra top spacing
+   plus a divider line, since both are BUY/RENT-labeled tables stacked
+   in one panel and need a clear break between them. */
+.cart-group--divider {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+}
+
+.cart-summary {
+  max-width: 360px;
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.cart-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.cart-summary__hint {
+  margin-top: 12px;
+  opacity: 0.72;
+}
+
+.cart-summary__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.cart-summary__consent input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.cart-summary__consent a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.cart-empty {
+  padding: 20px;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+}
+
+.cart-empty__title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cart-empty__text {
+  margin-bottom: 12px;
+  opacity: 0.72;
+}
+
+.cart-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* TEMPASI_POSTMODERATION_CART_AVAILABILITY (2026-08-10) */
+.cart-row--unavailable {
+  opacity: 0.6;
+}
+
+.cart-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cart-badge--warn {
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}

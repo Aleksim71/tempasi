@@ -11,14 +11,21 @@
     - Uses /preview/{{slug}} for Demo (matches current app)
 --}}
 
-<article class="tcard" data-template-slug="{{t.slug}}">
+<article
+  class="tcard"
+  data-template-card
+  data-template-slug="{{t.slug}}"
+  data-category="{{t.categorySlug}}"
+  data-price="{{t.price}}"
+  data-has-rent="{{#if t.prices.rent.amount}}1{{else}}0{{/if}}"
+>
   <div class="tcard__media">
-    <a class="tcard__thumb" href="/templates/{{t.slug}}" aria-label="Open template details">
+    <a class="tcard__thumb" href="/templates/{{t.slug}}{{#if t.selectedCaseParam}}?{{t.selectedCaseParam}}{{/if}}" aria-label="Open template details">
       <div class="template-card__no-preview" style="display:none;">Preview not available</div>
 
       <img
         class="tcard__img"
-        src="{{#if t.previewUrl}}{{t.previewUrl}}{{else if t.preview_url}}{{t.preview_url}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else if t.id}}/uploads/previews/{{t.id}}.png{{else}}/t/{{t.slug}}/preview.png{{/if}}"
+        src="{{#if t.previewUrl}}{{t.previewUrl}}{{else if t.preview_url}}{{t.preview_url}}{{else if t.preview}}{{t.preview}}{{else if t.preview_image}}{{t.preview_image}}{{else}}/t/{{t.slug}}/preview/preview.png{{/if}}"
         alt="Preview {{t.slug}}"
         loading="lazy"
         onerror="try{const box=this.closest('.tcard__media'); const ph=box && box.querySelector('.template-card__no-preview'); if(ph) ph.style.display='block'; this.remove();}catch(e){}"
@@ -26,10 +33,12 @@
     </a>
 
     <div class="tcard__badges" aria-label="Template badges">
+      {{#if t.isSold}}<span class="tbadge tbadge--sold">SOLD</span>{{/if}}
       {{#if t.is_new}}<span class="tbadge tbadge--new">NEW</span>{{/if}}
       {{#if t.is_popular}}<span class="tbadge tbadge--popular">POPULAR</span>{{/if}}
       {{#if t.is_exclusive}}<span class="tbadge tbadge--exclusive">EXCLUSIVE</span>{{/if}}
       {{#if t.rented_until}}<span class="tbadge tbadge--rented">RENTED</span>{{/if}}
+      <span class="tbadge" title="One template = exclusive buy. Cases are only presentation placements.">Exclusive buy</span>
     </div>
   </div>
 
@@ -38,12 +47,12 @@
       <div class="tcard__titles">
         <h3 class="tcard__title">{{t.title}}</h3>
 
-        {{#if t.author_name}}
-          <div class="tcard__author">by {{t.author_name}}</div>
-        {{else if t.author}}
-          <div class="tcard__author">by {{t.author}}</div>
-        {{else}}
-          <div class="tcard__author tcard__author--muted">by Tempasi Studio</div>
+        <div class="tcard__seller">
+          {{#if t.author}}{{t.author}}{{else}}Tempasi Studio{{/if}}
+        </div>
+
+        {{#if t.category}}
+          <div class="tcard__category">{{t.category}}</div>
         {{/if}}
       </div>
 
@@ -53,16 +62,6 @@
         {{/if}}
       </div>
     </header>
-
-    {{#if t.short}}
-      <p class="tcard__desc">{{t.short}}</p>
-    {{else if t.excerpt}}
-      <p class="tcard__desc">{{t.excerpt}}</p>
-    {{else if t.description}}
-      <p class="tcard__desc">{{t.description}}</p>
-    {{else}}
-      <p class="tcard__desc tcard__desc--muted">Clean, modern template ready for client demo and fast delivery.</p>
-    {{/if}}
 
     {{#if t.tech}}
       <div class="tcard__tech" aria-label="Tech stack">
@@ -78,38 +77,54 @@
       </div>
     {{/if}}
 
-    <footer class="tcard__foot">
-      <div class="tcard__prices" aria-label="Pricing">
-        <div class="tprice">
-          <span class="tprice__label">Rent</span>
-          {{#if t.rentPrice}}
-            <span class="tprice__value">{{t.rentPrice}}€</span>
-          {{else if t.rent_price}}
-            <span class="tprice__value">{{t.rent_price}}€</span>
+    <div class="tcard__cart" aria-label="Add to cart">
+      {{#if t.isOwner}}
+        {{!-- TEMPASI_CATALOG_OWNER_AWARE_CARDS (2026-08-15): don't
+             offer Buy/Rent on your own template — matches the details
+             page, which already hides these for the owner. Previously
+             the catalog showed Buy/Rent on every card regardless of
+             ownership, so an owner could open the Rent modal, fill it
+             in, and only be told "no" after submitting. --}}
+        <span class="tbadge" title="You own this template.">Your template</span>
+      {{else}}
+        {{#if t.price}}
+          {{#if isAuthenticated}}
+            <form method="post" action="/cart/add" class="tcard__cart-form">
+              <input type="hidden" name="template_slug" value="{{t.slug}}">
+              <input type="hidden" name="deal_type" value="BUY">
+              <input type="hidden" name="license" value="BUY">
+              <input type="hidden" name="next" value="/templates">
+              <button class="tbtn tbtn--primary" type="submit">Buy {{t.price}}€</button>
+            </form>
           {{else}}
-            <span class="tprice__value tprice__value--muted">—</span>
+            <a class="tbtn tbtn--primary" href="/login">Buy {{t.price}}€</a>
           {{/if}}
-        </div>
-
-        <div class="tprice">
-          <span class="tprice__label">Buy</span>
-          {{#if t.price}}
-            <span class="tprice__value">{{t.price}}€</span>
-          {{else if t.buyPrice}}
-            <span class="tprice__value">{{t.buyPrice}}€</span>
-          {{else}}
-            <span class="tprice__value tprice__value--muted">—</span>
-          {{/if}}
-        </div>
-
-        {{#if t.rented_until}}
-          <div class="tcard__renteduntil">until {{t.rented_until}}</div>
         {{/if}}
-      </div>
 
+        {{#if t.prices.rent.amount}}
+          {{#if isAuthenticated}}
+            <button
+              type="button"
+              class="tbtn"
+              data-rent-modal-trigger
+              data-slug="{{t.slug}}"
+              data-price="{{t.prices.rent.amount}}"
+            >Rent {{t.prices.rent.amount}}€</button>
+          {{else}}
+            <a class="tbtn" href="/login">Rent {{t.prices.rent.amount}}€</a>
+          {{/if}}
+        {{/if}}
+      {{/if}}
+    </div>
+
+    {{#if t.rented_until}}
+      <div class="tcard__renteduntil">until {{t.rented_until}}</div>
+    {{/if}}
+
+    <footer class="tcard__foot">
       <div class="tcard__actions" aria-label="Template actions">
-        <a class="tbtn tbtn--primary" href="/preview/{{t.slug}}" target="_blank" rel="noopener">Demo</a>
-        <a class="tbtn tbtn--ghost" href="/templates/{{t.slug}}">Details</a>
+        <a class="tbtn tbtn--primary" href="/templates/{{t.slug}}/demo?back=/templates" target="_blank" rel="noopener">Demo</a>
+        <a class="tbtn tbtn--ghost" href="/templates/{{t.slug}}{{#if t.selectedCaseParam}}?{{t.selectedCaseParam}}{{/if}}">Details</a>
       </div>
     </footer>
   </div>

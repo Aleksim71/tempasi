@@ -20,21 +20,32 @@
 
       <!-- CENTER -->
       <nav class="site-header__nav" aria-label="Main navigation">
-        <a href="/templates" class="nav-link">Templates</a>
+        <a href="/templates" class="nav-link{{#if (eq activePage 'templates')}} nav-link--active{{/if}}">Templates</a>
 
         {{#if isAuthed}}
-          <a href="/cabinet" class="nav-link">Cabinet</a>
+          <a href="/community" class="nav-link{{#if (eq activePage 'community')}} nav-link--active{{/if}}">Community</a>
+          <a href="/cabinet" class="nav-link{{#if (eq activePage 'cabinet')}} nav-link--active{{/if}}">Cabinet</a>
         {{/if}}
       </nav>
 
       <!-- RIGHT -->
       <div class="site-header__actions">
 
-        {{#if isAuthed}}
-
-          <!-- cart -->
+        {{#if isAuthed}}          <!-- cart -->
           <a href="/cart" class="header-icon" aria-label="Cart">
             {{> icon-cart}}
+            {{#if cartCount}}
+              <span class="header-cart-count">{{cartCount}}</span>
+            {{/if}}
+          </a>
+
+          <!-- avatar -->
+          <a href="/cabinet/profile" class="header-avatar" aria-label="Your profile">
+            {{#if headerAvatarUrl}}
+              <img src="{{headerAvatarUrl}}" alt="" width="32" height="32" />
+            {{else}}
+              <span class="header-avatar__initials" style="background-color: {{headerAvatarColor}}">{{headerAvatarInitials}}</span>
+            {{/if}}
           </a>
 
           <!-- logout -->

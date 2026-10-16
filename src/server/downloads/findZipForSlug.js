@@ -7,15 +7,15 @@ import path from 'node:path';
 const ZIPS_DIR = path.resolve(process.cwd(), 'storage', 'zips');
 
 function isSafeSlug(slug) {
-  // не даём path traversal и всякие странные значения
+  // guard against path traversal and other weird values
   return typeof slug === 'string' && /^seed-\d{3}$/.test(slug);
 }
 
 /**
- * Находит zip по slug в storage/zips
- * Ожидаемый формат: seed-001_v1.0.0.zip
+ * Finds a zip by slug in storage/zips
+ * Expected format: seed-001_v1.0.0.zip
  *
- * Возвращает:
+ * Returns:
  * { absPath, fileName } | null
  */
 export function findZipForSlug(slug) {
@@ -29,11 +29,11 @@ export function findZipForSlug(slug) {
     .filter((d) => d.isFile())
     .map((d) => d.name)
     .filter((name) => name.startsWith(prefix) && name.endsWith('.zip'))
-    .sort((a, b) => a.localeCompare(b, 'en')); // стабильно
+    .sort((a, b) => a.localeCompare(b, 'en')); // stable
 
   if (!files.length) return null;
 
-  // берём “последний” (обычно это самая свежая версия при одинаковом шаблоне имени)
+  // take the "latest" one (usually the most recent version for a given name pattern)
   const fileName = files[files.length - 1];
   const absPath = path.join(ZIPS_DIR, fileName);
 

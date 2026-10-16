@@ -1,0 +1,255 @@
+<div class="admin-templates">
+  <div class="admin-dashboard__header">
+    <h1 class="admin-dashboard__title">Templates</h1>
+
+    <div class="admin-view-toggle" aria-label="View mode">
+      <a href="/admin/trash" class="c-btn c-btn--sm">Trash</a>
+      <button type="button" id="adminViewList" class="view-toggle" aria-label="List view" aria-pressed="true">&#9776;</button>
+      <button type="button" id="adminViewCards" class="view-toggle" aria-label="Card view" aria-pressed="false">&#9638;</button>
+    </div>
+  </div>
+
+  <form class="admin-filters" method="get" action="/admin/templates">
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="regFrom">Registered from</label>
+        <input class="input" type="date" id="regFrom" name="regFrom" value="{{filters.regFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="regTo">to</label>
+        <input class="input" type="date" id="regTo" name="regTo" value="{{filters.regTo}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="modFrom">Modified from</label>
+        <input class="input" type="date" id="modFrom" name="modFrom" value="{{filters.modFrom}}" />
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="modTo">to</label>
+        <input class="input" type="date" id="modTo" name="modTo" value="{{filters.modTo}}" />
+      </div>
+    </div>
+
+    <div class="admin-filters__row">
+      <div class="admin-filters__field">
+        <label class="form__label" for="category">Catalog</label>
+        <select class="select" id="category" name="category">
+          {{#each categoryOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="status">Status</label>
+        <select class="select" id="status" name="status">
+          {{#each statusOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="sold">Sale status</label>
+        <select class="select" id="sold" name="sold">
+          {{#each soldOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="admin-filters__field">
+        <label class="form__label" for="owner">Seller</label>
+        <input class="input" type="text" id="owner" name="owner" value="{{filters.owner}}" placeholder="email or name" />
+      </div>
+      <div class="admin-filters__field admin-filters__field--grow">
+        <label class="form__label" for="q">Search</label>
+        <input class="input" type="text" id="q" name="q" value="{{filters.q}}" placeholder="title or slug" />
+      </div>
+    </div>
+
+    <div class="admin-filters__actions">
+      <button type="submit" class="c-btn c-btn--primary">Apply</button>
+      <a class="c-btn" href="/admin/templates">Reset</a>
+    </div>
+  </form>
+
+  <section class="admin-table-card">
+    {{#if templates.length}}
+      <div id="adminTemplatesView" data-view="list">
+        <table class="admin-table" id="adminTemplatesTable">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Registered</th>
+              <th>Modified</th>
+              <th>Sale price</th>
+              <th>Rent price</th>
+              <th>Seller</th>
+              <th>Status</th>
+              <th>Sale status</th>
+              <th>Actions</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each templates}}
+              <tr>
+                <td>{{this.title}}</td>
+                <td>{{this.createdLabel}}</td>
+                <td>{{this.updatedLabel}}</td>
+                <td>{{this.priceBuyLabel}}</td>
+                <td>{{this.priceRentLabel}}</td>
+                <td>{{this.ownerDisplay}}</td>
+                <td><span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span></td>
+                <td>
+                  {{#if this.isSold}}
+                    <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
+                  {{else}}
+                    <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.isBlocked}}
+                    <form method="post" action="/admin/templates/{{this.id}}/unblock">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Unblock</button>
+                    </form>
+                  {{else}}
+                    <form method="post" action="/admin/templates/{{this.id}}/block">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Block</button>
+                    </form>
+                  {{/if}}
+                </td>
+                <td>
+                  <form method="post" action="/admin/templates/{{this.id}}/delete" class="admin-delete-form" data-confirm-title="{{this.title}}">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="admin-cards-grid" id="adminTemplatesCards">
+          {{#each templates}}
+            <div class="admin-card">
+              <div class="admin-card__preview">
+                {{#if this.previewSrc}}
+                  <img
+                    class="admin-card__preview-img"
+                    src="{{this.previewSrc}}"
+                    alt="{{this.title}}"
+                    loading="lazy"
+                    onerror="this.remove()"
+                  />
+                {{/if}}
+              </div>
+              <div class="admin-card__body">
+                <div class="admin-card__title">{{this.title}}</div>
+                <div class="admin-card__row"><span class="admin-card__label">Registered</span><span>{{this.createdLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Modified</span><span>{{this.updatedLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Sale price</span><span>{{this.priceBuyLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Rent price</span><span>{{this.priceRentLabel}}</span></div>
+                <div class="admin-card__row"><span class="admin-card__label">Seller</span><span>{{this.ownerDisplay}}</span></div>
+                <div class="admin-card__row admin-card__pills">
+                  <span class="admin-status-pill admin-status-pill--{{this.statusSlug}}">{{this.statusLabel}}</span>
+                  {{#if this.isSold}}
+                    <span class="admin-status-pill admin-status-pill--sold">{{this.soldLabel}}</span>
+                  {{else}}
+                    <span class="admin-status-pill admin-status-pill--available">{{this.soldLabel}}</span>
+                  {{/if}}
+                </div>
+                <div class="admin-card__actions">
+                  {{#if this.isBlocked}}
+                    <form method="post" action="/admin/templates/{{this.id}}/unblock">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Unblock</button>
+                    </form>
+                  {{else}}
+                    <form method="post" action="/admin/templates/{{this.id}}/block">
+                      <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                      <button type="submit" class="c-btn c-btn--sm">Block</button>
+                    </form>
+                  {{/if}}
+                  <form method="post" action="/admin/templates/{{this.id}}/delete" class="admin-delete-form" data-confirm-title="{{this.title}}">
+                    <input type="hidden" name="returnTo" value="{{../currentHref}}" />
+                    <button type="submit" class="c-btn c-btn--sm c-btn--danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="admin-pagination">
+        <span class="admin-pagination__summary">{{total}} templates &middot; page {{page}} of {{totalPages}}</span>
+        <div class="admin-pagination__links">
+          {{#if hasPrev}}
+            <a class="c-btn" href="{{prevHref}}">Previous</a>
+          {{/if}}
+          {{#if hasNext}}
+            <a class="c-btn" href="{{nextHref}}">Next</a>
+          {{/if}}
+        </div>
+      </div>
+    {{else}}
+      <div class="admin-empty-state">
+        <h2>No templates match these filters</h2>
+        <p class="admin-empty-state__hint">Try widening the date range or clearing a filter.</p>
+      </div>
+    {{/if}}
+  </section>
+</div>
+
+<script>
+(function () {
+  var container = document.getElementById('adminTemplatesView');
+  var listBtn = document.getElementById('adminViewList');
+  var cardsBtn = document.getElementById('adminViewCards');
+  if (!container || !listBtn || !cardsBtn) return;
+
+  function setMode(mode) {
+    var isCards = mode === 'cards';
+    container.dataset.view = isCards ? 'cards' : 'list';
+    listBtn.classList.toggle('active', !isCards);
+    cardsBtn.classList.toggle('active', isCards);
+    listBtn.setAttribute('aria-pressed', isCards ? 'false' : 'true');
+    cardsBtn.setAttribute('aria-pressed', isCards ? 'true' : 'false');
+    try { localStorage.setItem('adminTemplatesView', isCards ? 'cards' : 'list'); } catch (e) {}
+  }
+
+  var saved = null;
+  try { saved = localStorage.getItem('adminTemplatesView'); } catch (e) {}
+  setMode(saved === 'cards' ? 'cards' : 'list');
+
+  listBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('list'); });
+  cardsBtn.addEventListener('click', function (e) { e.preventDefault(); setMode('cards'); });
+})();
+</script>
+
+<script>
+(function () {
+  // Confirm before deleting a template. Reads the title from a data
+  // attribute (already HTML-decoded by the DOM) instead of
+  // interpolating it into an inline onsubmit string, since an
+  // apostrophe in the title would otherwise break out of that string
+  // after the browser's HTML-entity decoding runs.
+  document.addEventListener('submit', async function (e) {
+    var form = e.target;
+    if (!form || !form.classList || !form.classList.contains('admin-delete-form')) return;
+    if (form.dataset.confirmed === '1') return;
+    e.preventDefault();
+
+    var title = form.getAttribute('data-confirm-title') || 'this template';
+    var ok = await window.tempasiConfirm({
+      title: 'Delete template?',
+      message: 'Delete "' + title + '"? It will move to Trash, where you can restore it or delete it forever.',
+      confirmLabel: 'Delete',
+    });
+
+    if (!ok) return;
+    form.dataset.confirmed = '1';
+    form.submit();
+  });
+})();
+</script>
