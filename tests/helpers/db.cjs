@@ -3,11 +3,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client } = require('pg');
+const { assertTestDatabaseUrl, assertConnectedToTestDb } = require('./testDbGuard.cjs');
 
 function mustGetTestDbUrl() {
-  const url = process.env.DATABASE_URL_TEST;
-  if (!url) throw new Error('DATABASE_URL_TEST is not set');
-  return url;
+  return assertTestDatabaseUrl(process.env.DATABASE_URL_TEST);
 }
 
 async function withDb(fn) {
@@ -37,6 +36,7 @@ async function migrateDb() {
 
 async function safeTruncate() {
   await withDb(async (db) => {
+    await assertConnectedToTestDb(db);
     const tables = ['entitlements', 'orders', 'sessions', 'users'];
 
     for (const t of tables) {

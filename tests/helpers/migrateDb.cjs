@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const pg = require('pg');
+const { assertTestDatabaseUrl, assertConnectedToTestDb } = require('./testDbGuard.cjs');
 
 function resolveMigrationsDir() {
   const candidates = [
@@ -49,6 +50,7 @@ async function execSqlFile(db, filepath) {
 }
 
 async function resetPublicSchema(db) {
+  await assertConnectedToTestDb(db);
   await db.query('DROP SCHEMA IF EXISTS public CASCADE;');
   await db.query('CREATE SCHEMA public;');
   await db.query('GRANT ALL ON SCHEMA public TO public;');
@@ -158,10 +160,7 @@ async function ensureOrdersCurrency(db) {
 }
 
 async function migrateDb() {
-  const connectionString = process.env.DATABASE_URL_TEST || '';
-  if (!connectionString) {
-    throw new Error('[migrateDb] DATABASE_URL_TEST is required');
-  }
+  const connectionString = assertTestDatabaseUrl(process.env.DATABASE_URL_TEST || '');
 
   const migrationsDir = resolveMigrationsDir();
   const files = listSqlMigrations(migrationsDir);
