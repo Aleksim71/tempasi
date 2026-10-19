@@ -88,3 +88,4 @@ outgoing/
 
 # local build / diagnostic output (scripts/build-outbox.sh)
 artifacts/
+Outbox/
