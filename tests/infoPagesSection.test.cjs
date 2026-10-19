@@ -11,6 +11,8 @@ const INFO_PATHS = [
   '/functionality',
   '/offers',
   '/impressum',
+  '/terms',
+  '/privacy',
   '/license',
   '/cookies',
   '/faq',
