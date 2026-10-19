@@ -5,6 +5,7 @@ import { createTemplatesRouter } from './templates.routes.js';
 import { createTemplatePreviewRouter } from './templatePreview.routes.js';
 import { createAuthPagesRouter } from './auth.pages.routes.js';
 import { createCartRouter } from './cart.routes.js';
+import { INFO_PAGES, buildInfoNav } from '../info-pages.js';
 
 export function createWebRouter() {
   const router = Router();
@@ -12,93 +13,31 @@ export function createWebRouter() {
   // Home -> templates catalog
   router.get('/', (_req, res) => res.redirect(302, '/templates'));
 
-  // Static content pages (public, no auth required)
-  router.get('/about', (_req, res) => {
-    res.render('pages/static/about', {
-      title: 'About',
-      bodyClass: 'page-static',
-      activePage: 'about',
-      styles: ['/css/pages/static-content.css'],
+  // Info section (public, no auth required): footer pages rendered with
+  // the cabinet-style sidebar. Pages, titles and sidebar entries come from
+  // src/web/info-pages.js — the single source of truth.
+  for (const page of INFO_PAGES) {
+    router.get(page.path, (_req, res) => {
+      res.render(page.view, {
+        title: page.title,
+        bodyClass: 'page-static page-info',
+        activePage: page.key,
+        styles: ['/css/pages/static-content.css', '/css/pages/info.css', ...(page.styles || [])],
+        infoNav: buildInfoNav(page.key),
+      });
     });
-  });
+  }
 
-  router.get('/functionality', (_req, res) => {
-    res.render('pages/static/functionality', {
-      title: 'How Tempasi works',
-      bodyClass: 'page-static',
-      activePage: 'functionality',
-      styles: ['/css/pages/static-content.css'],
-    });
-  });
-
-  // Provider identification (§ 5 DDG). Content is a structural placeholder
-  // until real details (name, address, contact) are supplied — see
-  // src/web/views/pages/static/impressum.hbs.
-  router.get('/impressum', (_req, res) => {
-    res.render('pages/static/impressum', {
-      title: 'Impressum',
-      bodyClass: 'page-static',
-      activePage: 'impressum',
-      styles: ['/css/pages/static-content.css'],
-    });
-  });
-
-  // Template usage rights (Buy/Rent). Real first-draft content, not a
-  // placeholder — but explicitly marked "pending legal review" and with
-  // one open business decision flagged (Rent expiry mid-project) — see
-  // src/web/views/pages/static/license.hbs.
-  router.get('/license', (_req, res) => {
-    res.render('pages/static/license', {
-      title: 'Template License',
-      bodyClass: 'page-static',
-      activePage: 'license',
-      styles: ['/css/pages/static-content.css'],
-    });
-  });
-
-  router.get('/contact', (_req, res) => {
-    res.render('pages/static/contact', {
-      title: 'Contact',
-      bodyClass: 'page-static',
-      activePage: 'contact',
-      styles: ['/css/pages/static-content.css'],
-    });
-  });
-
-  // Ad-traffic landing page: hero + Studios/Designers sections, deliberately
-  // not linked from the main nav or footer — reached only via direct/ad
-  // links. Main site header hidden to keep focus on the two CTAs.
+  // Ad-traffic landing page: hero + Studios/Designers sections. Main site
+  // header hidden to keep focus on the two CTAs. Reached via direct/ad
+  // links; in-site users get the same content at /offers (info section,
+  // linked from the footer) — both render partials/landing-content.hbs.
   router.get('/landing', (_req, res) => {
     res.render('pages/landing', {
       title: 'Tempasi — эксклюзивные шаблоны для вебстудий и дизайнеров',
       bodyClass: 'page-landing',
       hideHeader: true,
       styles: ['/css/pages/landing.css'],
-    });
-  });
-
-  // Grounded in actual cookie usage: a single first-party session cookie
-  // (sid), strictly necessary, no analytics/marketing cookies exist in
-  // the codebase. See src/middlewares/auth.middleware.cjs for the cookie
-  // itself; this page just documents it.
-  router.get('/cookies', (_req, res) => {
-    res.render('pages/static/cookies', {
-      title: 'Cookie Policy',
-      bodyClass: 'page-static',
-      activePage: 'cookies',
-      styles: ['/css/pages/static-content.css'],
-    });
-  });
-
-  // Public FAQ: single source of truth, extracted from the previously
-  // auth-gated cabinet Support "FAQ" tab (space-support.hbs), which now
-  // links here instead of duplicating the content.
-  router.get('/faq', (_req, res) => {
-    res.render('pages/static/faq', {
-      title: 'FAQ',
-      bodyClass: 'page-static',
-      activePage: 'faq',
-      styles: ['/css/pages/static-content.css'],
     });
   });
 

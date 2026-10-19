@@ -54,6 +54,18 @@
         {{!-- Cabinet should be wide (Templates-like): do NOT wrap with l-container --}}
         {{#if isCabinet}}
           {{{body}}}
+        {{else if infoNav}}
+          {{!-- Info section: cabinet-style sidebar + page text (src/web/info-pages.js) --}}
+          <section class="info">
+            <div class="l-container">
+              <div class="info__layout">
+                {{> info-sidebar}}
+                <div class="info__content">
+                  {{{body}}}
+                </div>
+              </div>
+            </div>
+          </section>
         {{else}}
           <div class="l-container l-stack">
             {{{body}}}

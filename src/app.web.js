@@ -229,6 +229,10 @@ export function createWebApp({ db }) {
   // name for {{> page-alert}} in the views to resolve.
   const pPageAlert = path.join(partialsRoot, 'page-alert.hbs');
 
+  // Info section (2026-10-19): hyphenated names, same rename() issue as above.
+  const pInfoSidebar = path.join(partialsRoot, 'info-sidebar.hbs');
+  const pLandingContent = path.join(partialsRoot, 'landing-content.hbs');
+
   // --- Cabinet space partials (with fallback to old root-level files) ---
   // New preferred location:
   //   partials/cabinet/space-*.hbs
@@ -273,6 +277,8 @@ export function createWebApp({ db }) {
 
   const templateCardV2 = safeRead(pTemplateCardV2);
   const pageAlert = safeRead(pPageAlert);
+  const infoSidebar = safeRead(pInfoSidebar);
+  const landingContent = safeRead(pLandingContent);
 
   // sprite (both names supported)
   if (iconsDash) registerPartialSafe('icons-sprite', iconsDash);
@@ -300,6 +306,10 @@ export function createWebApp({ db }) {
 
   // TEMPASI_PAGE_ALERT_MESSAGE (2026-08-16)
   registerPartialSafe('page-alert', pageAlert);
+
+  // Info section sidebar + shared landing content (/landing and /offers)
+  registerPartialSafe('info-sidebar', infoSidebar);
+  registerPartialSafe('landing-content', landingContent);
 
   // ✅ Cabinet partial aliases (REGISTER BOTH styles)
   // cases

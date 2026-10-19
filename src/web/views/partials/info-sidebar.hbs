@@ -1,0 +1,16 @@
+{{!-- src/web/views/partials/info-sidebar.hbs — driven by src/web/info-pages.js --}}
+<aside class="info__sidebar side">
+  {{#each infoNav}}
+    <div class="info__group">
+      <div class="side__title">{{title}}</div>
+      <nav class="side__nav" aria-label="{{title}}">
+        {{#each pages}}
+          <a class="side__link{{#if isActive}} is-active{{/if}}" href="{{path}}"{{#if isActive}} aria-current="page"{{/if}}>
+            <span>{{label}}</span>
+            <span class="side__meta">{{meta}}</span>
+          </a>
+        {{/each}}
+      </nav>
+    </div>
+  {{/each}}
+</aside>
