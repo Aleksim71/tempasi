@@ -50,6 +50,26 @@ export const INFO_GROUPS = [
         label: 'Impressum',
         meta: '§ 5 DDG',
       },
+      // General terms (AGB) — draft pending legal review, open decisions
+      // in [brackets] (contract model, VAT, payouts, withdrawal form).
+      {
+        key: 'terms',
+        path: '/terms',
+        view: 'pages/static/terms',
+        title: 'Terms of Service',
+        label: 'Terms',
+        meta: 'AGB',
+      },
+      // GDPR information — grounded in what the code actually processes
+      // (account, profile, orders, Stripe, sid cookie, server logs).
+      {
+        key: 'privacy',
+        path: '/privacy',
+        view: 'pages/static/privacy',
+        title: 'Privacy Policy',
+        label: 'Privacy',
+        meta: 'GDPR',
+      },
       // Template usage rights (Buy/Rent). Real first draft, marked
       // "pending legal review", one open business decision flagged.
       {
