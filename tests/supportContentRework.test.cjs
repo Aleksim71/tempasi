@@ -46,7 +46,7 @@ describe('Static content pages: /about and /functionality', () => {
     expect(contact.text).not.toContain('legal@tempasi.com');
   });
 
-  test('/landing renders 200 with both CTAs, no main site header, and is now linked from the footer', async () => {
+  test('/landing renders 200 with both CTAs, no main site header; the footer links to /offers instead', async () => {
     const { createWebApp } = await import('../src/app.web.js');
     const request = require('supertest');
     const app = createWebApp({ db: null });
@@ -63,8 +63,14 @@ describe('Static content pages: /about and /functionality', () => {
     // alongside FAQ. Header stays hidden on the landing page itself
     // regardless of referral source.
     expect(res.text).not.toMatch(/site-header__nav/);
+    // Decision changed on 2026-10-19: the footer link "Who benefits from
+    // this?" now points to /offers — the same landing content rendered
+    // inside the info section (site header + info sidebar). /landing
+    // stays reachable for ad traffic, header-less, and is not in the footer.
     const footer = readProjectFile('src/web/views/partials/footer.hbs');
-    expect(footer).toContain('/landing');
+    expect(footer).toContain('href="/offers"');
+    expect(footer).not.toContain('href="/landing"');
+    expect(res.text).not.toContain('info__sidebar');
   });
 
   test('/cookies documents only the real sid session cookie, no fabricated analytics claims', async () => {
