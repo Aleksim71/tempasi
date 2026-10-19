@@ -3,7 +3,9 @@
 /* =========================
    Fonts (Variant A: Inter)
    ========================= */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Google Fonts import removed (2026-10-19): it sent every visitor's IP to
+   Google, yet Inter was never applied — typography.css (loaded after this
+   file) redefines --ff-ui as a system stack. No visual change. */
 
 /* =========================
    Reset (low-specificity)
