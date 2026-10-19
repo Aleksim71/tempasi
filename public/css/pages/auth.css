@@ -197,6 +197,25 @@ body.auth .auth-shell {
   border: 1px solid rgba(255, 90, 90, 0.35);
 }
 
+/* Info line under the submit button (cookie / privacy notice) */
+.auth-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--c-muted);
+}
+
+.auth-hint a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-hint a:hover {
+  color: var(--c-text);
+}
+
 /* =========================================================
    COMPACT footer mode (auth only)
    We don't assume footer is <footer>.
