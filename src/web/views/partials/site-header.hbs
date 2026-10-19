@@ -26,6 +26,9 @@
           <a href="/community" class="nav-link{{#if (eq activePage 'community')}} nav-link--active{{/if}}">Community</a>
           <a href="/cabinet" class="nav-link{{#if (eq activePage 'cabinet')}} nav-link--active{{/if}}">Cabinet</a>
         {{/if}}
+
+        {{!-- Info section entry (src/web/info-pages.js); active on every info page --}}
+        <a href="/about" class="nav-link{{#if infoNav}} nav-link--active{{/if}}">Info</a>
       </nav>
 
       <!-- RIGHT -->
